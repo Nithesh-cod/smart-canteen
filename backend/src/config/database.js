@@ -99,8 +99,9 @@ pool.on('connect', () => {
   }
 });
 
-// Test the connection at startup — run a real query to confirm auth works
-(async () => {
+// Test the connection at startup — delay 2s so the pool has time to authenticate
+// before we probe it (avoids a false-positive error on Supabase's pooler).
+setTimeout(async () => {
   try {
     const result = await pool.query('SELECT NOW() AS now');
     console.log(`✅ Database reachable — server time: ${result.rows[0].now}`);
@@ -115,7 +116,7 @@ pool.on('connect', () => {
     );
     // Do not exit — requests will return 500 until the DB is fixed
   }
-})();
+}, 2000);
 
 pool.on('error', (err) => {
   // Log but never exit — errors are handled per-request
