@@ -20,6 +20,12 @@ const itemCss = `
   0% { background-position: -400px 0; }
   100% { background-position: 400px 0; }
 }
+@media (max-width: 480px) {
+  .menu-item-img { height: 140px !important; }
+  .menu-item-body { padding: 10px 12px 12px !important; }
+  .menu-item-name { font-size: 1.05rem !important; }
+  .menu-item-price { font-size: 1.1rem !important; }
+}
 `;
 
 function StarRating({ rating }: { rating: number }) {
@@ -135,7 +141,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
         </div>
 
         {/* Image */}
-        <div style={{
+        <div className="menu-item-img" style={{
           height: '180px',
           overflow: 'hidden',
           background: 'linear-gradient(135deg, #1a0a2e, #0a0a1a)',
@@ -217,9 +223,9 @@ export const MenuItem: React.FC<MenuItemProps> = ({
         </div>
 
         {/* Body */}
-        <div style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="menu-item-body" style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {/* Name */}
-          <div style={{
+          <div className="menu-item-name" style={{
             fontFamily: "'Rajdhani', sans-serif",
             fontSize: '1.25rem',
             fontWeight: 700,
@@ -262,7 +268,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
 
           {/* Price */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: 'auto' }}>
-            <span style={{
+            <span className="menu-item-price" style={{
               fontFamily: "'Orbitron', sans-serif",
               fontSize: '1.3rem',
               fontWeight: 800,

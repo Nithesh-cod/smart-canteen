@@ -1344,6 +1344,30 @@ const OwnerDashboard: React.FC = () => {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+
+        /* ── Owner Dashboard mobile ── */
+        @media (max-width: 768px) {
+          .owner-sidebar {
+            width: 64px !important;
+            padding: 16px 6px !important;
+          }
+          .owner-sidebar-logo { display: none !important; }
+          .owner-sidebar-label { display: none !important; }
+          .owner-sidebar-nav-item {
+            justify-content: center !important;
+            padding: 10px !important;
+          }
+          .owner-main {
+            margin-left: 64px !important;
+            padding: 20px 14px !important;
+          }
+          .owner-topbar h1 { font-size: 1.3rem !important; }
+          .owner-topbar-actions { flex-wrap: wrap !important; gap: 8px !important; }
+        }
+        @media (max-width: 480px) {
+          .owner-sidebar { width: 0 !important; overflow: hidden !important; padding: 0 !important; border-right: none !important; }
+          .owner-main { margin-left: 0 !important; padding: 14px 10px !important; }
+        }
       `}</style>
 
       <div
@@ -1355,6 +1379,7 @@ const OwnerDashboard: React.FC = () => {
       >
         {/* Sidebar */}
         <aside
+          className="owner-sidebar"
           style={{
             width: 250,
             minHeight: '100vh',
@@ -1372,6 +1397,7 @@ const OwnerDashboard: React.FC = () => {
         >
           {/* Logo */}
           <div
+            className="owner-sidebar-logo"
             style={{
               textAlign: 'center',
               marginBottom: 40,
@@ -1408,6 +1434,7 @@ const OwnerDashboard: React.FC = () => {
             {navItems.map((item) => (
               <button
                 key={item.id}
+                className="owner-sidebar-nav-item"
                 onClick={() => setActivePage(item.id)}
                 style={{
                   display: 'flex',
@@ -1455,7 +1482,7 @@ const OwnerDashboard: React.FC = () => {
                 }}
               >
                 <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
-                {item.label}
+                <span className="owner-sidebar-label">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -1478,6 +1505,7 @@ const OwnerDashboard: React.FC = () => {
 
         {/* Main Content */}
         <main
+          className="owner-main"
           style={{
             marginLeft: 250,
             flex: 1,
@@ -1487,6 +1515,7 @@ const OwnerDashboard: React.FC = () => {
         >
           {/* Top Bar */}
           <div
+            className="owner-topbar"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -1494,6 +1523,8 @@ const OwnerDashboard: React.FC = () => {
               marginBottom: 35,
               borderBottom: '1px solid rgba(255,255,255,0.08)',
               paddingBottom: 20,
+              flexWrap: 'wrap',
+              gap: 12,
             }}
           >
             <h1
