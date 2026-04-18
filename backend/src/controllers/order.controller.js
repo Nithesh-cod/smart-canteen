@@ -458,7 +458,8 @@ const track = asyncHandler(async (req, res) => {
     ...safeOrder
   } = order;
 
-  return res.json({ success: true, data: { order: safeOrder } });
+  // Return order directly as data (consistent with all other order endpoints)
+  return res.json({ success: true, data: safeOrder });
 });
 
 // ============================================================================

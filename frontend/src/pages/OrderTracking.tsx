@@ -303,7 +303,11 @@ const OrderTracking: React.FC = () => {
     setOrder(null);
     try {
       const res = await orderService.track(trackNum);
-      const data = (res as any).data?.data || (res as any).data || res;
+      // Backend returns { success, data: order } — axios wraps in response.data
+      // so res = { success, data: order }. Support legacy { data: { order } } shape too.
+      const data = (res as any).data?.id
+        ? (res as any).data
+        : (res as any).data?.order ?? (res as any).data?.data?.order ?? null;
       if (!data || !data.id) {
         setNotFound(true);
       } else {
@@ -325,7 +329,9 @@ const OrderTracking: React.FC = () => {
     if (!order) return;
     try {
       const res = await orderService.track(order.order_number);
-      const data = (res as any).data?.data || (res as any).data || res;
+      const data = (res as any).data?.id
+        ? (res as any).data
+        : (res as any).data?.order ?? (res as any).data?.data?.order ?? null;
       if (data?.id) setOrder(data);
     } catch {
       // silent
