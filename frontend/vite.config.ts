@@ -19,7 +19,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    // Chunk splitting: vendor libs in a separate chunk for better caching
+    // Disable <link rel="modulepreload"> injection — Vite preloads all split
+    // chunks upfront which causes hundreds of "preloaded but not used" warnings
+    // in the browser when navigating between SPA routes.
+    modulePreload: false,
     rollupOptions: {
       output: {
         manualChunks: {

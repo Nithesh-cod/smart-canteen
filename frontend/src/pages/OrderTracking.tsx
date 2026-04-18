@@ -392,9 +392,13 @@ const OrderTracking: React.FC = () => {
         .track-input:focus { outline: none; border-color: #00f5ff !important; box-shadow: 0 0 0 3px rgba(0,245,255,0.15) !important; }
       `}</style>
 
-      <div className="cyber-grid" style={{
+      {/* NOTE: do NOT use className="cyber-grid" here — that CSS class sets
+           pointer-events:none which blocks all input interaction on this page */}
+      <div style={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)',
+        backgroundImage: 'linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px)',
+        backgroundSize: '50px 50px',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '40px 20px 80px',
       }}>

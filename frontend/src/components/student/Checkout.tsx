@@ -121,30 +121,38 @@ const Checkout: React.FC<CheckoutProps> = ({
     setError('');
 
     try {
-      const orderResult = await orderService.create(
-        cartItems.map((i) => ({ menu_item_id: i.id, quantity: i.quantity })),
-        pointsToRedeem
-      );
+      let order: Order;
 
-      if (!orderResult.success || !orderResult.data) {
-        setCheckoutState('error');
-        setError(orderResult.message || 'Failed to create order. Please try again.');
-        return;
+      if (completedOrder) {
+        // ── Retry after payment failure ────────────────────────────────────
+        // Reuse the order that was already created — don't create a duplicate.
+        order = completedOrder;
+      } else {
+        // ── First attempt — create a fresh order ───────────────────────────
+        const orderResult = await orderService.create(
+          cartItems.map((i) => ({ menu_item_id: i.id, quantity: i.quantity })),
+          pointsToRedeem
+        );
+
+        if (!orderResult.success || !orderResult.data) {
+          setCheckoutState('error');
+          setError(orderResult.message || 'Failed to create order. Please try again.');
+          return;
+        }
+
+        // Backend returns { order: {...}, points_earned, ... }
+        const rawData = orderResult.data as any;
+        order = rawData?.order ?? rawData;
+
+        if (!order?.id) {
+          setCheckoutState('error');
+          setError('Failed to create order: invalid response from server.');
+          return;
+        }
+
+        dispatch(setCurrentOrder(order));
+        setCompletedOrder(order);
       }
-
-      // Backend returns { order: {...}, points_earned, points_used, discount_applied }
-      // The actual Order object is nested under .order
-      const rawData = orderResult.data as any;
-      const order: Order = rawData?.order ?? rawData;
-
-      if (!order?.id) {
-        setCheckoutState('error');
-        setError('Failed to create order: invalid response from server.');
-        return;
-      }
-
-      dispatch(setCurrentOrder(order));
-      setCompletedOrder(order);
 
       // Hide the checkout modal so the Razorpay iframe is fully visible
       setCheckoutState('paying');
@@ -723,30 +731,48 @@ const Checkout: React.FC<CheckoutProps> = ({
         {error || 'Something went wrong. Please try again.'}
       </p>
 
-      <button
-        onClick={handleTryAgain}
-        style={{
-          padding: '12px 28px',
-          borderRadius: 10,
-          border: '1px solid #00f5ff',
-          background: 'rgba(0,245,255,0.1)',
-          color: '#00f5ff',
-          fontSize: '1rem',
-          fontFamily: 'Rajdhani, sans-serif',
-          fontWeight: 700,
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          letterSpacing: '0.5px',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(0,245,255,0.2)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(0,245,255,0.1)';
-        }}
-      >
-        Try Again
-      </button>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <button
+          onClick={handleTryAgain}
+          style={{
+            padding: '12px 28px',
+            borderRadius: 10,
+            border: '1px solid #00f5ff',
+            background: 'rgba(0,245,255,0.1)',
+            color: '#00f5ff',
+            fontSize: '1rem',
+            fontFamily: 'Rajdhani, sans-serif',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            letterSpacing: '0.5px',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,245,255,0.2)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,245,255,0.1)'; }}
+        >
+          🔄 Try Again
+        </button>
+        <button
+          onClick={onClose}
+          style={{
+            padding: '12px 28px',
+            borderRadius: 10,
+            border: '1px solid rgba(255,255,255,0.2)',
+            background: 'rgba(255,255,255,0.05)',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: '1rem',
+            fontFamily: 'Rajdhani, sans-serif',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            letterSpacing: '0.5px',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+        >
+          ← Back to Menu
+        </button>
+      </div>
     </div>
   );
 
@@ -869,7 +895,7 @@ const Checkout: React.FC<CheckoutProps> = ({
       case 'info':
         return renderInfoContent();
       case 'authenticating':
-        return renderLoadingContent('Verifying identity...');
+        return renderLoadingContent('Setting up your order...');
       case 'idle':
         return renderIdleContent();
       case 'creating':
