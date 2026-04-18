@@ -45,11 +45,11 @@ const Modal: React.FC<ModalProps> = ({
     backdropFilter: 'blur(30px)',
     WebkitBackdropFilter: 'blur(30px)',
     border: '1px solid rgba(0,245,255,0.2)',
-    borderRadius: '25px',
-    padding: '35px',
-    width: '90%',
+    borderRadius: '22px',
+    padding: '28px 28px 32px',
+    width: '92%',
     maxWidth,
-    maxHeight: '85vh',
+    maxHeight: '88vh',
     overflowY: 'auto',
     position: 'relative',
     animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
@@ -61,13 +61,13 @@ const Modal: React.FC<ModalProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: title ? '28px' : '0',
+    marginBottom: title ? '22px' : '0',
   };
 
   const titleStyle: React.CSSProperties = {
     fontFamily: "'Orbitron', monospace",
     fontWeight: 700,
-    fontSize: '1.3rem',
+    fontSize: '1.2rem',
     background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
@@ -99,12 +99,12 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div style={overlayStyle} onClick={handleOverlayClick}>
-      <div style={contentStyle}>
+    <div className="modal-overlay" style={overlayStyle} onClick={handleOverlayClick}>
+      <div className="modal-content" style={contentStyle}>
         {(title || true) && (
           <div style={headerStyle}>
             {title ? (
-              <h2 style={titleStyle}>{title}</h2>
+              <h2 className="modal-title" style={titleStyle}>{title}</h2>
             ) : (
               <span />
             )}
