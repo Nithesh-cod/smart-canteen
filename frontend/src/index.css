@@ -268,7 +268,7 @@ body {
 
 /* ── OwnerDashboard — tablet: icon-only sidebar ─────────────────────── */
 @media (max-width: 900px) {
-  .owner-sidebar              { width: 64px !important; padding: 20px 6px !important; overflow: hidden !important; }
+  .owner-sidebar              { width: 64px !important; padding: 20px 6px !important; }
   .owner-sidebar-logo         { display: none !important; }
   .owner-sidebar-label        { display: none !important; }
   .owner-sidebar-nav-item     { justify-content: center !important; padding: 12px 6px !important; margin-bottom: 4px !important; }
@@ -289,20 +289,31 @@ body {
     border-right: none !important;
     border-top: 1px solid rgba(255,255,255,0.1) !important;
     justify-content: space-around !important;
-    align-items: center !important;
+    align-items: stretch !important;
     overflow: visible !important;
+  }
+  /* nav must also become a row so buttons lay out horizontally */
+  .owner-sidebar nav {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    width: 100% !important;
+    flex: 1 !important;
+    gap: 0 !important;
   }
   .owner-sidebar-logo         { display: none !important; }
   .owner-sidebar-footer       { display: none !important; }
   .owner-sidebar-nav-item {
+    flex: 1 !important;
+    max-width: 80px !important;
     flex-direction: column !important;
     justify-content: center !important;
     align-items: center !important;
     gap: 2px !important;
     padding: 4px 6px !important;
     margin-bottom: 0 !important;
-    min-width: 44px !important;
-    border-left: 4px solid transparent !important;   /* kill left-border active indicator */
+    border-left: none !important;
     border-bottom: 2px solid transparent !important;
     border-radius: 8px !important;
   }
@@ -334,4 +345,17 @@ body {
 /* ── Offer banner compact on mobile ─────────────────────────────────── */
 @media (max-width: 640px) {
   .offer-banner { padding: 8px 12px !important; margin-bottom: 14px !important; }
+}
+
+/* ── OrderTracking ───────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .track-outer  { padding: 16px 12px 60px !important; align-items: flex-start !important; }
+  .track-card   { padding: 24px 18px !important; border-radius: 20px !important; }
+  .track-logo   { font-size: 1.5rem !important; }
+  .track-detail-card { padding: 20px 16px !important; border-radius: 20px !important; }
+  /* Progress tracker step labels: allow wrapping on tiny screens */
+  .track-progress-label { white-space: normal !important; text-align: center !important; font-size: 0.6rem !important; }
+  /* Progress tracker container: reduce side padding */
+  .track-progress { margin: 18px 0 !important; }
+  .track-progress > div { padding: 0 6px !important; }
 }

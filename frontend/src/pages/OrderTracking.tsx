@@ -60,7 +60,7 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
   const fillPct = currentIdx <= 0 ? 0 : (currentIdx / (STATUS_STEPS.length - 1)) * 100;
 
   return (
-    <div style={{ margin: '32px 0' }}>
+    <div className="track-progress" style={{ margin: '32px 0' }}>
       <div style={{ position: 'relative', padding: '0 20px' }}>
         {/* Background track line */}
         <div style={{
@@ -121,7 +121,7 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
                   </div>
                 </div>
                 {/* Label */}
-                <div style={{
+                <div className="track-progress-label" style={{
                   fontSize: '0.68rem', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
                   color: isDone ? '#00ff88' : isCurrent ? '#00f5ff' : 'rgba(255,255,255,0.25)',
                   textTransform: 'uppercase', letterSpacing: 0.5,
@@ -394,7 +394,7 @@ const OrderTracking: React.FC = () => {
 
       {/* NOTE: do NOT use className="cyber-grid" here — that CSS class sets
            pointer-events:none which blocks all input interaction on this page */}
-      <div style={{
+      <div className="track-outer" style={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)',
         backgroundImage: 'linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px)',
@@ -405,14 +405,14 @@ const OrderTracking: React.FC = () => {
         <div style={{ width: '100%', maxWidth: 650 }}>
 
           {/* Main Search Card */}
-          <div style={{
+          <div className="track-card" style={{
             background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
             border: '1px solid rgba(255,255,255,0.1)', borderRadius: 30,
             padding: 40, animation: 'glowPulse 4s ease-in-out infinite',
           }}>
             {/* Logo */}
             <div style={{ textAlign: 'center', marginBottom: 6 }}>
-              <div style={{
+              <div className="track-logo" style={{
                 fontFamily: 'Orbitron, sans-serif', fontSize: '2.5rem', fontWeight: 900,
                 background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1.1,
@@ -486,7 +486,7 @@ const OrderTracking: React.FC = () => {
 
           {/* Order Details Card */}
           {order && (
-            <div style={{
+            <div className="track-detail-card" style={{
               marginTop: 24,
               background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
               border: `1px solid ${isCancelled ? 'rgba(255,51,102,0.3)' : 'rgba(0,245,255,0.2)'}`,
