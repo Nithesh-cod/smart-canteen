@@ -840,7 +840,6 @@ const ChefDisplay: React.FC = () => {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: linear-gradient(135deg, #0a0a1a, #1a0a2e, #0f0a1f); min-height: 100vh; font-family: 'Rajdhani', sans-serif; }
         @keyframes scanline { 0%{background-position:0 0} 100%{background-position:0 100vh} }
