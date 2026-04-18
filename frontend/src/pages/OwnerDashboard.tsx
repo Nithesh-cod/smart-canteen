@@ -210,7 +210,7 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
             <tbody>
               {filtered.map((order) => {
                 const sc = statusColor(order.status);
-                const paid = order.payment_status === 'paid' || order.payment_status === 'completed';
+                const paid = order.payment_status === 'paid';
                 return (
                   <tr
                     key={order.id}
