@@ -27,7 +27,7 @@ const StatsRow: React.FC<{ orders: Order[]; menuItems: MenuItem[] }> = ({ orders
   ];
 
   return (
-    <div style={{
+    <div className="chef-stats-grid" style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(4, 1fr)',
       gap: '16px',
@@ -294,7 +294,7 @@ const OrdersTab: React.FC<{ orders: Order[]; onStatusUpdate: (id: number, s: Ord
       .queue-col::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 2px; }
       .queue-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
     `}</style>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'start' }}>
+    <div className="chef-orders-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'start' }}>
       {COLUMNS.map(col => {
         const colOrders = orders.filter(o => o.status === col.status);
         return (
@@ -847,6 +847,24 @@ const ChefDisplay: React.FC = () => {
         @keyframes slideInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin { to{transform:rotate(360deg)} }
+
+        /* ── Mobile responsive ── */
+        .chef-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+        .chef-orders-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start; }
+        .chef-header { padding: 0 40px !important; }
+        .chef-main { padding: 24px 20px !important; }
+
+        @media (max-width: 768px) {
+          .chef-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; margin-bottom: 18px !important; }
+          .chef-orders-grid { grid-template-columns: 1fr !important; }
+          .chef-header { padding: 0 16px !important; height: auto !important; min-height: 60px !important; flex-wrap: wrap !important; gap: 8px !important; }
+          .chef-header h1 { font-size: 14px !important; letter-spacing: 1px !important; }
+          .chef-main { padding: 14px 12px !important; }
+        }
+        @media (max-width: 480px) {
+          .chef-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .chef-header { display: flex !important; flex-wrap: wrap !important; }
+        }
       `}</style>
 
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a1a, #1a0a2e, #0f0a1f)', position: 'relative' }}>
@@ -858,7 +876,7 @@ const ChefDisplay: React.FC = () => {
         }} />
 
         {/* Header */}
-        <header style={{
+        <header className="chef-header" style={{
           position: 'sticky', top: 0, zIndex: 50, height: '80px',
           background: 'rgba(10,10,26,0.88)', backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
@@ -924,7 +942,7 @@ const ChefDisplay: React.FC = () => {
         </header>
 
         {/* Main content */}
-        <main style={{ position: 'relative', zIndex: 1, padding: '28px 40px 60px' }}>
+        <main className="chef-main" style={{ position: 'relative', zIndex: 1, padding: '28px 40px 60px' }}>
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '20px' }}>
               <div style={{ width: '60px', height: '60px', border: '3px solid rgba(0,245,255,0.1)', borderTop: '3px solid #00f5ff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />

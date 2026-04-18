@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
 import { logout as logoutAction } from '../store/slices/authSlice';
@@ -14,6 +14,8 @@ import Checkout from '../components/student/Checkout';
 import { useToast } from '../components/common/Toast';
 import type { MenuItem, Order } from '../types';
 import api from '../services/api';
+// @ts-ignore — JSX component without types
+import Ballpit from '../components/student/Ballpit';
 
 // ─── Offer Banner ─────────────────────────────────────────────────────────────
 
@@ -68,21 +70,21 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
           50% { box-shadow: 0 0 20px rgba(255,0,255,0.4); }
         }
       `}</style>
-      <span style={{ fontSize: '1.3rem' }}>🎁</span>
+      <span style={{ fontSize: 'clamp(1rem, 3vw, 1.3rem)' }}>🎁</span>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <div style={{
           fontFamily: 'Orbitron, sans-serif',
           fontWeight: 700,
-          fontSize: '0.75rem',
+          fontSize: 'clamp(0.65rem, 2vw, 0.75rem)',
           color: '#ff00ff',
-          letterSpacing: '0.1em',
+          letterSpacing: '0.08em',
         }}>
           {discount && `${discount}${minOrder} · `}{offer.title}
         </div>
         {offer.description && (
           <div style={{
             fontFamily: 'Rajdhani, sans-serif',
-            fontSize: '0.78rem',
+            fontSize: 'clamp(0.7rem, 2vw, 0.78rem)',
             color: 'rgba(255,255,255,0.55)',
             marginTop: 2,
             whiteSpace: 'nowrap',
@@ -115,74 +117,8 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
   );
 };
 
-// ─── Floating Particles ───────────────────────────────────────────────────────
-
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  duration: number;
-  delay: number;
-  drift: number;
-}
-
-const PARTICLE_COLORS = [
-  'rgba(0,245,255,0.6)',
-  'rgba(255,0,255,0.5)',
-  'rgba(255,237,78,0.4)',
-  'rgba(0,255,136,0.5)',
-  'rgba(255,51,102,0.4)',
-  'rgba(168,85,247,0.5)',
-];
-
-const generateParticles = (): Particle[] =>
-  Array.from({ length: 30 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: 2 + Math.random() * 4,
-    color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
-    duration: 8 + Math.random() * 12,
-    delay: Math.random() * 8,
-    drift: (Math.random() - 0.5) * 60,
-  }));
-
-const FloatingParticles: React.FC = () => {
-  const particles = useMemo(generateParticles, []);
-  return (
-    <>
-      <style>{`
-        @keyframes floatParticle {
-          0%   { transform: translateY(0) translateX(0); opacity: 0; }
-          10%  { opacity: 1; }
-          90%  { opacity: 0.8; }
-          100% { transform: translateY(-100vh) translateX(var(--drift)); opacity: 0; }
-        }
-      `}</style>
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-        {particles.map(p => (
-          <div
-            key={p.id}
-            style={{
-              position: 'absolute',
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-              width: p.size,
-              height: p.size,
-              borderRadius: '50%',
-              background: p.color,
-              boxShadow: `0 0 ${p.size * 2}px ${p.color}`,
-              animation: `floatParticle ${p.duration}s ${p.delay}s ease-in-out infinite`,
-              '--drift': `${p.drift}px`,
-            } as React.CSSProperties}
-          />
-        ))}
-      </div>
-    </>
-  );
-};
+// Ballpit colours: cyan → magenta → amber → green (matches app theme)
+const BALLPIT_COLORS = [0x00f5ff, 0xff00ff, 0xffed4e, 0x00ff88, 0xa855f7];
 
 // ─── Main StudentKiosk Component ──────────────────────────────────────────────
 
@@ -191,6 +127,9 @@ const bgStyle: React.CSSProperties = {
   background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)',
   position: 'relative',
 };
+
+// Responsive helpers (mobile-first inline styles via JS)
+const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 640;
 
 const StudentKiosk: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -413,8 +352,22 @@ const StudentKiosk: React.FC = () => {
 
   return (
     <div style={bgStyle}>
-      <FloatingParticles />
-      <div className="cyber-grid" />
+      {/* ── Ballpit full-screen background ─────────────────────────────────── */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <Ballpit
+          count={150}
+          gravity={0.6}
+          friction={0.982}
+          wallBounce={0.85}
+          followCursor
+          colors={BALLPIT_COLORS}
+          ambientColor={0x0a0a1a}
+          ambientIntensity={0.6}
+          lightIntensity={180}
+          minSize={0.3}
+          maxSize={0.9}
+        />
+      </div>
 
       {/* Sticky header */}
       <header
@@ -422,10 +375,10 @@ const StudentKiosk: React.FC = () => {
           position: 'sticky',
           top: 0,
           zIndex: 100,
-          background: 'rgba(10,10,26,0.9)',
+          background: 'rgba(10,10,26,0.85)',
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
-          padding: '15px 30px',
+          padding: 'clamp(10px, 2vw, 15px) clamp(14px, 4vw, 30px)',
         }}
       >
         <div
@@ -439,23 +392,23 @@ const StudentKiosk: React.FC = () => {
             <h1
               style={{
                 fontFamily: 'Orbitron, sans-serif',
-                fontSize: '2rem',
+                fontSize: 'clamp(1.1rem, 4vw, 2rem)',
                 fontWeight: 900,
                 background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 margin: 0,
                 lineHeight: 1.2,
+                whiteSpace: 'nowrap',
               }}
             >
               🍕 SMART CANTEEN
             </h1>
             <p
               style={{
-                fontSize: '0.75rem',
-                letterSpacing: '3px',
+                fontSize: 'clamp(0.6rem, 1.8vw, 0.75rem)',
+                letterSpacing: '2px',
                 color: 'rgba(255,255,255,0.5)',
-                marginTop: 2,
                 fontFamily: 'Rajdhani, sans-serif',
                 margin: '2px 0 0 0',
               }}
@@ -465,12 +418,12 @@ const StudentKiosk: React.FC = () => {
           </div>
 
           {/* Right side: cart count hint */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {cartCount > 0 && (
               <div
                 style={{
                   fontFamily: 'Rajdhani, sans-serif',
-                  fontSize: '0.9rem',
+                  fontSize: 'clamp(0.75rem, 2.5vw, 0.9rem)',
                   color: 'rgba(0,245,255,0.7)',
                   letterSpacing: '0.5px',
                 }}
@@ -485,7 +438,7 @@ const StudentKiosk: React.FC = () => {
       {/* Main content */}
       <main
         style={{
-          padding: '20px 30px',
+          padding: 'clamp(12px, 3vw, 20px) clamp(10px, 4vw, 30px)',
           maxWidth: 1400,
           margin: '0 auto',
           paddingBottom: 120,
@@ -536,18 +489,18 @@ const StudentKiosk: React.FC = () => {
         aria-label={`Open cart, ${cartCount} items`}
         style={{
           position: 'fixed',
-          bottom: 30,
-          right: 30,
+          bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
+          right: 20,
           zIndex: 1000,
-          width: 70,
-          height: 70,
+          width: 'clamp(56px, 10vw, 70px)',
+          height: 'clamp(56px, 10vw, 70px)',
           borderRadius: '50%',
           background: 'rgba(0,245,255,0.12)',
           backdropFilter: 'blur(20px)',
           border: '2px solid #00f5ff',
           boxShadow: '0 0 30px rgba(0,245,255,0.4)',
           cursor: 'pointer',
-          fontSize: '1.8rem',
+          fontSize: 'clamp(1.4rem, 4vw, 1.8rem)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

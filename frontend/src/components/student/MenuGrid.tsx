@@ -113,6 +113,7 @@ const MenuGrid: React.FC<MenuGridProps> = ({
         </span>
         <input
           type="text"
+          className="menu-search-input"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search menu..."
@@ -157,6 +158,7 @@ const MenuGrid: React.FC<MenuGridProps> = ({
           return (
             <button
               key={cat.id}
+              className="menu-cat-pill"
               onClick={() => onCategoryChange(cat.id)}
               style={{
                 flexShrink: 0,
@@ -197,7 +199,7 @@ const MenuGrid: React.FC<MenuGridProps> = ({
 
       {/* ── Loading skeletons ─────────────────────────────────────────────── */}
       {loading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 25 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 'clamp(12px, 3vw, 25px)' }}>
           {Array.from({ length: 8 }).map((_, idx) => (
             <div
               key={idx}
@@ -254,7 +256,7 @@ const MenuGrid: React.FC<MenuGridProps> = ({
 
       {/* ── Items grid ────────────────────────────────────────────────────── */}
       {!loading && filteredItems.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 25 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 'clamp(12px, 3vw, 25px)' }}>
           {filteredItems.map((item, idx) => {
             const cartItem = cartItems.find((ci) => ci.id === item.id);
             const cartQuantity = cartItem ? cartItem.quantity : 0;
@@ -285,6 +287,17 @@ const MenuGrid: React.FC<MenuGridProps> = ({
         @keyframes cardEntry {
           from { opacity: 0; transform: translateY(24px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        /* ── Mobile tweaks ── */
+        @media (max-width: 480px) {
+          .menu-search-input {
+            font-size: 0.95rem !important;
+            padding: 11px 14px 11px 42px !important;
+          }
+          .menu-cat-pill {
+            padding: 6px 12px !important;
+            font-size: 0.82rem !important;
+          }
         }
       `}</style>
     </div>
