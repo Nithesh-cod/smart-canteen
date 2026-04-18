@@ -7,7 +7,7 @@ import {
   clearCart,
 } from '../../store/slices/cartSlice';
 import { setCurrentOrder } from '../../store/slices/orderSlice';
-import { updateStudent, setCredentials } from '../../store/slices/authSlice';
+import { updateStudent, setCredentials, logout } from '../../store/slices/authSlice';
 import * as orderService from '../../services/order.service';
 import * as paymentService from '../../services/payment.service';
 import { downloadBillPDF, printThermalBill } from '../../services/payment.service';
@@ -82,6 +82,10 @@ const Checkout: React.FC<CheckoutProps> = ({
 
   // Guest info (collected when student is not logged in)
   const [guestInfo, setGuestInfo] = useState({ name: '', roll: '', phone: '' });
+  // Tracks whether auth happened silently during THIS checkout session.
+  // If true, we clear the session when the modal closes so the kiosk never
+  // shows the student as "logged in" after they finish ordering.
+  const [isGuestSession, setIsGuestSession] = useState(false);
   const wasOpenRef = useRef(false);
 
   // Reset state every time the modal is freshly opened
@@ -92,9 +96,18 @@ const Checkout: React.FC<CheckoutProps> = ({
       setGuestInfo({ name: '', roll: '', phone: '' });
       setCompletedOrder(null);
       setBillPrinted(null);
+      setIsGuestSession(false);
     }
     wasOpenRef.current = isOpen;
   }, [isOpen]); // intentionally NOT including currentStudent
+
+  // Clear guest session — called whenever the modal closes after a guest checkout.
+  // This ensures the student kiosk never shows a "logged in" state after ordering.
+  const clearGuestSession = () => {
+    authService.clearAuthData();   // remove from localStorage
+    dispatch(logout());            // remove from Redux
+    setIsGuestSession(false);
+  };
 
   // Derive name/phone from Redux (after possible guest auth)
   const studentName = currentStudent?.name ?? '';
@@ -112,6 +125,7 @@ const Checkout: React.FC<CheckoutProps> = ({
 
   const handleClose = () => {
     if (!isBlocking) {
+      if (isGuestSession) clearGuestSession();
       onClose();
     }
   };
@@ -281,9 +295,14 @@ const Checkout: React.FC<CheckoutProps> = ({
         authData = signupResult.data;
       }
 
-      // ── Step 3: Persist and proceed ─────────────────────────────────────
+      // ── Step 3: Store temporarily for this checkout session only ───────
+      // We DO persist to localStorage so the axios interceptor can attach
+      // the token on the order-creation request. But we mark this as a
+      // guest session so it gets cleared when the modal closes — the kiosk
+      // should never show the student as "permanently logged in".
       authService.saveAuthData(authData.token, authData.student);
       dispatch(setCredentials({ student: authData.student, token: authData.token }));
+      setIsGuestSession(true);
       setCheckoutState('idle');
     } catch (err: unknown) {
       // Catch signup errors (e.g. duplicate phone, network failure)
@@ -297,6 +316,8 @@ const Checkout: React.FC<CheckoutProps> = ({
     if (completedOrder) {
       onSuccess(completedOrder);
     }
+    // Always clear guest auth on close — kiosk goes back to anonymous mode
+    if (isGuestSession) clearGuestSession();
     onClose();
   };
 
@@ -753,7 +774,6 @@ const Checkout: React.FC<CheckoutProps> = ({
           🔄 Try Again
         </button>
         <button
-          onClick={onClose}
           style={{
             padding: '12px 28px',
             borderRadius: 10,
@@ -769,6 +789,7 @@ const Checkout: React.FC<CheckoutProps> = ({
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+          onClick={() => { if (isGuestSession) clearGuestSession(); onClose(); }}
         >
           ← Back to Menu
         </button>
