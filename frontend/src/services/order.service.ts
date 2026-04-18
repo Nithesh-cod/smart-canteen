@@ -6,6 +6,12 @@ export interface CreateOrderItem {
   quantity: number;
 }
 
+export interface GuestInfo {
+  guest_name: string;
+  guest_phone?: string;
+  guest_roll?: string;
+}
+
 export interface GetAllParams {
   status?: string;
   page?: number;
@@ -14,14 +20,18 @@ export interface GetAllParams {
 
 /**
  * Place a new order.
+ * Pass guestInfo when the student is not logged in (guest checkout).
+ * No Authorization header is sent — the backend accepts anonymous POST /orders.
  */
 export const create = async (
   items: CreateOrderItem[],
-  pointsToRedeem: number = 0
+  pointsToRedeem: number = 0,
+  guestInfo?: GuestInfo
 ): Promise<ApiResponse<Order>> => {
   const response = await api.post<ApiResponse<Order>>('/orders', {
     items,
     points_to_redeem: pointsToRedeem,
+    ...(guestInfo ?? {}),
   });
   return response.data;
 };

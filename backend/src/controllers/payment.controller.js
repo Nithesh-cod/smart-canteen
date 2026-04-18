@@ -26,7 +26,7 @@ const { rupeesToPaise }        = require('../utils/helpers');
  */
 const createPaymentOrder = asyncHandler(async (req, res) => {
   const { order_id } = req.body;
-  const studentId    = req.user.id;
+  const studentId    = req.user ? req.user.id : null;
 
   if (!order_id) {
     return res.status(400).json({ success: false, message: 'order_id is required' });
@@ -38,8 +38,8 @@ const createPaymentOrder = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
 
-  // Verify the order belongs to the requesting student
-  if (order.student_id !== studentId) {
+  // For logged-in students verify ownership; guest orders have null student_id
+  if (studentId && order.student_id && order.student_id !== studentId) {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
 
@@ -109,7 +109,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
     order_id
   } = req.body;
 
-  const studentId = req.user.id;
+  const studentId = req.user ? req.user.id : null;
 
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !order_id) {
     return res.status(400).json({
@@ -137,7 +137,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
 
-  if (order.student_id !== studentId) {
+  // For logged-in students verify ownership; guest orders have null student_id
+  if (studentId && order.student_id && order.student_id !== studentId) {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
 
@@ -159,33 +160,28 @@ const verifyPayment = asyncHandler(async (req, res) => {
     await Order.updateStatus(order.id, 'preparing');
   }
 
-  // 4. Update student loyalty points and spending stats
+  // 4. Update student loyalty points and spending stats — only for logged-in students
   let updatedStudent = null;
-  try {
-    // Deduct any points that were redeemed at order time
-    if (order.points_used > 0) {
-      await Student.deductPoints(studentId, order.points_used);
+  if (studentId && order.student_id) {
+    try {
+      if (order.points_used > 0) {
+        await Student.deductPoints(studentId, order.points_used);
+      }
+      if (order.points_earned > 0) {
+        await Student.addPoints(studentId, order.points_earned);
+      }
+      updatedStudent = await Student.updateStats(studentId, parseFloat(order.total_amount));
+      updatedStudent = await Student.updateTier(studentId);
+    } catch (pointsErr) {
+      logger.error('Failed to update student points/stats after payment', pointsErr);
     }
-
-    // Add points earned from this order
-    if (order.points_earned > 0) {
-      await Student.addPoints(studentId, order.points_earned);
-    }
-
-    // Update total_spent and total_orders counters
-    updatedStudent = await Student.updateStats(studentId, parseFloat(order.total_amount));
-
-    // Recalculate tier based on new total_spent
-    updatedStudent = await Student.updateTier(studentId);
-  } catch (pointsErr) {
-    // Log but do not fail the payment response
-    logger.error('Failed to update student points/stats after payment', pointsErr);
   }
 
   // 5. Emit payment:success socket event
   const io = req.app.get('io');
   if (io) {
-    io.to(`student:${studentId}`).emit('payment:confirmed', {
+    const socketRoom = studentId ? `student:${studentId}` : `order:${order.id}`;
+    io.to(socketRoom).emit('payment:confirmed', {
       orderId:       order.id,
       orderNumber:   order.order_number,
       amount:        order.total_amount,

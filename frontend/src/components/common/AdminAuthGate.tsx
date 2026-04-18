@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import axios from 'axios';
 import * as authService from '../../services/auth.service';
 
 // ─── JWT decoder (no verification — just reads the payload) ───────────────────
@@ -33,30 +34,61 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
   const autoLoggingIn = useRef(false);
 
   // ── Silent auto-login ──────────────────────────────────────────────────────
+  // 1. Try login.  2. If 404 (account never created), auto-signup then login.
   const silentLogin = useCallback(async (rollNum: string) => {
     if (autoLoggingIn.current) return;
     autoLoggingIn.current = true;
+
+    const attemptLogin = async (): Promise<{ token: string; student: import('../../types').Student } | null> => {
+      try {
+        const result = await authService.login(rollNum.trim());
+        if (result.success && result.data) return result.data;
+        return null;
+      } catch (err) {
+        // 404 → account not created yet; anything else → real failure
+        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+        throw err;
+      }
+    };
+
     try {
-      const result = await authService.login(rollNum.trim());
-      if (!result.success || !result.data) {
+      let authData = await attemptLogin();
+
+      // Account doesn't exist yet — auto-create it so the dashboard never blocks
+      if (!authData) {
+        try {
+          await authService.signup({
+            name:        dashboardName,   // e.g. "Chef Display" or "Owner Dashboard"
+            roll_number: rollNum.trim(),
+            phone:       rollNum.trim(),  // use roll as placeholder phone (unique)
+          });
+          authData = await attemptLogin();
+        } catch {
+          // signup failed (e.g. duplicate) — try login one more time
+          authData = await attemptLogin();
+        }
+      }
+
+      if (!authData) {
         autoLoggingIn.current = false;
         setStatus('unauthenticated');
         return;
       }
-      const payload = decodeJWT(result.data.token);
+
+      const payload = decodeJWT(authData.token);
       const role = payload?.role as string | undefined;
       if (!role || !requiredRoles.includes(role)) {
         autoLoggingIn.current = false;
         setStatus('wrong_role');
         return;
       }
-      authService.saveAuthData(result.data.token, result.data.student);
+      authService.saveAuthData(authData.token, authData.student);
       setStatus('authenticated');
     } catch {
       autoLoggingIn.current = false;
       setStatus('unauthenticated');
     }
-  }, [requiredRoles]);
+  }, [requiredRoles, dashboardName]);
 
   // ── Check stored token / trigger auto-login ────────────────────────────────
   const checkToken = useCallback(() => {
@@ -64,18 +96,20 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
     if (token) {
       const payload = decodeJWT(token);
       if (payload) {
-        const expired = payload.exp && (payload.exp as number) * 1000 < Date.now();
+        const expired = !payload.exp || (payload.exp as number) * 1000 < Date.now();
         if (!expired) {
           const role = payload.role as string | undefined;
           if (role && requiredRoles.includes(role)) {
             setStatus('authenticated');
             return;
           }
+          // Token is valid but wrong role (e.g. stale student token)
+          // Fall through to auto-login below instead of showing wrong_role immediately
         }
       }
       authService.clearAuthData();
     }
-    // No valid token — auto-login silently if roll configured
+    // No usable token — auto-login silently if roll configured
     if (autoLoginRoll) {
       silentLogin(autoLoginRoll);
     } else {
@@ -142,7 +176,38 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
     return <>{children}</>;
   }
 
-  // Wrong role or unauthenticated (manual login form — only if no autoLoginRoll)
+  // If autoLoginRoll is set but role is wrong → backend env var is not configured
+  if (autoLoginRoll && status === 'wrong_role') {
+    return (
+      <div style={pageStyle}>
+        <div style={cardStyle}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>⚠️</div>
+            <h1 style={headingStyle}>{dashboardName}</h1>
+            <p style={{ ...subStyle, marginTop: 12, lineHeight: 1.6 }}>
+              Account <strong style={{ color: '#00f5ff' }}>{autoLoginRoll}</strong> logged in but has <em>student</em> role.
+              <br /><br />
+              On Render, set:<br />
+              <code style={{ color: '#ffed4e', fontSize: '0.85rem' }}>
+                ADMIN_ROLLS={autoLoginRoll}<br />
+                CHEF_ROLLS={autoLoginRoll}
+              </code>
+              <br /><br />
+              Then redeploy the backend.
+            </p>
+            <button
+              onClick={() => { authService.clearAuthData(); autoLoggingIn.current = false; silentLogin(autoLoginRoll); }}
+              style={{ ...btnStyle, marginTop: 16 }}
+            >
+              🔄 Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Wrong role or unauthenticated (manual login form — only when no autoLoginRoll)
   return (
     <div style={pageStyle}>
       <div style={cardStyle}>

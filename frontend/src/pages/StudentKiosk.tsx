@@ -8,7 +8,6 @@ import * as menuService from '../services/menu.service';
 import * as authService from '../services/auth.service';
 import { subscribeToTable, unsubscribe } from '../services/supabase';
 import socketService from '../services/socket.service';
-import ProfileBar from '../components/student/ProfileBar';
 import MenuGrid from '../components/student/MenuGrid';
 import Cart from '../components/student/Cart';
 import Checkout from '../components/student/Checkout';
@@ -185,15 +184,6 @@ const FloatingParticles: React.FC = () => {
   );
 };
 
-// ─── Tier Badge ───────────────────────────────────────────────────────────────
-
-const TIER_CONFIG: Record<string, { color: string; bg: string; border: string; emoji: string; label: string }> = {
-  bronze:   { color: '#cd7f32', bg: 'rgba(205,127,50,0.18)',  border: 'rgba(205,127,50,0.5)',  emoji: '🥉', label: 'Bronze' },
-  silver:   { color: '#c0c0c0', bg: 'rgba(192,192,192,0.15)', border: 'rgba(192,192,192,0.4)', emoji: '🥈', label: 'Silver' },
-  gold:     { color: '#ffd700', bg: 'rgba(255,215,0,0.18)',   border: 'rgba(255,215,0,0.5)',   emoji: '🥇', label: 'Gold' },
-  platinum: { color: '#e5e4e2', bg: 'rgba(229,228,226,0.14)', border: 'rgba(229,228,226,0.5)', emoji: '💎', label: 'Platinum' },
-};
-
 // ─── Main StudentKiosk Component ──────────────────────────────────────────────
 
 const bgStyle: React.CSSProperties = {
@@ -218,6 +208,15 @@ const StudentKiosk: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeOffers, setActiveOffers] = useState<ActiveOffer[]>([]);
+
+  // ── Kiosk is ALWAYS anonymous ─────────────────────────────────────────────
+  // Clear any stored token/student on mount so an admin who previously used
+  // this browser never leaks into the kiosk UI or gets attached to guest orders.
+  useEffect(() => {
+    authService.clearAuthData();
+    dispatch(logoutAction());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cart bounce animation state
   const [cartBouncing, setCartBouncing] = useState(false);
@@ -336,12 +335,6 @@ const StudentKiosk: React.FC = () => {
     }
   };
 
-  const handleLogout = useCallback(async () => {
-    authService.clearAuthData();
-    dispatch(logoutAction());
-    showToast('Logged out successfully.', 'info');
-  }, [dispatch, showToast]);
-
   // Listen for global 401 event — clear student state without page reload
   useEffect(() => {
     const handleUnauth = () => {
@@ -406,10 +399,8 @@ const StudentKiosk: React.FC = () => {
 
   const handleOrderSuccess = useCallback(
     (_order: Order) => {
-      // Kiosk reset — clear everything so next student starts fresh
+      // Reset kiosk for the next student — cart only (no auth to clear; kiosk is always anonymous)
       dispatch(clearCart());
-      authService.clearAuthData();
-      dispatch(logoutAction());
       setCheckoutOpen(false);
       setCartOpen(false);
       setSelectedCategory('all');
@@ -419,10 +410,6 @@ const StudentKiosk: React.FC = () => {
     },
     [dispatch, showToast]
   );
-
-  // Tier info for header badge
-  const tierKey = (currentStudent?.tier as string | undefined)?.toLowerCase() ?? 'bronze';
-  const tierInfo = TIER_CONFIG[tierKey] ?? TIER_CONFIG.bronze;
 
   return (
     <div style={bgStyle}>
@@ -477,37 +464,8 @@ const StudentKiosk: React.FC = () => {
             </p>
           </div>
 
-          {/* Right side: student tier badge + cart count hint */}
+          {/* Right side: cart count hint */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {currentStudent && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {/* Student name */}
-                <span style={{
-                  fontFamily: 'Rajdhani, sans-serif',
-                  fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.7)',
-                  fontWeight: 600,
-                }}>
-                  {currentStudent.name}
-                </span>
-                {/* Tier badge */}
-                <span style={{
-                  background: tierInfo.bg,
-                  border: `1px solid ${tierInfo.border}`,
-                  color: tierInfo.color,
-                  borderRadius: '50px',
-                  padding: '3px 10px',
-                  fontSize: '0.7rem',
-                  fontFamily: 'Orbitron, sans-serif',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {tierInfo.emoji} {tierInfo.label}
-                </span>
-              </div>
-            )}
-
             {cartCount > 0 && (
               <div
                 style={{
@@ -535,15 +493,6 @@ const StudentKiosk: React.FC = () => {
           zIndex: 1,
         }}
       >
-        {/* Profile bar */}
-        {currentStudent && (
-          <ProfileBar
-            student={currentStudent}
-            onSwitch={handleLogout}
-            onLogout={handleLogout}
-          />
-        )}
-
         {/* Active offers banner */}
         <OfferBanner offers={activeOffers} />
 

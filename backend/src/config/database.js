@@ -209,6 +209,19 @@ const runMigrations = async () => {
     console.warn('⚠️  Migration warning (category check):', err.message);
   }
 
+  // ── guest columns on orders (no-login student checkout) ─────────────────
+  try {
+    await pool.query(`
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS guest_name  VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS guest_phone VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS guest_roll  VARCHAR(50)
+    `);
+    console.log('✅ Migration: guest columns on orders ready');
+  } catch (err) {
+    console.warn('⚠️  Migration warning (guest columns):', err.message);
+  }
+
   // ── offers table ─────────────────────────────────────────────────────────
   try {
     await pool.query(`

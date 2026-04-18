@@ -7,11 +7,10 @@ import {
   clearCart,
 } from '../../store/slices/cartSlice';
 import { setCurrentOrder } from '../../store/slices/orderSlice';
-import { updateStudent, setCredentials, logout } from '../../store/slices/authSlice';
+import { updateStudent } from '../../store/slices/authSlice';
 import * as orderService from '../../services/order.service';
 import * as paymentService from '../../services/payment.service';
 import { downloadBillPDF, printThermalBill } from '../../services/payment.service';
-import * as authService from '../../services/auth.service';
 import type { Order } from '../../types';
 import Modal from '../common/Modal';
 
@@ -24,7 +23,7 @@ interface CheckoutProps {
   studentPhone: string;
 }
 
-type CheckoutState = 'info' | 'authenticating' | 'idle' | 'creating' | 'paying' | 'verifying' | 'success' | 'error';
+type CheckoutState = 'info' | 'idle' | 'creating' | 'paying' | 'verifying' | 'success' | 'error';
 
 const CONFETTI_COLORS = [
   '#00f5ff',
@@ -80,12 +79,8 @@ const Checkout: React.FC<CheckoutProps> = ({
   const [confettiParticles] = useState<ConfettiParticle[]>(generateConfetti);
   const [billPrinted, setBillPrinted] = useState<boolean | null>(null);
 
-  // Guest info (collected when student is not logged in)
+  // Guest info — collected locally; never sent to auth endpoints
   const [guestInfo, setGuestInfo] = useState({ name: '', roll: '', phone: '' });
-  // Tracks whether auth happened silently during THIS checkout session.
-  // If true, we clear the session when the modal closes so the kiosk never
-  // shows the student as "logged in" after they finish ordering.
-  const [isGuestSession, setIsGuestSession] = useState(false);
   const wasOpenRef = useRef(false);
 
   // Reset state every time the modal is freshly opened
@@ -96,22 +91,13 @@ const Checkout: React.FC<CheckoutProps> = ({
       setGuestInfo({ name: '', roll: '', phone: '' });
       setCompletedOrder(null);
       setBillPrinted(null);
-      setIsGuestSession(false);
     }
     wasOpenRef.current = isOpen;
   }, [isOpen]); // intentionally NOT including currentStudent
 
-  // Clear guest session — called whenever the modal closes after a guest checkout.
-  // This ensures the student kiosk never shows a "logged in" state after ordering.
-  const clearGuestSession = () => {
-    authService.clearAuthData();   // remove from localStorage
-    dispatch(logout());            // remove from Redux
-    setIsGuestSession(false);
-  };
-
-  // Derive name/phone from Redux (after possible guest auth)
-  const studentName = currentStudent?.name ?? '';
-  const studentPhone = currentStudent?.phone ?? '';
+  // Resolve display name / phone — prefer logged-in student, fall back to guest form input
+  const studentName  = currentStudent?.name  ?? guestInfo.name;
+  const studentPhone = currentStudent?.phone ?? guestInfo.phone;
 
   // 1 pt = ₹0.10  →  pointsDiscount in rupees (e.g. 15 pts = ₹1.50)
   const pointsDiscount = pointsToRedeem * 0.10;
@@ -120,12 +106,10 @@ const Checkout: React.FC<CheckoutProps> = ({
   const isBlocking =
     checkoutState === 'paying' ||
     checkoutState === 'verifying' ||
-    checkoutState === 'authenticating' ||
     checkoutState === 'success';
 
   const handleClose = () => {
     if (!isBlocking) {
-      if (isGuestSession) clearGuestSession();
       onClose();
     }
   };
@@ -143,9 +127,17 @@ const Checkout: React.FC<CheckoutProps> = ({
         order = completedOrder;
       } else {
         // ── First attempt — create a fresh order ───────────────────────────
+        // Guest orders include name/phone/roll directly; no auth token needed.
+        const guestPayload = currentStudent ? undefined : {
+          guest_name:  guestInfo.name.trim()  || 'Guest',
+          guest_phone: guestInfo.phone.trim() || undefined,
+          guest_roll:  guestInfo.roll.trim()  || undefined,
+        };
+
         const orderResult = await orderService.create(
           cartItems.map((i) => ({ menu_item_id: i.id, quantity: i.quantity })),
-          pointsToRedeem
+          pointsToRedeem,
+          guestPayload
         );
 
         if (!orderResult.success || !orderResult.data) {
@@ -223,7 +215,7 @@ const Checkout: React.FC<CheckoutProps> = ({
               orderId: order.id,
               createdAt: order.created_at,
               studentName: studentName,
-              studentRoll: currentStudent?.roll_number ?? '',
+              studentRoll: currentStudent?.roll_number ?? guestInfo.roll ?? '',
               items: cartSnapshot,
               subtotal: subtotalSnapshot,
               pointsUsed,
@@ -249,75 +241,28 @@ const Checkout: React.FC<CheckoutProps> = ({
   };
 
   const handleTryAgain = () => {
-    setCheckoutState(currentStudent ? 'idle' : 'info');
+    // If guest info was already filled in, go straight to idle; otherwise re-show form
+    const hasGuestInfo = !currentStudent && guestInfo.name.trim().length > 0;
+    setCheckoutState(currentStudent || hasGuestInfo ? 'idle' : 'info');
     setError('');
   };
 
   // ── Guest info handler ──────────────────────────────────────────────────────
-  const handleGuestInfo = async () => {
-    const { name, roll, phone } = guestInfo;
-    if (!name.trim() || !roll.trim() || !phone.trim()) {
-      setError('Please fill in your name, roll number, and phone number.');
+  // No auth calls — just validate the name and proceed straight to checkout.
+  const handleGuestInfo = () => {
+    const { name } = guestInfo;
+    if (!name.trim()) {
+      setError('Please enter your name to place an order.');
       return;
     }
-    setCheckoutState('authenticating');
     setError('');
-    try {
-      // ── Step 1: Try login (existing student) ────────────────────────────
-      // A 404 from the server means "no account yet" — not a fatal error.
-      // A 401 would be intercepted by axios and fire auth:unauthorized, but
-      // the backend now returns 404 for missing users, so axios just throws
-      // a regular error here and we fall through to signup.
-      let authData: { token: string; student: import('../../types').Student } | null = null;
-
-      try {
-        const loginResult = await authService.login(roll.trim());
-        if (loginResult.success && loginResult.data) {
-          authData = loginResult.data;
-        }
-      } catch {
-        // 404 / network error → treat as "user not found", continue to signup
-        authData = null;
-      }
-
-      // ── Step 2: Auto-register if not found ──────────────────────────────
-      if (!authData) {
-        const signupResult = await authService.signup({
-          name: name.trim(),
-          roll_number: roll.trim(),
-          phone: phone.trim(),
-        });
-        if (!signupResult.success || !signupResult.data) {
-          setError(signupResult.message || 'Could not create account. Please check your details.');
-          setCheckoutState('info');
-          return;
-        }
-        authData = signupResult.data;
-      }
-
-      // ── Step 3: Store temporarily for this checkout session only ───────
-      // We DO persist to localStorage so the axios interceptor can attach
-      // the token on the order-creation request. But we mark this as a
-      // guest session so it gets cleared when the modal closes — the kiosk
-      // should never show the student as "permanently logged in".
-      authService.saveAuthData(authData.token, authData.student);
-      dispatch(setCredentials({ student: authData.student, token: authData.token }));
-      setIsGuestSession(true);
-      setCheckoutState('idle');
-    } catch (err: unknown) {
-      // Catch signup errors (e.g. duplicate phone, network failure)
-      const serverMsg = (err as any)?.response?.data?.message;
-      setError(serverMsg || 'Could not authenticate. Please check your details and try again.');
-      setCheckoutState('info');
-    }
+    setCheckoutState('idle');
   };
 
   const handleContinueShopping = () => {
     if (completedOrder) {
       onSuccess(completedOrder);
     }
-    // Always clear guest auth on close — kiosk goes back to anonymous mode
-    if (isGuestSession) clearGuestSession();
     onClose();
   };
 
@@ -789,7 +734,7 @@ const Checkout: React.FC<CheckoutProps> = ({
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-          onClick={() => { if (isGuestSession) clearGuestSession(); onClose(); }}
+          onClick={() => onClose()}
         >
           ← Back to Menu
         </button>
@@ -826,8 +771,8 @@ const Checkout: React.FC<CheckoutProps> = ({
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '2rem', marginBottom: 6 }}>👤</div>
           <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem', color: 'rgba(255,255,255,0.6)', margin: 0, lineHeight: 1.5 }}>
-            Enter your details to place an order.<br />
-            <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.35)' }}>Returning? Your points will be loaded automatically.</span>
+            Enter your name to place an order.<br />
+            <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.35)' }}>Roll number and phone are optional — used on your bill.</span>
           </p>
         </div>
 
@@ -915,8 +860,6 @@ const Checkout: React.FC<CheckoutProps> = ({
     switch (checkoutState) {
       case 'info':
         return renderInfoContent();
-      case 'authenticating':
-        return renderLoadingContent('Setting up your order...');
       case 'idle':
         return renderIdleContent();
       case 'creating':
@@ -941,7 +884,7 @@ const Checkout: React.FC<CheckoutProps> = ({
       <Modal
         isOpen={modalVisible}
         onClose={handleClose}
-        title={checkoutState === 'info' || checkoutState === 'authenticating' ? '👤 Who\'s Ordering?' : '💳 Checkout'}
+        title={checkoutState === 'info' ? '👤 Who\'s Ordering?' : '💳 Checkout'}
         maxWidth="560px"
       >
         {renderContent()}

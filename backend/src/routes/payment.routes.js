@@ -8,7 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/payment.controller');
-const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
+const { verifyToken, isAdmin, optionalAuth } = require('../middleware/auth.middleware');
 
 // ============================================================================
 // WEBHOOK ROUTE (must be before body-parsed routes if using raw body)
@@ -31,7 +31,7 @@ router.post('/webhook', paymentController.handleWebhook);
  * @access  Private (Student)
  * @body    { order_id }
  */
-router.post('/create', verifyToken, paymentController.createPaymentOrder);
+router.post('/create', optionalAuth, paymentController.createPaymentOrder);
 
 /**
  * @route   POST /api/payments/verify
@@ -39,7 +39,7 @@ router.post('/create', verifyToken, paymentController.createPaymentOrder);
  * @access  Private (Student)
  * @body    { order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature }
  */
-router.post('/verify', verifyToken, paymentController.verifyPayment);
+router.post('/verify', optionalAuth, paymentController.verifyPayment);
 
 /**
  * @route   GET /api/payments/history
