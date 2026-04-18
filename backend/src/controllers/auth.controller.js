@@ -41,7 +41,7 @@ const buildPayload = (student) => {
  * @returns {string}
  */
 const generateAccessToken = (student) =>
-  jwt.sign(buildPayload(student), process.env.JWT_SECRET, { expiresIn: '15m' });
+  jwt.sign(buildPayload(student), process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '8h' });
 
 /**
  * Issue a long-lived refresh token (7 days).

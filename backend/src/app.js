@@ -14,6 +14,11 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
+
+// Trust the first proxy hop (Render / Vercel / nginx sit in front of Express).
+// Required for express-rate-limit to read X-Forwarded-For correctly.
+app.set('trust proxy', 1);
+
 const http = require('http').createServer(app);
 
 // ─── Allowed origins ──────────────────────────────────────────────────────────

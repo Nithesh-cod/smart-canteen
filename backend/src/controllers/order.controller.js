@@ -30,8 +30,26 @@ const VALID_TRANSITIONS = {
  * Auth: student
  */
 const create = asyncHandler(async (req, res) => {
-  const { items, points_to_redeem = 0 } = req.body;
-  const studentId = req.user.id;
+  const {
+    items,
+    points_to_redeem = 0,
+    // Guest checkout fields — sent when student is not logged in
+    guest_name,
+    guest_phone,
+    guest_roll
+  } = req.body;
+
+  // req.user is null for guest orders (optionalAuth middleware)
+  const isGuest   = !req.user;
+  const studentId = isGuest ? null : req.user.id;
+
+  // Guest must supply at least a name
+  if (isGuest && !guest_name) {
+    return res.status(400).json({
+      success: false,
+      message: 'guest_name is required for guest checkout'
+    });
+  }
 
   // Basic validation
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -95,11 +113,11 @@ const create = asyncHandler(async (req, res) => {
     });
   }
 
-  // Points discount (1 point = ₹0.10; max 50% of original amount)
+  // Points discount — only for logged-in students
   let pointsUsed  = 0;
   let totalAmount = originalAmount;
 
-  if (points_to_redeem > 0) {
+  if (!isGuest && points_to_redeem > 0) {
     const student = await Student.findById(studentId);
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
@@ -116,12 +134,12 @@ const create = asyncHandler(async (req, res) => {
     const requestedDiscount = points_to_redeem * 0.10;
     const actualDiscount    = Math.min(requestedDiscount, maxDiscountAmount);
 
-    pointsUsed  = Math.floor(actualDiscount / 0.10); // actual points consumed
+    pointsUsed  = Math.floor(actualDiscount / 0.10);
     totalAmount = originalAmount - actualDiscount;
   }
 
-  // Points earned = 10% of the final (discounted) amount
-  const pointsEarned = calculatePoints(totalAmount);
+  // Points earned — only for logged-in students
+  const pointsEarned = isGuest ? 0 : calculatePoints(totalAmount);
   const orderNumber  = generateOrderNumber();
 
   const orderData = {
@@ -132,7 +150,11 @@ const create = asyncHandler(async (req, res) => {
     points_used:     pointsUsed,
     points_earned:   pointsEarned,
     payment_status:  'pending',
-    payment_method:  null
+    payment_method:  null,
+    // Guest fields (null for logged-in students)
+    guest_name:  isGuest ? (guest_name  || null) : null,
+    guest_phone: isGuest ? (guest_phone || null) : null,
+    guest_roll:  isGuest ? (guest_roll  || null) : null
   };
 
   const newOrder = await Order.create(orderData, orderItems);
@@ -177,7 +199,7 @@ const create = asyncHandler(async (req, res) => {
     });
   }
 
-  logger.success(`Order created: #${newOrder.order_number} for student ${studentId}`);
+  logger.success(`Order created: #${newOrder.order_number} for ${isGuest ? `guest ${guest_name}` : `student ${studentId}`}`);
 
   return res.status(201).json({
     success: true,

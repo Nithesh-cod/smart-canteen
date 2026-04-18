@@ -114,12 +114,13 @@ export const printThermalBill = (bill: BillData): void => {
   });
 
   const itemRows = bill.items.map(item => {
-    const amt = item.qty * item.price;
+    const unitPrice = parseFloat(item.price as unknown as string) || 0;
+    const amt = item.qty * unitPrice;
     return `
       <tr>
         <td style="padding:2px 0;">${item.name}</td>
         <td style="text-align:center;">${item.qty}</td>
-        <td style="text-align:right;">₹${item.price.toFixed(2)}</td>
+        <td style="text-align:right;">₹${unitPrice.toFixed(2)}</td>
         <td style="text-align:right;">-</td>
         <td style="text-align:right;">₹${amt.toFixed(2)}</td>
       </tr>`;

@@ -83,6 +83,10 @@ CREATE TABLE orders (
     razorpay_order_id   VARCHAR(255),
     razorpay_payment_id VARCHAR(255),
     razorpay_signature  VARCHAR(255),
+    -- Guest checkout fields (null for logged-in students)
+    guest_name          VARCHAR(255),
+    guest_phone         VARCHAR(20),
+    guest_roll          VARCHAR(50),
     created_at          TIMESTAMPTZ   DEFAULT NOW(),
     updated_at          TIMESTAMPTZ   DEFAULT NOW(),
     completed_at        TIMESTAMPTZ

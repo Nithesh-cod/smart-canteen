@@ -18,21 +18,25 @@ const { query, transaction } = require('../config/database');
  */
 const create = async (orderData, items) => {
   return await transaction(async (client) => {
-    // 1. Insert order
+    // 1. Insert order — student_id is null for guest (no-login) checkouts
     const orderResult = await client.query(
-      `INSERT INTO orders 
-       (student_id, order_number, total_amount, original_amount, points_used, points_earned, payment_status, payment_method)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO orders
+       (student_id, order_number, total_amount, original_amount, points_used, points_earned,
+        payment_status, payment_method, guest_name, guest_phone, guest_roll)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
-        orderData.student_id,
+        orderData.student_id || null,
         orderData.order_number,
         orderData.total_amount,
         orderData.original_amount || orderData.total_amount,
         orderData.points_used || 0,
         orderData.points_earned || 0,
         orderData.payment_status || 'pending',
-        orderData.payment_method || null
+        orderData.payment_method || null,
+        orderData.guest_name  || null,
+        orderData.guest_phone || null,
+        orderData.guest_roll  || null,
       ]
     );
 
@@ -52,25 +56,25 @@ const create = async (orderData, items) => {
     const completeResult = await client.query(
       `SELECT
          o.*,
-         s.name as student_name,
-         s.roll_number as student_roll,
-         s.phone as student_phone,
-         s.points as student_points,
+         COALESCE(s.name,        o.guest_name)  as student_name,
+         COALESCE(s.roll_number, o.guest_roll)  as student_roll,
+         COALESCE(s.phone,       o.guest_phone) as student_phone,
+         s.points     as student_points,
          s.department as student_dept,
          COALESCE(
            json_agg(
              json_build_object(
-               'id', oi.id,
+               'id',           oi.id,
                'menu_item_id', oi.menu_item_id,
-               'item_name', oi.item_name,
-               'quantity', oi.quantity,
-               'price', oi.price
+               'item_name',    oi.item_name,
+               'quantity',     oi.quantity,
+               'price',        oi.price
              ) ORDER BY oi.id
            ) FILTER (WHERE oi.id IS NOT NULL),
            '[]'::json
          ) as items
        FROM orders o
-       INNER JOIN students s ON o.student_id = s.id
+       LEFT JOIN students s ON o.student_id = s.id
        LEFT JOIN order_items oi ON o.id = oi.order_id
        WHERE o.id = $1
        GROUP BY o.id, s.name, s.roll_number, s.phone, s.points, s.department`,
@@ -91,24 +95,27 @@ const create = async (orderData, items) => {
  */
 const getById = async (id) => {
   const result = await query(
-    `SELECT 
+    `SELECT
        o.*,
-       s.name as student_name,
-       s.roll_number as student_roll,
-       s.phone as student_phone,
-       s.points as student_points,
+       COALESCE(s.name,        o.guest_name)  as student_name,
+       COALESCE(s.roll_number, o.guest_roll)  as student_roll,
+       COALESCE(s.phone,       o.guest_phone) as student_phone,
+       s.points     as student_points,
        s.department as student_dept,
-       json_agg(
-         json_build_object(
-           'id', oi.id,
-           'menu_item_id', oi.menu_item_id,
-           'item_name', oi.item_name,
-           'quantity', oi.quantity,
-           'price', oi.price
-         )
+       COALESCE(
+         json_agg(
+           json_build_object(
+             'id',          oi.id,
+             'menu_item_id',oi.menu_item_id,
+             'item_name',   oi.item_name,
+             'quantity',    oi.quantity,
+             'price',       oi.price
+           ) ORDER BY oi.id
+         ) FILTER (WHERE oi.id IS NOT NULL),
+         '[]'::json
        ) as items
      FROM orders o
-     INNER JOIN students s ON o.student_id = s.id
+     LEFT JOIN students s ON o.student_id = s.id
      LEFT JOIN order_items oi ON o.id = oi.order_id
      WHERE o.id = $1
      GROUP BY o.id, s.name, s.roll_number, s.phone, s.points, s.department`,
@@ -124,19 +131,22 @@ const getById = async (id) => {
  */
 const getByOrderNumber = async (orderNumber) => {
   const result = await query(
-    `SELECT 
+    `SELECT
        o.*,
-       s.name as student_name,
-       s.roll_number as student_roll,
-       json_agg(
-         json_build_object(
-           'item_name', oi.item_name,
-           'quantity', oi.quantity,
-           'price', oi.price
-         )
+       COALESCE(s.name,        o.guest_name) as student_name,
+       COALESCE(s.roll_number, o.guest_roll) as student_roll,
+       COALESCE(
+         json_agg(
+           json_build_object(
+             'item_name', oi.item_name,
+             'quantity',  oi.quantity,
+             'price',     oi.price
+           ) ORDER BY oi.id
+         ) FILTER (WHERE oi.id IS NOT NULL),
+         '[]'::json
        ) as items
      FROM orders o
-     INNER JOIN students s ON o.student_id = s.id
+     LEFT JOIN students s ON o.student_id = s.id
      LEFT JOIN order_items oi ON o.id = oi.order_id
      WHERE o.order_number = $1
      GROUP BY o.id, s.name, s.roll_number`,
@@ -180,19 +190,22 @@ const getByStudent = async (studentId, limit = 50) => {
  */
 const getAll = async (filters = {}) => {
   let queryText = `
-    SELECT 
+    SELECT
       o.*,
-      s.name as student_name,
-      s.roll_number as student_roll,
-      json_agg(
-        json_build_object(
-          'item_name', oi.item_name,
-          'quantity', oi.quantity,
-          'price', oi.price
-        )
+      COALESCE(s.name,        o.guest_name) as student_name,
+      COALESCE(s.roll_number, o.guest_roll) as student_roll,
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'item_name', oi.item_name,
+            'quantity',  oi.quantity,
+            'price',     oi.price
+          ) ORDER BY oi.id
+        ) FILTER (WHERE oi.id IS NOT NULL),
+        '[]'::json
       ) as items
     FROM orders o
-    INNER JOIN students s ON o.student_id = s.id
+    LEFT JOIN students s ON o.student_id = s.id
     LEFT JOIN order_items oi ON o.id = oi.order_id
     WHERE 1=1
   `;
