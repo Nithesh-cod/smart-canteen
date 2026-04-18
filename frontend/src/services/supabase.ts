@@ -63,6 +63,12 @@ export const subscribeToTable = (
 ): RealtimeChannel => {
   const name = channelName ?? `realtime:${table}`;
 
+  // When Supabase is not configured, return an unsubscribed channel so callers
+  // always get a RealtimeChannel back but NO WebSocket connection is attempted.
+  if (!REALTIME_ENABLED) {
+    return supabase.channel(`noop:${name}`);
+  }
+
   const channel = supabase
     .channel(name)
     .on(
