@@ -50,15 +50,16 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
 
   return (
     <div
+      className="offer-banner"
       style={{
         background: 'linear-gradient(90deg, rgba(255,0,255,0.12), rgba(0,245,255,0.12), rgba(255,0,255,0.12))',
         border: '1px solid rgba(255,0,255,0.4)',
         borderRadius: 12,
-        padding: '10px 20px',
-        marginBottom: 20,
+        padding: '10px 18px',
+        marginBottom: 18,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        gap: 10,
         animation: 'offerPulse 3s ease-in-out infinite',
         overflow: 'hidden',
         position: 'relative',
@@ -355,44 +356,41 @@ const StudentKiosk: React.FC = () => {
       {/* ── Ballpit full-screen background ─────────────────────────────────── */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
         <Ballpit
-          count={150}
-          gravity={0.6}
-          friction={0.982}
-          wallBounce={0.85}
+          count={280}
+          gravity={0.55}
+          friction={0.984}
+          wallBounce={0.82}
           followCursor
           colors={BALLPIT_COLORS}
           ambientColor={0x0a0a1a}
-          ambientIntensity={0.6}
-          lightIntensity={180}
-          minSize={0.3}
-          maxSize={0.9}
+          ambientIntensity={0.5}
+          lightIntensity={160}
+          minSize={0.12}
+          maxSize={0.42}
         />
       </div>
 
       {/* Sticky header */}
       <header
+        className="kiosk-header"
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 100,
-          background: 'rgba(10,10,26,0.85)',
+          background: 'rgba(10,10,26,0.9)',
           backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
-          padding: 'clamp(10px, 2vw, 15px) clamp(14px, 4vw, 30px)',
+          padding: '14px 28px',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1
+              className="kiosk-title"
               style={{
                 fontFamily: 'Orbitron, sans-serif',
-                fontSize: 'clamp(1.1rem, 4vw, 2rem)',
+                fontSize: '1.75rem',
                 fontWeight: 900,
                 background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
                 WebkitBackgroundClip: 'text',
@@ -405,27 +403,33 @@ const StudentKiosk: React.FC = () => {
               🍕 SMART CANTEEN
             </h1>
             <p
+              className="kiosk-subtitle"
               style={{
-                fontSize: 'clamp(0.6rem, 1.8vw, 0.75rem)',
-                letterSpacing: '2px',
-                color: 'rgba(255,255,255,0.5)',
+                fontSize: '0.7rem',
+                letterSpacing: '2.5px',
+                color: 'rgba(255,255,255,0.45)',
                 fontFamily: 'Rajdhani, sans-serif',
-                margin: '2px 0 0 0',
+                margin: '3px 0 0 0',
               }}
             >
               CYBER FOOD ORDERING
             </p>
           </div>
 
-          {/* Right side: cart count hint */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Cart count hint */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {cartCount > 0 && (
               <div
+                className="kiosk-cart-hint"
                 style={{
                   fontFamily: 'Rajdhani, sans-serif',
-                  fontSize: 'clamp(0.75rem, 2.5vw, 0.9rem)',
-                  color: 'rgba(0,245,255,0.7)',
+                  fontSize: '0.88rem',
+                  color: 'rgba(0,245,255,0.75)',
                   letterSpacing: '0.5px',
+                  background: 'rgba(0,245,255,0.08)',
+                  border: '1px solid rgba(0,245,255,0.2)',
+                  borderRadius: 20,
+                  padding: '4px 12px',
                 }}
               >
                 {cartCount} item{cartCount !== 1 ? 's' : ''} in cart
@@ -437,8 +441,9 @@ const StudentKiosk: React.FC = () => {
 
       {/* Main content */}
       <main
+        className="kiosk-main"
         style={{
-          padding: 'clamp(12px, 3vw, 20px) clamp(10px, 4vw, 30px)',
+          padding: '18px 24px',
           maxWidth: 1400,
           margin: '0 auto',
           paddingBottom: 120,
@@ -485,22 +490,24 @@ const StudentKiosk: React.FC = () => {
         }
       `}</style>
       <button
+        className="kiosk-cart-btn"
         onClick={() => setCartOpen(true)}
         aria-label={`Open cart, ${cartCount} items`}
         style={{
           position: 'fixed',
-          bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
-          right: 20,
+          bottom: 24,
+          right: 22,
           zIndex: 1000,
-          width: 'clamp(56px, 10vw, 70px)',
-          height: 'clamp(56px, 10vw, 70px)',
+          width: 64,
+          height: 64,
           borderRadius: '50%',
           background: 'rgba(0,245,255,0.12)',
           backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           border: '2px solid #00f5ff',
-          boxShadow: '0 0 30px rgba(0,245,255,0.4)',
+          boxShadow: '0 0 28px rgba(0,245,255,0.45)',
           cursor: 'pointer',
-          fontSize: 'clamp(1.4rem, 4vw, 1.8rem)',
+          fontSize: '1.7rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

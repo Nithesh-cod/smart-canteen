@@ -20,12 +20,6 @@ const itemCss = `
   0% { background-position: -400px 0; }
   100% { background-position: 400px 0; }
 }
-@media (max-width: 480px) {
-  .menu-item-img { height: 140px !important; }
-  .menu-item-body { padding: 10px 12px 12px !important; }
-  .menu-item-name { font-size: 1.05rem !important; }
-  .menu-item-price { font-size: 1.1rem !important; }
-}
 `;
 
 function StarRating({ rating }: { rating: number }) {
@@ -237,7 +231,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
           </div>
 
           {/* Rating + prep time */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="menu-item-rating-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <StarRating rating={Number(item.rating ?? 0)} />
               <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginLeft: '2px' }}>
@@ -251,7 +245,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
 
           {/* Description */}
           {item.description && (
-            <p style={{
+            <p className="menu-item-desc" style={{
               color: 'rgba(255,255,255,0.45)',
               fontSize: '0.82rem',
               lineHeight: 1.4,

@@ -848,23 +848,7 @@ const ChefDisplay: React.FC = () => {
         @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin { to{transform:rotate(360deg)} }
 
-        /* ── Mobile responsive ── */
-        .chef-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
-        .chef-orders-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start; }
-        .chef-header { padding: 0 40px !important; }
-        .chef-main { padding: 24px 20px !important; }
-
-        @media (max-width: 768px) {
-          .chef-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; margin-bottom: 18px !important; }
-          .chef-orders-grid { grid-template-columns: 1fr !important; }
-          .chef-header { padding: 0 16px !important; height: auto !important; min-height: 60px !important; flex-wrap: wrap !important; gap: 8px !important; }
-          .chef-header h1 { font-size: 14px !important; letter-spacing: 1px !important; }
-          .chef-main { padding: 14px 12px !important; }
-        }
-        @media (max-width: 480px) {
-          .chef-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .chef-header { display: flex !important; flex-wrap: wrap !important; }
-        }
+        /* class names — layout overridden by index.css media queries */
       `}</style>
 
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a1a, #1a0a2e, #0f0a1f)', position: 'relative' }}>

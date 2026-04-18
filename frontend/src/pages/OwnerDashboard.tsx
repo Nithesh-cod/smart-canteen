@@ -1344,30 +1344,6 @@ const OwnerDashboard: React.FC = () => {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-
-        /* ── Owner Dashboard mobile ── */
-        @media (max-width: 768px) {
-          .owner-sidebar {
-            width: 64px !important;
-            padding: 16px 6px !important;
-          }
-          .owner-sidebar-logo { display: none !important; }
-          .owner-sidebar-label { display: none !important; }
-          .owner-sidebar-nav-item {
-            justify-content: center !important;
-            padding: 10px !important;
-          }
-          .owner-main {
-            margin-left: 64px !important;
-            padding: 20px 14px !important;
-          }
-          .owner-topbar h1 { font-size: 1.3rem !important; }
-          .owner-topbar-actions { flex-wrap: wrap !important; gap: 8px !important; }
-        }
-        @media (max-width: 480px) {
-          .owner-sidebar { width: 0 !important; overflow: hidden !important; padding: 0 !important; border-right: none !important; }
-          .owner-main { margin-left: 0 !important; padding: 14px 10px !important; }
-        }
       `}</style>
 
       <div
@@ -1434,7 +1410,7 @@ const OwnerDashboard: React.FC = () => {
             {navItems.map((item) => (
               <button
                 key={item.id}
-                className="owner-sidebar-nav-item"
+                className={`owner-sidebar-nav-item${activePage === item.id ? ' owner-nav-active' : ''}`}
                 onClick={() => setActivePage(item.id)}
                 style={{
                   display: 'flex',
@@ -1489,6 +1465,7 @@ const OwnerDashboard: React.FC = () => {
 
           {/* Footer */}
           <div
+            className="owner-sidebar-footer"
             style={{
               borderTop: '1px solid rgba(255,255,255,0.06)',
               paddingTop: 16,

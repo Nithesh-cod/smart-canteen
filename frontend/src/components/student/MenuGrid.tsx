@@ -16,7 +16,6 @@ interface MenuGridProps {
   onSearchChange: (q: string) => void;
 }
 
-// Category emoji map — fallback for unknown categories
 const CATEGORY_EMOJI: Record<string, string> = {
   all:          '🍽️',
   favorites:    '❤️',
@@ -49,9 +48,6 @@ const MenuGrid: React.FC<MenuGridProps> = ({
   onCategoryChange,
   onSearchChange,
 }) => {
-  // ── Dynamic category pills derived from real menu items ──────────────────
-  // Always starts with "All", ends with "Favorites"; middle pills are unique
-  // categories found in the actual data (preserving first-seen casing).
   const categories = useMemo(() => {
     const seen = new Set<string>();
     const mid: Array<{ id: string; label: string; emoji: string }> = [];
@@ -69,10 +65,8 @@ const MenuGrid: React.FC<MenuGridProps> = ({
     ];
   }, [items]);
 
-  // ── Filtered items ────────────────────────────────────────────────────────
   const filteredItems = useMemo((): MenuItemType[] => {
     let filtered = [...items];
-
     if (selectedCategory === 'favorites') {
       filtered = filtered.filter((item) => favorites.includes(item.id));
     } else if (selectedCategory !== 'all') {
@@ -80,7 +74,6 @@ const MenuGrid: React.FC<MenuGridProps> = ({
         (item) => item.category.toLowerCase() === selectedCategory.toLowerCase()
       );
     }
-
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(
@@ -90,25 +83,19 @@ const MenuGrid: React.FC<MenuGridProps> = ({
           item.category.toLowerCase().includes(q)
       );
     }
-
     return filtered;
   }, [items, selectedCategory, favorites, searchQuery]);
 
   return (
     <div style={{ width: '100%' }}>
-      {/* ── Search bar ──────────────────────────────────────────────────── */}
-      <div style={{ position: 'relative', marginBottom: 24 }}>
-        <span
-          style={{
-            position: 'absolute',
-            left: 16,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            fontSize: '1.1rem',
-            pointerEvents: 'none',
-            zIndex: 1,
-          }}
-        >
+
+      {/* ── Search bar ────────────────────────────────────────────────────── */}
+      <div style={{ position: 'relative', marginBottom: 18 }}>
+        <span style={{
+          position: 'absolute', left: 14, top: '50%',
+          transform: 'translateY(-50%)', fontSize: '1rem',
+          pointerEvents: 'none', zIndex: 1,
+        }}>
           🔍
         </span>
         <input
@@ -119,21 +106,21 @@ const MenuGrid: React.FC<MenuGridProps> = ({
           placeholder="Search menu..."
           style={{
             width: '100%',
-            padding: '14px 18px 14px 46px',
-            background: 'rgba(255,255,255,0.03)',
+            padding: '13px 16px 13px 42px',
+            background: 'rgba(255,255,255,0.04)',
             backdropFilter: 'blur(20px)',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 12,
             color: '#ffffff',
-            fontSize: '1rem',
+            fontSize: '0.95rem',
             fontFamily: 'Rajdhani, sans-serif',
             outline: 'none',
             boxSizing: 'border-box',
-            transition: 'border-color 0.3s, box-shadow 0.3s',
+            transition: 'border-color 0.25s, box-shadow 0.25s',
           }}
           onFocus={(e) => {
             e.currentTarget.style.borderColor = 'rgba(0,245,255,0.5)';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(0,245,255,0.1)';
+            e.currentTarget.style.boxShadow = '0 0 16px rgba(0,245,255,0.1)';
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -142,13 +129,14 @@ const MenuGrid: React.FC<MenuGridProps> = ({
         />
       </div>
 
-      {/* ── Category pills (dynamic) ─────────────────────────────────────── */}
+      {/* ── Category pills ────────────────────────────────────────────────── */}
       <div
+        className="menu-cat-pills"
         style={{
           display: 'flex',
-          gap: 10,
+          gap: 8,
           overflowX: 'auto',
-          marginBottom: 28,
+          marginBottom: 22,
           paddingBottom: 4,
           scrollbarWidth: 'none',
         }}
@@ -162,32 +150,30 @@ const MenuGrid: React.FC<MenuGridProps> = ({
               onClick={() => onCategoryChange(cat.id)}
               style={{
                 flexShrink: 0,
-                padding: '8px 18px',
+                padding: '7px 16px',
                 borderRadius: 50,
-                border: isActive
-                  ? '1px solid #00f5ff'
-                  : '1px solid rgba(255,255,255,0.1)',
-                background: isActive ? 'rgba(0,245,255,0.15)' : 'rgba(255,255,255,0.03)',
-                color: isActive ? '#00f5ff' : 'rgba(255,255,255,0.7)',
-                fontSize: '0.9rem',
+                border: isActive ? '1px solid #00f5ff' : '1px solid rgba(255,255,255,0.12)',
+                background: isActive ? 'rgba(0,245,255,0.14)' : 'rgba(255,255,255,0.03)',
+                color: isActive ? '#00f5ff' : 'rgba(255,255,255,0.65)',
+                fontSize: '0.85rem',
                 fontFamily: 'Rajdhani, sans-serif',
                 fontWeight: isActive ? 700 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 backdropFilter: 'blur(10px)',
-                letterSpacing: '0.5px',
+                letterSpacing: '0.3px',
                 whiteSpace: 'nowrap',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.borderColor = 'rgba(0,245,255,0.3)';
+                  e.currentTarget.style.borderColor = 'rgba(0,245,255,0.35)';
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.65)';
                 }
               }}
             >
@@ -199,17 +185,16 @@ const MenuGrid: React.FC<MenuGridProps> = ({
 
       {/* ── Loading skeletons ─────────────────────────────────────────────── */}
       {loading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 'clamp(12px, 3vw, 25px)' }}>
+        <div className="menu-grid">
           {Array.from({ length: 8 }).map((_, idx) => (
             <div
               key={idx}
               style={{
                 background: 'rgba(255,255,255,0.03)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 16,
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 14,
                 overflow: 'hidden',
-                height: 340,
+                height: 300,
                 position: 'relative',
               }}
             >
@@ -219,14 +204,14 @@ const MenuGrid: React.FC<MenuGridProps> = ({
                 backgroundSize: '200% 100%',
                 animation: 'shimmer 1.5s infinite',
               }} />
-              <div style={{ height: 160, background: 'rgba(255,255,255,0.04)' }} />
-              <div style={{ padding: 16 }}>
-                <div style={{ height: 20, background: 'rgba(255,255,255,0.06)', borderRadius: 6, marginBottom: 10, width: '70%' }} />
-                <div style={{ height: 14, background: 'rgba(255,255,255,0.04)', borderRadius: 6, marginBottom: 8, width: '90%' }} />
-                <div style={{ height: 14, background: 'rgba(255,255,255,0.04)', borderRadius: 6, marginBottom: 20, width: '60%' }} />
+              <div style={{ height: 140, background: 'rgba(255,255,255,0.04)' }} />
+              <div style={{ padding: 14 }}>
+                <div style={{ height: 16, background: 'rgba(255,255,255,0.06)', borderRadius: 5, marginBottom: 8, width: '70%' }} />
+                <div style={{ height: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 5, marginBottom: 6, width: '90%' }} />
+                <div style={{ height: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 5, marginBottom: 18, width: '55%' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ height: 24, background: 'rgba(0,245,255,0.08)', borderRadius: 6, width: '30%' }} />
-                  <div style={{ height: 36, background: 'rgba(255,255,255,0.06)', borderRadius: 8, width: '35%' }} />
+                  <div style={{ height: 20, background: 'rgba(0,245,255,0.08)', borderRadius: 5, width: '28%' }} />
+                  <div style={{ height: 32, background: 'rgba(255,255,255,0.06)', borderRadius: 7, width: '35%' }} />
                 </div>
               </div>
             </div>
@@ -236,18 +221,18 @@ const MenuGrid: React.FC<MenuGridProps> = ({
 
       {/* ── Empty state ───────────────────────────────────────────────────── */}
       {!loading && filteredItems.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '80px 20px', color: 'rgba(255,255,255,0.5)' }}>
-          <div style={{ fontSize: '4rem', marginBottom: 16 }}>🍽️</div>
-          <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '1.2rem', letterSpacing: '1px' }}>
+        <div style={{ textAlign: 'center', padding: '60px 16px', color: 'rgba(255,255,255,0.45)' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: 14 }}>🍽️</div>
+          <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '1.1rem', letterSpacing: '1px' }}>
             No items found
           </p>
           {searchQuery && (
-            <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.9rem', marginTop: 8, color: 'rgba(255,255,255,0.3)' }}>
+            <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', marginTop: 8, color: 'rgba(255,255,255,0.3)' }}>
               Try a different search term
             </p>
           )}
           {selectedCategory === 'favorites' && favorites.length === 0 && !searchQuery && (
-            <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.9rem', marginTop: 8, color: 'rgba(255,255,255,0.3)' }}>
+            <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', marginTop: 8, color: 'rgba(255,255,255,0.3)' }}>
               No favorites yet — tap ❤️ on any item!
             </p>
           )}
@@ -256,15 +241,14 @@ const MenuGrid: React.FC<MenuGridProps> = ({
 
       {/* ── Items grid ────────────────────────────────────────────────────── */}
       {!loading && filteredItems.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 'clamp(12px, 3vw, 25px)' }}>
+        <div className="menu-grid">
           {filteredItems.map((item, idx) => {
             const cartItem = cartItems.find((ci) => ci.id === item.id);
             const cartQuantity = cartItem ? cartItem.quantity : 0;
             const isFavorite = favorites.includes(item.id);
-            const delay = `${Math.min(idx, 11) * 0.06}s`;
-
+            const delay = `${Math.min(idx, 11) * 0.05}s`;
             return (
-              <div key={item.id} style={{ animation: `cardEntry 0.45s ease ${delay} both` }}>
+              <div key={item.id} style={{ animation: `cardEntry 0.4s ease ${delay} both` }}>
                 <MenuItem
                   item={item}
                   isFavorite={isFavorite}
@@ -280,25 +264,12 @@ const MenuGrid: React.FC<MenuGridProps> = ({
       )}
 
       <style>{`
-        @keyframes shimmer {
-          0%   { background-position: -200% 0; }
-          100% { background-position:  200% 0; }
-        }
         @keyframes cardEntry {
-          from { opacity: 0; transform: translateY(24px); }
+          from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        /* ── Mobile tweaks ── */
-        @media (max-width: 480px) {
-          .menu-search-input {
-            font-size: 0.95rem !important;
-            padding: 11px 14px 11px 42px !important;
-          }
-          .menu-cat-pill {
-            padding: 6px 12px !important;
-            font-size: 0.82rem !important;
-          }
-        }
+        /* hide pill scrollbar */
+        .menu-cat-pills::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   );
