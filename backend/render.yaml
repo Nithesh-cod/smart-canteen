@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: smart-canteen-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      # Add all remaining vars manually in the Render dashboard
+      # (DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, RAZORPAY_KEY_ID,
+      #  RAZORPAY_KEY_SECRET, SUPABASE_URL, SUPABASE_ANON_KEY,
+      #  ADMIN_ROLLS, CHEF_ROLLS, FRONTEND_URLS)
