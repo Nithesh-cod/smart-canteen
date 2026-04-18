@@ -155,24 +155,33 @@ app.use('/api/admin', require('./routes/admin.routes'));
 // The frontend is built into frontend/dist/ via `npm run build`.
 // Every non-API GET request falls back to index.html so React Router works.
 
+// Only serve the React SPA when the built dist/ folder actually exists
+// (monorepo / single-server deploy). When frontend is on Vercel this
+// block is skipped entirely — no ENOENT errors.
 if (process.env.NODE_ENV === 'production') {
+  const fs = require('fs');
   const distPath = path.resolve(__dirname, '../../frontend/dist');
 
-  // Serve static assets (JS, CSS, images …)
-  app.use(express.static(distPath, { index: false }));
+  if (fs.existsSync(distPath)) {
+    // Serve static assets (JS, CSS, images …)
+    app.use(express.static(distPath, { index: false }));
 
-  // SPA fallback: any GET that didn't match an API route → send index.html
-  app.get('*', (req, res, next) => {
-    // Let actual API / socket / health routes fall through
-    if (
-      req.path.startsWith('/api') ||
-      req.path.startsWith('/socket.io') ||
-      req.path === '/health'
-    ) {
-      return next();
-    }
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
+    // SPA fallback: any GET that didn't match an API route → send index.html
+    app.get('*', (req, res, next) => {
+      if (
+        req.path.startsWith('/api') ||
+        req.path.startsWith('/socket.io') ||
+        req.path === '/health'
+      ) {
+        return next();
+      }
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+
+    console.log(`[Static] Serving React SPA from ${distPath}`);
+  } else {
+    console.log('[Static] No frontend/dist found — API-only mode (frontend on Vercel)');
+  }
 }
 
 // ============================================================================
