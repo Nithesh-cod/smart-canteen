@@ -336,34 +336,34 @@ const cancel = async (id) => {
  * @returns {Promise<Object>} Statistics object
  */
 const getStats = async (filters = {}) => {
-  // Today's stats
+  // Today's stats — only completed orders count as revenue
   const todayResult = await query(
-    `SELECT 
+    `SELECT
        COUNT(*) as order_count,
        COALESCE(SUM(total_amount), 0) as revenue
      FROM orders
      WHERE DATE(created_at) = CURRENT_DATE
-     AND payment_status = 'paid'`
+     AND status = 'completed'`
   );
 
-  // This week's stats
+  // This week's stats — only completed orders
   const weekResult = await query(
-    `SELECT 
+    `SELECT
        COUNT(*) as order_count,
        COALESCE(SUM(total_amount), 0) as revenue
      FROM orders
      WHERE created_at >= DATE_TRUNC('week', CURRENT_DATE)
-     AND payment_status = 'paid'`
+     AND status = 'completed'`
   );
 
-  // This month's stats
+  // This month's stats — only completed orders
   const monthResult = await query(
-    `SELECT 
+    `SELECT
        COUNT(*) as order_count,
        COALESCE(SUM(total_amount), 0) as revenue
      FROM orders
      WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
-     AND payment_status = 'paid'`
+     AND status = 'completed'`
   );
 
   // Status breakdown
@@ -391,13 +391,13 @@ const getStats = async (filters = {}) => {
  */
 const getRevenueData = async (days = 30) => {
   const result = await query(
-    `SELECT 
+    `SELECT
        DATE(created_at) as date,
        COUNT(*) as order_count,
        COALESCE(SUM(total_amount), 0) as revenue
      FROM orders
      WHERE created_at >= CURRENT_DATE - INTERVAL '${days} days'
-     AND payment_status = 'paid'
+     AND status = 'completed'
      GROUP BY DATE(created_at)
      ORDER BY date ASC`
   );
