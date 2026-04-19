@@ -674,23 +674,31 @@ function createBallpit(e, t = {}) {
   const rr = new a();
   let cc = false;
 
-  e.style.touchAction = 'none';
-  e.style.userSelect = 'none';
-  e.style.webkitUserSelect = 'none';
+  // Only lock touch interaction when cursor-following is enabled.
+  // When followCursor === false the canvas must stay transparent to
+  // pointer/touch events so the page underneath remains scrollable and
+  // tappable (critical on mobile).
+  if (t.followCursor !== false) {
+    e.style.touchAction = 'none';
+    e.style.userSelect = 'none';
+    e.style.webkitUserSelect = 'none';
+  }
 
-  const hh = S({
-    domElement: e,
-    onMove() {
-      n.setFromCamera(hh.nPosition, i.camera);
-      i.camera.getWorldDirection(o.normal);
-      n.ray.intersectPlane(o, rr);
-      s.physics.center.copy(rr);
-      s.config.controlSphere0 = true;
-    },
-    onLeave() {
-      s.config.controlSphere0 = false;
-    }
-  });
+  const hh = t.followCursor !== false
+    ? S({
+        domElement: e,
+        onMove() {
+          n.setFromCamera(hh.nPosition, i.camera);
+          i.camera.getWorldDirection(o.normal);
+          n.ray.intersectPlane(o, rr);
+          s.physics.center.copy(rr);
+          s.config.controlSphere0 = true;
+        },
+        onLeave() {
+          s.config.controlSphere0 = false;
+        }
+      })
+    : { dispose() {} };
   function initialize(e) {
     if (s) {
       i.clear();

@@ -360,8 +360,7 @@ const StudentKiosk: React.FC = () => {
           gravity={0}
           friction={0.984}
           wallBounce={0.82}
-          followCursor
-          size0={0.3}
+          followCursor={false}
           colors={BALLPIT_COLORS}
           ambientColor={0x0a0a1a}
           ambientIntensity={0.5}
