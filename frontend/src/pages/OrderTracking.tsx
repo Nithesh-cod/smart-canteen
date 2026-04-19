@@ -165,7 +165,7 @@ const RecentOrdersList: React.FC<{
   if (recentOrders.length === 0) return null;
 
   return (
-    <div style={{
+    <div className="track-recent-card" style={{
       marginTop: 24,
       background: 'rgba(255,255,255,0.02)',
       backdropFilter: 'blur(20px)',
@@ -552,7 +552,7 @@ const OrderTracking: React.FC = () => {
 
                   {/* Status Display */}
                   <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                    <div style={{
+                    <div className="track-status-label" style={{
                       fontFamily: 'Orbitron, sans-serif', fontSize: '1.4rem', fontWeight: 900,
                       color: isCompleted ? '#00ff88' : '#00f5ff', letterSpacing: 2, marginBottom: 8,
                       textShadow: isCompleted ? '0 0 20px rgba(0,255,136,0.5)' : '0 0 20px rgba(0,245,255,0.5)',
