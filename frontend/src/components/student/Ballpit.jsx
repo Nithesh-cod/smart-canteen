@@ -422,13 +422,17 @@ class W {
     this.setSizes();
   }
   #R() {
-    const { config: e, positionData: t } = this;
+    const { config: e, positionData: t, velocityData: vel } = this;
     this.center.toArray(t, 0);
     for (let i = 1; i < e.count; i++) {
       const s = 3 * i;
-      t[s] = E(2 * e.maxX);
+      t[s]     = E(2 * e.maxX);
       t[s + 1] = E(2 * e.maxY);
       t[s + 2] = E(2 * e.maxZ);
+      // Seed random velocity so balls drift immediately (critical when gravity=0)
+      vel[s]     = E(e.maxVelocity);
+      vel[s + 1] = E(e.maxVelocity);
+      vel[s + 2] = 0;
     }
   }
   setSizes() {
@@ -452,6 +456,12 @@ class W {
       I.fromArray(s, base);
       B.fromArray(o, base);
       B.y -= e.delta * t.gravity * n[idx];
+      // In zero-gravity floating mode, re-energise any ball that has
+      // nearly stopped so the swarm keeps drifting across the screen.
+      if (t.gravity === 0 && B.lengthSq() < (t.maxVelocity * 0.18) ** 2) {
+        B.x += E(t.maxVelocity * 0.06);
+        B.y += E(t.maxVelocity * 0.06);
+      }
       B.multiplyScalar(t.friction);
       B.clampLength(0, t.maxVelocity);
       I.add(B);

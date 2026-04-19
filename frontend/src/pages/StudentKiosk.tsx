@@ -358,8 +358,8 @@ const StudentKiosk: React.FC = () => {
         <Ballpit
           count={280}
           gravity={0}
-          friction={0.984}
-          wallBounce={0.82}
+          friction={0.999}
+          wallBounce={0.96}
           followCursor={false}
           colors={BALLPIT_COLORS}
           ambientColor={0x0a0a1a}
