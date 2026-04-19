@@ -8,15 +8,15 @@ import type { Order, MenuItem, OrderStatus } from '../types';
 
 // ─── Stats Row ────────────────────────────────────────────────────────────────
 
-const StatsRow: React.FC<{ orders: Order[]; menuItems: MenuItem[] }> = ({ orders, menuItems }) => {
+const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: MenuItem[] }> = ({ orders, todayOrders, menuItems }) => {
   const pending = orders.filter(o => o.status === 'pending').length;
   const preparing = orders.filter(o => o.status === 'preparing').length;
   const ready = orders.filter(o => o.status === 'ready').length;
 
-  // Today's revenue: sum total_amount of completed/ready orders created today
+  // Revenue: only COMPLETED orders from today (completing an order locks in the sale)
   const today = new Date().toDateString();
-  const revenue = orders
-    .filter(o => ['completed', 'ready'].includes(o.status) && new Date(o.created_at).toDateString() === today)
+  const revenue = todayOrders
+    .filter(o => o.status === 'completed' && new Date(o.created_at).toDateString() === today)
     .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
   const stats = [
@@ -276,6 +276,180 @@ const ActionBtn: React.FC<{
     >
       {label}
     </button>
+  );
+};
+
+// ─── Today's Food Grid ────────────────────────────────────────────────────────
+
+interface AggItem {
+  name: string;
+  quantity: number;
+  revenue: number;
+  imageUrl: string | null;
+}
+
+const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> = ({ todayOrders, menuItems }) => {
+  const today = new Date().toDateString();
+  const todayAll   = todayOrders.filter(o => new Date(o.created_at).toDateString() === today);
+  const completed  = todayAll.filter(o => o.status === 'completed');
+
+  // image lookup from menu
+  const imgMap = new Map<number, string | null>();
+  menuItems.forEach(m => imgMap.set(m.id, m.image_url ?? null));
+
+  // Aggregate items from ALL today's orders
+  const itemMap = new Map<string, AggItem>();
+  for (const order of todayAll) {
+    for (const item of (order.items ?? [])) {
+      const existing = itemMap.get(item.item_name) ?? { name: item.item_name, quantity: 0, revenue: 0, imageUrl: imgMap.get(item.menu_item_id ?? -1) ?? null };
+      itemMap.set(item.item_name, {
+        ...existing,
+        quantity: existing.quantity + item.quantity,
+        revenue:  existing.revenue  + item.price * item.quantity,
+      });
+    }
+  }
+
+  const aggItems   = Array.from(itemMap.values()).sort((a, b) => b.quantity - a.quantity);
+  const totalRev   = completed.reduce((s, o) => s + Number(o.total_amount), 0);
+  const totalItems = aggItems.reduce((s, i) => s + i.quantity, 0);
+
+  if (aggItems.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 20px', color: 'rgba(255,255,255,0.3)' }}>
+        <div style={{ fontSize: '4rem', marginBottom: 16 }}>🍽️</div>
+        <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 13, letterSpacing: 3, color: 'rgba(255,255,255,0.25)' }}>NO ORDERS YET TODAY</div>
+      </div>
+    );
+  }
+
+  const summaryStats = [
+    { label: 'Total Orders',  value: todayAll.length,     color: '#00f5ff', icon: '📋' },
+    { label: 'Completed',     value: completed.length,    color: '#00ff88', icon: '✅' },
+    { label: 'Items Sold',    value: totalItems,          color: '#ff00ff', icon: '🍽️' },
+    { label: "Today's Revenue", value: `₹${totalRev.toLocaleString('en-IN')}`, color: '#ffed4e', icon: '💰' },
+  ];
+
+  return (
+    <>
+      {/* Summary bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+        {summaryStats.map(s => (
+          <div key={s.label} style={{
+            background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
+            border: `1px solid ${s.color}33`, borderRadius: 16, padding: '16px 20px',
+            display: 'flex', alignItems: 'center', gap: 14,
+            boxShadow: `0 0 18px ${s.color}0d`,
+          }}>
+            <span style={{ fontSize: 26 }}>{s.icon}</span>
+            <div>
+              <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 20, fontWeight: 900, color: s.color, lineHeight: 1, textShadow: `0 0 12px ${s.color}66` }}>{s.value}</div>
+              <div style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 3 }}>{s.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Section label */}
+      <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(0,245,255,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
+        🍽️ Items Ordered Today — sorted by popularity
+      </div>
+
+      {/* Food grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(165px, 1fr))', gap: 16, marginBottom: 40 }}>
+        {aggItems.map((item, idx) => (
+          <div key={item.name} style={{
+            background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
+            border: `1px solid ${idx === 0 ? 'rgba(255,237,78,0.45)' : 'rgba(0,245,255,0.12)'}`,
+            borderRadius: 16, overflow: 'hidden', position: 'relative',
+            boxShadow: idx === 0 ? '0 0 24px rgba(255,237,78,0.12)' : '0 2px 12px rgba(0,0,0,0.3)',
+            animation: `fadeInUp 0.4s ease ${Math.min(idx, 12) * 0.04}s both`,
+            transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
+          >
+            {idx === 0 && (
+              <div style={{
+                position: 'absolute', top: 8, right: 8, zIndex: 2,
+                background: '#ffed4e', color: '#0a0a1a',
+                fontSize: 8, fontFamily: 'Orbitron, monospace', fontWeight: 700,
+                padding: '2px 7px', borderRadius: 4, letterSpacing: 1,
+              }}>🏆 TOP</div>
+            )}
+            {/* Rank badge */}
+            <div style={{
+              position: 'absolute', top: 8, left: 8, zIndex: 2,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
+              borderRadius: 6, padding: '2px 8px',
+              fontFamily: 'Orbitron, monospace', fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 700,
+            }}>#{idx + 1}</div>
+
+            {/* Image */}
+            <div style={{ height: 125, background: 'rgba(0,0,0,0.35)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {item.imageUrl
+                ? <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: 44 }}>🍽️</span>
+              }
+            </div>
+
+            {/* Info */}
+            <div style={{ padding: '12px 13px 14px' }}>
+              <div style={{
+                fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 14,
+                color: '#fff', marginBottom: 10, lineHeight: 1.25,
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              }}>{item.name}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{
+                  background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.35)',
+                  borderRadius: 20, padding: '3px 10px',
+                  fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#00f5ff',
+                }}>×{item.quantity}</div>
+                <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#ffed4e' }}>
+                  ₹{item.revenue.toFixed(0)}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Completed orders list */}
+      {completed.length > 0 && (
+        <>
+          <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(0,255,136,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
+            ✅ Completed Orders Today ({completed.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[...completed].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(order => (
+              <div key={order.id} style={{
+                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(0,255,136,0.15)',
+                borderLeft: '3px solid #00ff88', borderRadius: 12, padding: '12px 18px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'Orbitron, monospace', fontSize: 12, color: '#00ff88', fontWeight: 700 }}>
+                    #{order.order_number}
+                  </span>
+                  {order.student_name && (
+                    <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
+                      👤 {order.student_name}
+                    </span>
+                  )}
+                  <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.3)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {(order.items ?? []).map(i => `${i.quantity}× ${i.item_name}`).join('  ·  ')}
+                  </span>
+                </div>
+                <span style={{ fontFamily: 'Orbitron, monospace', fontSize: 13, color: '#ffed4e', fontWeight: 700 }}>
+                  ₹{Number(order.total_amount).toFixed(0)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </>
   );
 };
 
@@ -651,12 +825,13 @@ const EditMenuTab: React.FC<{
 
 const ChefDisplay: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [todayOrders, setTodayOrders] = useState<Order[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'today' | 'menu'>('orders');
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Web Audio API beep
@@ -715,17 +890,35 @@ const ChefDisplay: React.FC = () => {
     }
   }, []);
 
+  // Fetch ALL of today's orders (including completed) for the food-grid tab
+  const fetchTodayOrders = useCallback(async () => {
+    try {
+      const data = await orderService.getAll({ limit: 300 });
+      const list: Order[] = Array.isArray(data)
+        ? data
+        : Array.isArray((data as any)?.data?.orders)
+          ? (data as any).data.orders
+          : Array.isArray((data as any)?.data)
+            ? (data as any).data
+            : [];
+      const todayStr = new Date().toDateString();
+      setTodayOrders(list.filter(o => new Date(o.created_at).toDateString() === todayStr));
+    } catch (err) {
+      console.error('Failed to fetch today orders:', err);
+    }
+  }, []);
+
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchOrders(), fetchMenuItems()]);
+      await Promise.all([fetchOrders(), fetchMenuItems(), fetchTodayOrders()]);
       setLoading(false);
     };
     init();
 
     const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
-    // Polling fallback — refresh active orders every 20s in case realtime misses events
-    const pollInterval = setInterval(() => fetchOrders(), 20_000);
+    // Polling fallback — refresh active orders + today's stats every 20s
+    const pollInterval = setInterval(() => { fetchOrders(); fetchTodayOrders(); }, 20_000);
 
     try {
       socketService.connect();
@@ -746,6 +939,8 @@ const ChefDisplay: React.FC = () => {
           }
           return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
         });
+        // Keep today's grid in sync whenever an order status changes
+        fetchTodayOrders();
       });
       socketService.on('order:cancelled', (data: { id: number }) => {
         setOrders(prev => prev.filter(o => o.id !== data.id));
@@ -778,11 +973,13 @@ const ChefDisplay: React.FC = () => {
       if (eventType === 'INSERT') {
         // Re-fetch so we get the full joined data (items, student name, etc.)
         fetchOrders();
+        fetchTodayOrders();
         playNotificationBeep();
       } else if (eventType === 'UPDATE') {
         const updated = row as any;
         if (['completed', 'cancelled'].includes(updated.status)) {
           setOrders(prev => prev.filter(o => o.id !== updated.id));
+          fetchTodayOrders(); // update food grid when order completes
         } else if (['pending', 'preparing', 'ready'].includes(updated.status)) {
           // Partial update — just patch the status; full data arrives via Socket.IO
           setOrders(prev => prev.map(o =>
@@ -818,7 +1015,7 @@ const ChefDisplay: React.FC = () => {
       unsubscribe(ordersChannel);
       unsubscribe(menuChannel);
     };
-  }, [fetchOrders, fetchMenuItems, playNotificationBeep]);
+  }, [fetchOrders, fetchMenuItems, fetchTodayOrders, playNotificationBeep]);
 
   const handleStatusUpdate = useCallback(async (orderId: number, status: OrderStatus) => {
     setOrders(prev => {
@@ -829,11 +1026,13 @@ const ChefDisplay: React.FC = () => {
     });
     try {
       await orderService.updateStatus(orderId, status);
+      // Refresh food grid whenever an order status changes (esp. completed)
+      fetchTodayOrders();
     } catch (err) {
       console.error('Failed to update status:', err);
       fetchOrders();
     }
-  }, [fetchOrders]);
+  }, [fetchOrders, fetchTodayOrders]);
 
   const totalActive = orders.filter(o => ['pending', 'preparing'].includes(o.status)).length;
 
@@ -935,20 +1134,24 @@ const ChefDisplay: React.FC = () => {
           ) : (
             <>
               {/* Stats Row */}
-              <StatsRow orders={orders} menuItems={menuItems} />
+              <StatsRow orders={orders} todayOrders={todayOrders} menuItems={menuItems} />
 
               {/* Tabs */}
-              <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '4px', border: '1px solid rgba(255,255,255,0.08)', width: 'fit-content' }}>
-                {(['orders', 'menu'] as const).map(tab => (
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '4px', border: '1px solid rgba(255,255,255,0.08)', width: 'fit-content', flexWrap: 'wrap' }}>
+                {([
+                  { id: 'orders', label: '📋 Orders' },
+                  { id: 'today',  label: '🍽️ Today\'s Orders' },
+                  { id: 'menu',   label: '✏️ Edit Menu' },
+                ] as const).map(tab => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
                     style={{
-                      padding: '10px 28px',
-                      background: activeTab === tab ? 'rgba(0,245,255,0.12)' : 'transparent',
-                      border: activeTab === tab ? '1px solid rgba(0,245,255,0.4)' : '1px solid transparent',
+                      padding: '10px 24px',
+                      background: activeTab === tab.id ? 'rgba(0,245,255,0.12)' : 'transparent',
+                      border: activeTab === tab.id ? '1px solid rgba(0,245,255,0.4)' : '1px solid transparent',
                       borderRadius: '8px',
-                      color: activeTab === tab ? '#00f5ff' : 'rgba(255,255,255,0.4)',
+                      color: activeTab === tab.id ? '#00f5ff' : 'rgba(255,255,255,0.4)',
                       fontFamily: 'Orbitron, monospace',
                       fontSize: '12px',
                       fontWeight: '700',
@@ -956,17 +1159,22 @@ const ChefDisplay: React.FC = () => {
                       letterSpacing: '2px',
                       textTransform: 'uppercase',
                       transition: 'all 0.2s',
-                      boxShadow: activeTab === tab ? '0 0 15px rgba(0,245,255,0.2)' : 'none',
+                      boxShadow: activeTab === tab.id ? '0 0 15px rgba(0,245,255,0.2)' : 'none',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {tab === 'orders' ? '📋 Orders' : '✏️ Edit Menu'}
+                    {tab.label}
                   </button>
                 ))}
               </div>
 
-              {activeTab === 'orders' ? (
+              {activeTab === 'orders' && (
                 <OrdersTab orders={orders} onStatusUpdate={handleStatusUpdate} />
-              ) : (
+              )}
+              {activeTab === 'today' && (
+                <TodayFoodGrid todayOrders={todayOrders} menuItems={menuItems} />
+              )}
+              {activeTab === 'menu' && (
                 <EditMenuTab items={menuItems} onRefresh={fetchMenuItems} />
               )}
             </>
