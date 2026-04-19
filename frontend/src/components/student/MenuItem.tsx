@@ -69,6 +69,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
     <>
       <style>{itemCss}</style>
       <div
+        className="menu-item-card"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{

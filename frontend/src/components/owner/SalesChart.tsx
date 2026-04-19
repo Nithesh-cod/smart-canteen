@@ -117,6 +117,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
 
   return (
     <div
+      className="owner-chart-card"
       style={{
         background: 'rgba(255,255,255,0.03)',
         backdropFilter: 'blur(20px)',
@@ -305,7 +306,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
 
       {/* Chart */}
       {data.length > 0 ? (
-        <div style={{ height: 320, position: 'relative' }}>
+        <div className="owner-chart-wrap" style={{ height: 320, position: 'relative' }}>
           <Line data={chartData} options={options} />
         </div>
       ) : (

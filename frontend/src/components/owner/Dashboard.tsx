@@ -100,6 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
 
       {/* KPI Cards */}
       <div
+        className="owner-kpi-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -163,7 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
       </div>
 
       {/* Middle Two Columns */}
-      <div style={{ display: 'flex', gap: 25 }}>
+      <div className="owner-mid-row" style={{ display: 'flex', gap: 25 }}>
 
         {/* Top Items */}
         <div style={{ ...glassCard, flex: 1 }}>

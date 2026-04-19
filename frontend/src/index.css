@@ -347,15 +347,47 @@ body {
   .offer-banner { padding: 8px 12px !important; margin-bottom: 14px !important; }
 }
 
+/* ── MenuItem card: opaque dark glass — balls don't bleed through text ─ */
+.menu-item-card {
+  background: rgba(6, 6, 20, 0.87) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+}
+
+/* ── OwnerDashboard: global overflow guard on main panel ─────────────── */
+.owner-main {
+  min-width: 0;       /* prevent flex child from overflowing its container */
+  overflow-x: hidden;
+}
+
+/* ── Owner Dashboard: KPI grid collapses to 1-col on phone ──────────── */
+@media (max-width: 700px) {
+  .owner-kpi-grid   { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .owner-mid-row    { flex-direction: column !important; gap: 14px !important; }
+  .owner-chart-card { padding: 16px !important; }
+  .owner-chart-wrap { height: 220px !important; }
+}
+@media (max-width: 480px) {
+  .owner-kpi-grid   { gap: 10px !important; }
+  .owner-chart-wrap { height: 180px !important; }
+}
+
 /* ── OrderTracking ───────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .track-outer  { padding: 16px 12px 60px !important; align-items: flex-start !important; }
-  .track-card   { padding: 24px 18px !important; border-radius: 20px !important; }
-  .track-logo   { font-size: 1.5rem !important; }
-  .track-detail-card { padding: 20px 16px !important; border-radius: 20px !important; }
-  /* Progress tracker step labels: allow wrapping on tiny screens */
-  .track-progress-label { white-space: normal !important; text-align: center !important; font-size: 0.6rem !important; }
-  /* Progress tracker container: reduce side padding */
-  .track-progress { margin: 18px 0 !important; }
-  .track-progress > div { padding: 0 6px !important; }
+  .track-outer        { padding: 16px 12px 60px !important; }
+  .track-card         { padding: 20px 16px !important; border-radius: 20px !important; }
+  .track-logo         { font-size: 1.4rem !important; line-height: 1.15 !important; }
+  .track-detail-card  { padding: 18px 14px !important; border-radius: 20px !important; }
+  .track-recent-card  { padding: 18px 14px !important; border-radius: 18px !important; }
+  /* Status label: smaller + tighter spacing so it doesn't wrap awkwardly */
+  .track-status-label { font-size: 1.05rem !important; letter-spacing: 1px !important; }
+  /* Progress tracker: tighten margins, allow labels to wrap */
+  .track-progress       { margin: 16px 0 !important; }
+  .track-progress > div { padding: 0 4px !important; }
+  .track-progress-label {
+    white-space: normal !important;
+    font-size: 0.58rem !important;
+    max-width: 52px !important;
+    word-break: break-word !important;
+  }
 }
