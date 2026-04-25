@@ -5,10 +5,11 @@
 // create, getById, getAll, updateStatus, cancel, track, getStats
 // ============================================================================
 
-const Order    = require('../models/Order');
-const Student  = require('../models/Student');
-const MenuItem = require('../models/MenuItem');
-const logger   = require('../utils/logger');
+const Order          = require('../models/Order');
+const Student        = require('../models/Student');
+const MenuItem       = require('../models/MenuItem');
+const printerService = require('../services/printer.service');
+const logger         = require('../utils/logger');
 const { asyncHandler }                  = require('../middleware/error.middleware');
 const { calculatePoints, generateOrderNumber } = require('../utils/helpers');
 
@@ -374,6 +375,24 @@ const updateStatus = asyncHandler(async (req, res) => {
         timestamp:   new Date().toISOString()
       });
     }
+  }
+
+  // ── Print receipt when chef marks order as "ready" ────────────────────────
+  // The physical receipt is handed to the student when they collect their food.
+  if (status === 'ready') {
+    setImmediate(async () => {
+      try {
+        const completeOrder = await Order.getById(orderId);
+        const result = await printerService.printBill(completeOrder);
+        if (result.printed) {
+          logger.info(`Receipt printed at counter for order #${order.order_number}`);
+        } else {
+          logger.info(`Printer unavailable — no receipt for order #${order.order_number}`);
+        }
+      } catch (printErr) {
+        logger.warn(`Receipt print error for order #${order.order_number}:`, printErr.message);
+      }
+    });
   }
 
   logger.success(`Order #${order.order_number} status changed to "${status}"`);

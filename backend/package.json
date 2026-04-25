@@ -31,9 +31,11 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "node-thermal-printer": "^4.4.4",
+    "pdf-to-printer": "^5.7.0",
     "pdfkit": "^0.15.0",
     "pg": "^8.11.3",
     "razorpay": "^2.9.2",
+    "serialport": "^13.0.0",
     "socket.io": "^4.6.2"
   },
   "devDependencies": {

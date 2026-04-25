@@ -104,9 +104,6 @@ export interface BillData {
  * This generates a KFC-style receipt as HTML without any PDF library.
  */
 export const printThermalBill = (bill: BillData): void => {
-  const sgst = bill.totalAmount * 0.025;
-  const cgst = bill.totalAmount * 0.025;
-  const baseAmount = bill.totalAmount - sgst - cgst;
   const invoiceNo = `OZ${bill.orderId}`;
   const dateStr = new Date(bill.createdAt).toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
@@ -118,11 +115,8 @@ export const printThermalBill = (bill: BillData): void => {
     const amt = item.qty * unitPrice;
     return `
       <tr>
-        <td style="padding:2px 0;">${item.name}</td>
-        <td style="text-align:center;">${item.qty}</td>
-        <td style="text-align:right;">₹${unitPrice.toFixed(2)}</td>
-        <td style="text-align:right;">-</td>
-        <td style="text-align:right;">₹${amt.toFixed(2)}</td>
+        <td style="padding:2px 0;word-break:break-word;">${item.name} &times;${item.qty}</td>
+        <td style="text-align:right;white-space:nowrap;">&#8377;${amt.toFixed(2)}</td>
       </tr>`;
   }).join('');
 
@@ -132,84 +126,82 @@ export const printThermalBill = (bill: BillData): void => {
 <meta charset="utf-8">
 <title>Bill ${invoiceNo}</title>
 <style>
-  @page { size: 80mm auto; margin: 4mm; }
+  @page { size: 58mm auto; margin: 2mm 3mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 9.5px;
+    line-height: 1.3;
     color: #000;
     background: #fff;
-    width: 72mm;
-    padding: 4px;
+    width: 52mm;
   }
   .center { text-align: center; }
-  .bold { font-weight: bold; }
-  .big { font-size: 14px; }
-  .sep { border-top: 1px dashed #000; margin: 4px 0; }
-  table { width: 100%; border-collapse: collapse; }
-  td { padding: 2px 0; vertical-align: top; }
-  .total-row td { font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
-  .grand-total td { font-size: 13px; font-weight: bold; border-top: 2px solid #000; padding-top: 4px; }
-  .footer { margin-top: 8px; text-align: center; font-size: 10px; }
+  .bold   { font-weight: bold; }
+  .big    { font-size: 13.5px; }
+  .sep    { border-top: 1px dashed #555; margin: 3px 0; }
+  table   { width: 100%; border-collapse: collapse; }
+  td      { padding: 1px 0; vertical-align: top; }
+  .grand td { font-size: 12px; font-weight: bold;
+               border-top: 1.5px solid #000; padding-top: 3px; }
+  .footer { margin-top: 6px; text-align: center; font-size: 9.5px; }
 </style>
 </head>
 <body>
 <div class="center bold big">SMART CANTEEN</div>
-<div class="center" style="font-size:10px;">NITTE University Campus, Mangalore</div>
-<div class="center" style="font-size:10px;">GSTIN: 29AABCC1234D1Z5</div>
+<div class="center" style="font-size:9px;">COIMBATORE INSTITUTE OF ENGINEERING AND TECHNOLOGY</div>
+<div class="center" style="font-size:9px;">THONDAMUTHUR Road, COIMBATORE - 641109</div>
 <div class="sep"></div>
 <table>
   <tr><td class="bold">INVOICE #</td><td style="text-align:right;">${invoiceNo}</td></tr>
   <tr><td class="bold">DATE</td><td style="text-align:right;">${dateStr}</td></tr>
-  <tr><td class="bold">STUDENT</td><td style="text-align:right;">${bill.studentName}</td></tr>
-  <tr><td class="bold">ROLL NO</td><td style="text-align:right;">${bill.studentRoll}</td></tr>
+  <tr><td class="bold">CUSTOMER</td><td style="text-align:right;">${bill.studentName || 'Guest'}</td></tr>
+  ${bill.studentRoll ? `<tr><td class="bold">ROLL NO</td><td style="text-align:right;">${bill.studentRoll}</td></tr>` : ''}
 </table>
 <div class="sep"></div>
 <table>
   <thead>
     <tr>
-      <th style="text-align:left;">Desc</th>
-      <th style="text-align:center;">Qty</th>
-      <th style="text-align:right;">Price</th>
-      <th style="text-align:right;">Disc</th>
+      <th style="text-align:left;">Item</th>
       <th style="text-align:right;">Amt</th>
     </tr>
   </thead>
-  <tbody>
-    ${itemRows}
-  </tbody>
+  <tbody>${itemRows}</tbody>
 </table>
 <div class="sep"></div>
 <table>
-  <tr><td>Base Amount</td><td style="text-align:right;">₹${baseAmount.toFixed(2)}</td></tr>
-  <tr><td>SGST @2.5%</td><td style="text-align:right;">₹${sgst.toFixed(2)}</td></tr>
-  <tr><td>CGST @2.5%</td><td style="text-align:right;">₹${cgst.toFixed(2)}</td></tr>
-  ${bill.pointsUsed > 0 ? `<tr><td>Points Redeemed (${bill.pointsUsed} pts)</td><td style="text-align:right;">-₹${bill.pointsDiscount.toFixed(2)}</td></tr>` : ''}
-  <tr class="grand-total"><td>TOTAL</td><td style="text-align:right;">₹${bill.totalAmount.toFixed(2)}</td></tr>
+  <tr><td>Subtotal</td><td style="text-align:right;">&#8377;${bill.subtotal.toFixed(2)}</td></tr>
+  ${bill.pointsUsed > 0
+    ? `<tr><td>Points (${bill.pointsUsed} pts)</td><td style="text-align:right;">-&#8377;${bill.pointsDiscount.toFixed(2)}</td></tr>`
+    : ''}
+  <tr class="grand"><td>TOTAL PAID</td><td style="text-align:right;">&#8377;${bill.totalAmount.toFixed(2)}</td></tr>
 </table>
 <div class="sep"></div>
 <table>
-  <tr><td>Payment Method</td><td style="text-align:right;">${bill.paymentMethod}</td></tr>
-  <tr><td>Points Earned</td><td style="text-align:right;">+${bill.pointsEarned} pts 💎</td></tr>
+  <tr><td>Method</td><td style="text-align:right;">${bill.paymentMethod}</td></tr>
+  <tr><td>Points Earned</td><td style="text-align:right;">+${bill.pointsEarned} pts</td></tr>
 </table>
 <div class="sep"></div>
 <div class="footer">
-  <div class="bold">Thank you for dining with us!</div>
-  <div>Please come again 😊</div>
-  <div style="margin-top:4px;">Smart Canteen · Powered by OZone</div>
+  <div class="bold">Thank you for ordering!</div>
+  <div>Please come again</div>
 </div>
 </body>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=320,height=600,scrollbars=yes');
+  const win = window.open('', '_blank', 'width=340,height=700,scrollbars=no');
   if (win) {
     win.document.write(html);
     win.document.close();
     win.focus();
-    // Slight delay for rendering before print dialog
+    // Give the browser time to render before opening the print dialog
     setTimeout(() => {
       win.print();
-    }, 400);
+      // Close the window after printing (or if user cancels)
+      setTimeout(() => {
+        try { win.close(); } catch { /* ignore */ }
+      }, 1000);
+    }, 500);
   }
 };
 
