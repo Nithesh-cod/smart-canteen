@@ -19,10 +19,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    // Disable <link rel="modulepreload"> injection — Vite preloads all split
-    // chunks upfront which causes hundreds of "preloaded but not used" warnings
-    // in the browser when navigating between SPA routes.
-    modulePreload: false,
+    // Disable modulepreload entirely — Vite's default behaviour injects
+    // <link rel="modulepreload"> for every split chunk, flooding the console
+    // with "preloaded but not used" warnings when navigating between SPA routes.
+    modulePreload: { polyfill: false },
     rollupOptions: {
       output: {
         manualChunks: {
