@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://smart-canteen-api.onrender.com/api/:path*"
+      "destination": "https://smart-canteen-8l03.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
