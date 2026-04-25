@@ -11,7 +11,16 @@ services:
         value: production
       - key: PORT
         value: 5000
-      # Add all remaining vars manually in the Render dashboard
-      # (DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, RAZORPAY_KEY_ID,
-      #  RAZORPAY_KEY_SECRET, SUPABASE_URL, SUPABASE_ANON_KEY,
-      #  ADMIN_ROLLS, CHEF_ROLLS, FRONTEND_URLS)
+      - key: PRINTER_TYPE
+        value: none
+      # ── Add these manually in the Render dashboard ────────────────────────────
+      # DATABASE_URL          → Supabase connection string
+      # JWT_SECRET            → strong random secret
+      # JWT_REFRESH_SECRET    → strong random secret
+      # RAZORPAY_KEY_ID       → rzp_live_... or rzp_test_...
+      # RAZORPAY_KEY_SECRET   → Razorpay secret
+      # RAZORPAY_WEBHOOK_SECRET
+      # ADMIN_ROLLS           → comma-separated roll numbers
+      # CHEF_ROLLS            → comma-separated roll numbers
+      # FRONTEND_URLS         → https://smart-canteen.vercel.app  (your Vercel URL)
+      # CANTEEN_NAME / CANTEEN_COLLEGE / CANTEEN_ADDRESS / CANTEEN_GSTIN / CANTEEN_PHONE

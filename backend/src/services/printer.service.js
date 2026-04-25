@@ -28,6 +28,12 @@ const os          = require('os');
 const path        = require('path');
 require('dotenv').config();
 
+// Printing is only possible on the local Windows machine that has the POS
+// printer driver installed.  On cloud hosts (Render, Railway, Heroku — all
+// Linux) every print path returns { printed: false } so the caller falls
+// back to generating a PDF for browser download.
+const isWindows = process.platform === 'win32';
+
 let printer              = null;
 let bluetoothSerial      = null;
 let isPrinterInitialized = false;
@@ -48,6 +54,11 @@ const CANTEEN_PHONE   = process.env.CANTEEN_PHONE   || '+91 XXXXX XXXXX';
  * e.g.  PRINTER_NAME=POS-58-Series (1)
  */
 const printToWindowsPrinter = async (pdfBuffer) => {
+  if (!isWindows) {
+    console.log('ℹ️  Non-Windows host — GDI print skipped, PDF will be returned instead');
+    return false;
+  }
+
   const printerName = process.env.PRINTER_NAME || '';
   const tmpFile     = path.join(os.tmpdir(), `receipt-${Date.now()}.pdf`);
 
@@ -384,6 +395,7 @@ const printBill = async (order) => {
 
   // ── Windows GDI path ────────────────────────────────────────────────────────
   if (printerType === 'windows') {
+    if (!isWindows) return { printed: false };   // cloud host — caller generates PDF
     try {
       const pdfBuffer = await generateBillPDF(order);
       const ok        = await printToWindowsPrinter(pdfBuffer);

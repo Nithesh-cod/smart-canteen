@@ -1,8 +1,11 @@
-// In development, Vite proxies /api and /socket.io to localhost:5000.
-// In production, the Express backend serves the frontend from the same origin,
-// so relative paths resolve correctly without needing an absolute URL.
-export const API_URL = import.meta.env.VITE_API_URL || '/api';
-export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
+// Dev:  Vite proxies /api and /socket.io to localhost:5000 (vite.config.ts).
+// Prod: Vercel rewrites /api/* to Render backend (vercel.json).
+//       Socket.IO must connect directly to Render — Vercel can't proxy WebSockets.
+const RENDER_BACKEND = 'https://smart-canteen-api.onrender.com';
+
+export const API_URL    = import.meta.env.VITE_API_URL    || '/api';
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ||
+  (import.meta.env.PROD ? RENDER_BACKEND : '');
 
 export const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || '';
 
