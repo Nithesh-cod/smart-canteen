@@ -206,37 +206,47 @@ const verifyPayment = asyncHandler(async (req, res) => {
     });
   }
 
-  // 6. Attempt to print the bill.
-  //    • If printer is connected → print ESC/POS receipt.
-  //    • If printer is offline   → generate a PDF and return it as base64
-  //      so the browser can auto-download it.
-  let billPrinted   = false;
-  let billPdfBase64 = null;
+  // 6. Print the bill.
+  //    • Windows GDI (PRINTER_TYPE=windows):
+  //        Fire-and-forget in the background so the HTTP response is instant.
+  //        Return bill_printed:true optimistically — the spooler takes it from here.
+  //    • ESC/POS (bluetooth/usb/network):
+  //        Try synchronously (fast, <1 s).  If it fails, fall back to a base64 PDF.
+  //    • none:
+  //        Always generate a PDF for the browser to download.
+  const printerType     = (process.env.PRINTER_TYPE || 'none').toLowerCase();
+  let   billPrinted     = false;
+  let   billPdfBase64   = null;
 
-  try {
-    const completeOrder = await Order.getById(order.id);
+  const completeOrder = await Order.getById(order.id);
 
-    const printResult = await printerService.printBill(completeOrder);
-    billPrinted = printResult.printed;
-
-    if (!billPrinted) {
-      // Printer unavailable — generate PDF fallback
+  if (printerType === 'windows') {
+    // Background print — don't block the response
+    billPrinted = true; // optimistic
+    setImmediate(async () => {
       try {
-        const pdfBuffer  = await printerService.generateBillPDF(completeOrder);
-        billPdfBase64    = pdfBuffer.toString('base64');
+        await printerService.printBill(completeOrder);
+      } catch (printErr) {
+        logger.warn(`Background print error for order #${order.order_number}:`, printErr.message);
+      }
+    });
+  } else {
+    // ESC/POS: synchronous (fast) or PDF fallback
+    try {
+      const printResult = await printerService.printBill(completeOrder);
+      billPrinted = printResult.printed;
+    } catch (printErr) {
+      logger.warn('Bill print error (printer may be offline):', printErr.message);
+    }
+    if (!billPrinted) {
+      try {
+        const pdfBuffer = await printerService.generateBillPDF(completeOrder);
+        billPdfBase64   = pdfBuffer.toString('base64');
         logger.info(`PDF bill generated for order #${order.order_number}`);
       } catch (pdfErr) {
         logger.warn('PDF generation also failed:', pdfErr.message);
       }
     }
-  } catch (printErr) {
-    logger.warn('Bill handling error (printer may be offline):', printErr.message);
-    // Still try PDF
-    try {
-      const completeOrder = await Order.getById(order.id);
-      const pdfBuffer     = await printerService.generateBillPDF(completeOrder);
-      billPdfBase64       = pdfBuffer.toString('base64');
-    } catch { /* silently ignore */ }
   }
 
   logger.success(`Payment verified for order #${order.order_number} — ₹${order.total_amount}`);
