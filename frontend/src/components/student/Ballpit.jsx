@@ -75,53 +75,15 @@ class x {
       this.canvas = document.getElementById(this.#e.id);
     } else {
       console.error('Three: Missing canvas or id parameter');
-      return;
     }
-    
-    // Check if canvas is valid
-    if (!this.canvas) {
-      console.error('Three: Canvas element not found');
-      return;
-    }
-    
     this.canvas.style.display = 'block';
-    
-    // Test WebGL support before creating renderer
-    const testContext = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
-    if (!testContext) {
-      console.error('Three: WebGL not supported in this browser');
-      // Optionally show a fallback UI
-      this.canvas.style.display = 'none';
-      return;
-    }
-    
     const e = {
       canvas: this.canvas,
       powerPreference: 'high-performance',
-      failIfMajorPerformanceCaveat: false,
       ...(this.#e.rendererOptions ?? {})
     };
-    
-    try {
-      this.renderer = new s(e);
-      this.renderer.outputColorSpace = n;
-      
-      // Add context loss/restore handlers
-      this.canvas.addEventListener('webglcontextlost', this.#handleContextLost.bind(this), false);
-      this.canvas.addEventListener('webglcontextrestored', this.#handleContextRestored.bind(this), false);
-    } catch (error) {
-      console.error('Three: Failed to create WebGL renderer:', error);
-      this.canvas.style.display = 'none';
-    }
-  }
-  #handleContextLost(event) {
-    event.preventDefault();
-    console.warn('Three: WebGL context lost');
-    this.#z(); // Stop animation loop
-  }
-  #handleContextRestored() {
-    console.log('Three: WebGL context restored');
-    // Optionally reinitialize if needed
+    this.renderer = new s(e);
+    this.renderer.outputColorSpace = n;
   }
   #g() {
     if (!(this.#e.size instanceof Object)) {
@@ -144,12 +106,6 @@ class x {
     this.#r?.disconnect();
     this.#o?.disconnect();
     document.removeEventListener('visibilitychange', this.#v.bind(this));
-    
-    // Remove context event listeners
-    if (this.canvas) {
-      this.canvas.removeEventListener('webglcontextlost', this.#handleContextLost.bind(this));
-      this.canvas.removeEventListener('webglcontextrestored', this.#handleContextRestored.bind(this));
-    }
   }
   #u(e) {
     this.#s = e[0].isIntersecting;
@@ -212,8 +168,6 @@ class x {
     }
   }
   #b() {
-    if (!this.renderer) return;
-    
     this.renderer.setSize(this.size.width, this.size.height);
     this.#t?.setSize(this.size.width, this.size.height);
     let e = window.devicePixelRatio;
@@ -233,7 +187,7 @@ class x {
     this.render = e.render.bind(e);
   }
   #w() {
-    if (this.#n || !this.renderer) return;
+    if (this.#n) return;
     const animate = () => {
       this.#l = requestAnimationFrame(animate);
       this.#h.delta = this.#c.getDelta();
@@ -254,9 +208,7 @@ class x {
     }
   }
   #i() {
-    if (this.renderer && this.scene && this.camera) {
-      this.renderer.render(this.scene, this.camera);
-    }
+    this.renderer.render(this.scene, this.camera);
   }
   clear() {
     this.scene.traverse(e => {
@@ -278,10 +230,8 @@ class x {
     this.#z();
     this.clear();
     this.#t?.dispose();
-    if (this.renderer) {
-      this.renderer.dispose();
-      this.renderer.forceContextLoss();
-    }
+    this.renderer.dispose();
+    this.renderer.forceContextLoss();
     this.isDisposed = true;
   }
 }
@@ -722,13 +672,6 @@ function createBallpit(e, t = {}) {
     size: 'parent',
     rendererOptions: { antialias: true, alpha: true }
   });
-  
-  // Check if renderer was successfully created
-  if (!i.renderer) {
-    console.error('Failed to initialize WebGL renderer');
-    return null;
-  }
-  
   let s;
   i.renderer.toneMapping = v;
   i.camera.position.set(0, 0, 20);
@@ -775,13 +718,11 @@ function createBallpit(e, t = {}) {
     i.scene.add(s);
   }
   i.onBeforeRender = e => {
-    if (!cc && s) s.update(e);
+    if (!cc) s.update(e);
   };
   i.onAfterResize = e => {
-    if (s) {
-      s.config.maxX = e.wWidth / 2;
-      s.config.maxY = e.wHeight / 2;
-    }
+    s.config.maxX = e.wWidth / 2;
+    s.config.maxY = e.wHeight / 2;
   };
   return {
     three: i,
@@ -809,27 +750,19 @@ const Ballpit = ({ className = '', followCursor = true, ...props }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Guard: if this canvas already has a WebGL context (e.g. React StrictMode
+    // double-mount), skip initialisation rather than crashing.
     try {
-      const instance = createBallpit(canvas, { followCursor, ...props });
-      
-      // Only set the ref if creation was successful
-      if (instance) {
-        spheresInstanceRef.current = instance;
-      } else {
-        console.error('Ballpit initialization failed - WebGL may not be supported');
-      }
-    } catch (error) {
-      console.error('Failed to create ballpit:', error);
-      // Optionally set an error state to show fallback UI
+      spheresInstanceRef.current = createBallpit(canvas, { followCursor, ...props });
+    } catch (err) {
+      // WebGL unavailable or StrictMode context clash — degrade silently.
+      console.warn('Ballpit: WebGL init skipped —', err?.message ?? err);
     }
 
     return () => {
       if (spheresInstanceRef.current) {
-        try {
-          spheresInstanceRef.current.dispose();
-        } catch (error) {
-          console.error('Error disposing ballpit:', error);
-        }
+        spheresInstanceRef.current.dispose();
+        spheresInstanceRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
