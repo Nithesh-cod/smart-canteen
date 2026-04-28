@@ -23,7 +23,7 @@ import { useToast } from '../components/common/Toast';
 import type { MenuItem, Order } from '../types';
 import api from '../services/api';
 // @ts-ignore — JSX component without types
-import Ballpit from '../components/student/Ballpit';
+import Orb from '../components/student/Orb';
 
 // ─── Offer Banner ─────────────────────────────────────────────────────────────
 
@@ -126,8 +126,6 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
   );
 };
 
-// Ballpit colours: cyan → magenta → amber → green (matches app theme)
-const BALLPIT_COLORS = [0x00f5ff, 0xff00ff, 0xffed4e, 0x00ff88, 0xa855f7];
 
 // ─── Main StudentKiosk Component ──────────────────────────────────────────────
 
@@ -361,24 +359,18 @@ const StudentKiosk: React.FC = () => {
 
   return (
     <div style={bgStyle}>
-      {/* ── Ballpit full-screen background ─────────────────────────────────── */}
-      {/* background colour here is the fallback when WebGL fails / canvas is empty */}
+      {/* ── Orb full-screen background ───────────────────────────────────────── */}
+      {/* Dark gradient is the CSS fallback when WebGL is unavailable */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
                     background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)' }}>
         <BallpitBoundary>
-        <Ballpit
-          count={280}
-          gravity={0}
-          friction={0.999}
-          wallBounce={0.96}
-          followCursor={false}
-          colors={BALLPIT_COLORS}
-          ambientColor={0x0a0a1a}
-          ambientIntensity={0.5}
-          lightIntensity={160}
-          minSize={0.12}
-          maxSize={0.42}
-        />
+          <Orb
+            hue={200}
+            hoverIntensity={0.5}
+            rotateOnHover={true}
+            forceHoverState={false}
+            backgroundColor="#0a0a1a"
+          />
         </BallpitBoundary>
       </div>
 
