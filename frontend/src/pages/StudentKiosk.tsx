@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Component } from 'react';
+
+// ── Error boundary so Ballpit WebGL failures never crash the kiosk UI ─────────
+class BallpitBoundary extends Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: Error) { console.warn('Ballpit caught by error boundary:', err.message); }
+  render() { return this.state.failed ? null : this.props.children; }
+}
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
 import { logout as logoutAction } from '../store/slices/authSlice';
@@ -355,6 +363,7 @@ const StudentKiosk: React.FC = () => {
     <div style={bgStyle}>
       {/* ── Ballpit full-screen background ─────────────────────────────────── */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <BallpitBoundary>
         <Ballpit
           count={280}
           gravity={0}
@@ -368,6 +377,7 @@ const StudentKiosk: React.FC = () => {
           minSize={0.12}
           maxSize={0.42}
         />
+        </BallpitBoundary>
       </div>
 
       {/* Sticky header */}
