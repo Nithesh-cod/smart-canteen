@@ -238,22 +238,18 @@ export default function Orb({
     let currentRot  = 0;
     const rotationSpeed = 0.3;
 
+    // Track mouse anywhere on the page so the orb reacts through UI layers
     const handleMouseMove = e => {
       const rect   = container.getBoundingClientRect();
-      const x      = e.clientX - rect.left;
-      const y      = e.clientY - rect.top;
       const width  = rect.width;
       const height = rect.height;
       const size   = Math.min(width, height);
-      const uvX    = ((x - width  / 2) / size) * 2.0;
-      const uvY    = ((y - height / 2) / size) * 2.0;
-      targetHover  = Math.sqrt(uvX * uvX + uvY * uvY) < 0.8 ? 1 : 0;
+      const uvX    = ((e.clientX - rect.left  - width  / 2) / size) * 2.0;
+      const uvY    = ((e.clientY - rect.top   - height / 2) / size) * 2.0;
+      targetHover  = Math.sqrt(uvX * uvX + uvY * uvY) < 1.1 ? 1 : 0;
     };
 
-    const handleMouseLeave = () => { targetHover = 0; };
-
-    container.addEventListener('mousemove',  handleMouseMove);
-    container.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('mousemove', handleMouseMove);
 
     const update = t => {
       rafId = requestAnimationFrame(update);
@@ -280,8 +276,7 @@ export default function Orb({
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
-      container.removeEventListener('mousemove',  handleMouseMove);
-      container.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('mousemove', handleMouseMove);
       if (gl.canvas.parentNode === container) {
         container.removeChild(gl.canvas);
       }
