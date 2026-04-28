@@ -80,6 +80,7 @@ class x {
     const e = {
       canvas: this.canvas,
       powerPreference: 'high-performance',
+      failIfMajorPerformanceCaveat: false,
       ...(this.#e.rendererOptions ?? {})
     };
     this.renderer = new s(e);
@@ -768,7 +769,7 @@ const Ballpit = ({ className = '', followCursor = true, ...props }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <canvas className={className} ref={canvasRef} style={{ width: '100%', height: '100%' }} />;
+  return <canvas className={className} ref={canvasRef} style={{ width: '100%', height: '100%', background: 'transparent' }} />;
 };
 
 export default Ballpit;
