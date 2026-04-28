@@ -9,7 +9,12 @@
 
 const { ThermalPrinter, PrinterTypes } = require('node-thermal-printer');
 const PDFDocument = require('pdfkit');
+const fs   = require('fs');
+const os   = require('os');
+const path = require('path');
 require('dotenv').config();
+
+const isWindows = process.platform === 'win32';
 
 let printer            = null;
 let bluetoothSerial    = null;
@@ -142,6 +147,175 @@ const initializeNetworkPrinter = async () => {
 };
 
 // ============================================================================
+// WINDOWS GDI PRINT  (pdf-to-printer → Windows print queue)
+// ============================================================================
+
+/**
+ * Write pdfBuffer to a temp file and send it to the Windows printer.
+ * Returns true on success, false on failure.
+ */
+const printToWindowsPrinter = async (pdfBuffer) => {
+  if (!isWindows) return false;
+
+  const printerName = process.env.PRINTER_NAME;
+  if (!printerName) {
+    console.warn('⚠️  PRINTER_NAME not set in .env — cannot print');
+    return false;
+  }
+
+  let pdfToPrinter;
+  try {
+    pdfToPrinter = require('pdf-to-printer');
+  } catch {
+    console.warn('⚠️  pdf-to-printer not installed — run: npm install pdf-to-printer');
+    return false;
+  }
+
+  const tmpFile = path.join(os.tmpdir(), `receipt_${Date.now()}.pdf`);
+  try {
+    fs.writeFileSync(tmpFile, pdfBuffer);
+    await pdfToPrinter.print(tmpFile, {
+      printer: printerName,
+      scale:   'noscale',
+      silent:  true,
+    });
+    return true;
+  } catch (err) {
+    console.warn('⚠️  pdf-to-printer error:', err.message);
+    return false;
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch {}
+  }
+};
+
+// ============================================================================
+// THERMAL PDF  (48 mm = 136 pt printable width — matches POS-58-Series driver)
+// ============================================================================
+
+/**
+ * Generates a receipt PDF sized exactly for the POS-58-Series thermal printer.
+ * PW = 136 pt (48 mm) — the physical printable area of the GDI driver.
+ * Uses 'Rs.' instead of '₹' because Helvetica has no rupee glyph.
+ */
+const generateThermalPDF = (order) => {
+  return new Promise((resolve, reject) => {
+    const PW = 136, PH = 595.3;
+    const ML = 8,  MR = 8;
+    const CW = PW - ML - MR; // 120 pt
+
+    const doc = new PDFDocument({
+      size:          [PW, PH],
+      margins:       { top: 10, bottom: 10, left: ML, right: MR },
+      autoFirstPage: true,
+    });
+
+    const chunks = [];
+    doc.on('data',  c  => chunks.push(c));
+    doc.on('end',   () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const resetX = () => { doc.x = ML; };
+
+    const ctr = (text, opts = {}) => {
+      doc.text(text, ML, doc.y, { width: CW, align: 'center', ...opts });
+      resetX();
+    };
+
+    const kv = (left, right) => {
+      const y = doc.y;
+      const lw = Math.floor(CW * 0.62);
+      const rw = CW - lw;
+      doc.text(left,  ML,      y, { width: lw, lineBreak: false });
+      doc.text(right, ML + lw, y, { width: rw, align: 'right', lineBreak: false });
+      doc.moveDown(0.45);
+      resetX();
+    };
+
+    const sep = () => {
+      resetX();
+      doc.moveDown(0.15)
+         .moveTo(ML, doc.y).lineTo(PW - MR, doc.y)
+         .strokeColor('#888').lineWidth(0.5).stroke()
+         .moveDown(0.15);
+      resetX();
+    };
+
+    // ── Header ────────────────────────────────────────────────────────────────
+    doc.font('Helvetica-Bold').fontSize(9);
+    ctr(CANTEEN_NAME.toUpperCase());
+    doc.font('Helvetica').fontSize(6.5);
+    ctr(CANTEEN_COLLEGE);
+    ctr(CANTEEN_ADDRESS);
+    ctr(`GSTIN: ${CANTEEN_GSTIN}`);
+    ctr(`Tel: ${CANTEEN_PHONE}`);
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Bold').fontSize(7.5);
+    ctr('** RECEIPT **');
+    sep();
+
+    // ── Order info ────────────────────────────────────────────────────────────
+    const d = new Date(order.created_at);
+    doc.font('Helvetica').fontSize(7);
+    kv('Order:',  order.order_number);
+    kv('Date:',   d.toLocaleDateString('en-GB'));
+    kv('Time:',   d.toLocaleTimeString('en-GB', { hour12: false }));
+    kv('Name:',   order.student_name || 'Guest');
+    if (order.student_roll) kv('Roll:', order.student_roll);
+    sep();
+
+    // ── Items ─────────────────────────────────────────────────────────────────
+    doc.font('Helvetica-Bold').fontSize(7);
+    kv('Item', 'Amt');
+    doc.font('Helvetica').fontSize(7);
+    (order.items || []).forEach(item => {
+      const amt  = `Rs.${(item.price * item.quantity).toFixed(2)}`;
+      const name = item.item_name.length > 15
+        ? item.item_name.substring(0, 13) + '..'
+        : item.item_name;
+      kv(`${name} x${item.quantity}`, amt);
+    });
+    sep();
+
+    // ── Totals ────────────────────────────────────────────────────────────────
+    const orig  = parseFloat(order.original_amount || order.total_amount).toFixed(2);
+    const total = parseFloat(order.total_amount).toFixed(2);
+    doc.font('Helvetica').fontSize(7);
+    kv('Subtotal:', `Rs.${orig}`);
+    if (order.points_used > 0) {
+      const disc = (order.points_used * 0.1).toFixed(2);
+      kv(`Points (${order.points_used} pts):`, `-Rs.${disc}`);
+    }
+    doc.font('Helvetica-Bold').fontSize(7.5);
+    kv('TOTAL PAID:', `Rs.${total}`);
+    sep();
+
+    // ── Payment ───────────────────────────────────────────────────────────────
+    doc.font('Helvetica').fontSize(7);
+    kv('Via:', order.payment_method || 'Razorpay');
+    if (order.razorpay_payment_id) {
+      const ref = order.razorpay_payment_id.substring(0, 20);
+      kv('Ref:', ref);
+    }
+    sep();
+
+    // ── Points ────────────────────────────────────────────────────────────────
+    doc.font('Helvetica-Bold').fontSize(7);
+    ctr(`Points earned: +${order.points_earned}`);
+    doc.font('Helvetica').fontSize(6.5);
+    ctr('1 pt = Rs.0.10 off next order');
+    doc.moveDown(0.3);
+    sep();
+
+    // ── Footer ────────────────────────────────────────────────────────────────
+    doc.font('Helvetica').fontSize(7);
+    ctr('Thank you!  Visit again :)');
+    doc.moveDown(0.5);
+
+    doc.end();
+  });
+};
+
+// ============================================================================
 // PRINT ESC/POS CUSTOMER BILL
 // ============================================================================
 /**
@@ -151,6 +325,17 @@ const initializeNetworkPrinter = async () => {
  */
 const printBill = async (order) => {
   try {
+    const printerType = (process.env.PRINTER_TYPE || 'bluetooth').toLowerCase();
+
+    // ── Windows GDI path ──────────────────────────────────────────────────────
+    if (printerType === 'windows') {
+      if (!isWindows) return { printed: false };
+      const pdfBuffer = await generateThermalPDF(order);
+      const ok        = await printToWindowsPrinter(pdfBuffer);
+      return { printed: ok };
+    }
+
+    // ── ESC/POS path (bluetooth / USB / network) ──────────────────────────────
     if (!isPrinterInitialized) {
       const ok = await initializePrinter();
       if (!ok) return { printed: false };
@@ -460,6 +645,8 @@ module.exports = {
   printBill,
   printKitchenReceipt,
   generateBillPDF,
+  generateThermalPDF,
+  printToWindowsPrinter,
   testPrint,
   checkPrinterStatus,
   disconnectPrinter,
