@@ -362,7 +362,9 @@ const StudentKiosk: React.FC = () => {
   return (
     <div style={bgStyle}>
       {/* ── Ballpit full-screen background ─────────────────────────────────── */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+      {/* background colour here is the fallback when WebGL fails / canvas is empty */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)' }}>
         <BallpitBoundary>
         <Ballpit
           count={280}
