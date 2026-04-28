@@ -30,9 +30,9 @@ const Modal: React.FC<ModalProps> = ({
   const overlayStyle: React.CSSProperties = {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.85)',
-    backdropFilter: 'blur(15px)',
-    WebkitBackdropFilter: 'blur(15px)',
+    background: 'rgba(0,0,0,0.35)',
+    backdropFilter: 'blur(4px)',
+    WebkitBackdropFilter: 'blur(4px)',
     zIndex: 2000,
     display: 'flex',
     alignItems: 'center',
@@ -41,10 +41,11 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   const contentStyle: React.CSSProperties = {
-    background: 'rgba(26,10,46,0.97)',
-    backdropFilter: 'blur(30px)',
-    WebkitBackdropFilter: 'blur(30px)',
-    border: '1px solid rgba(0,245,255,0.2)',
+    background: 'rgba(10,6,24,0.55)',
+    backdropFilter: 'blur(28px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+    border: '1px solid rgba(0,245,255,0.18)',
+    boxShadow: '0 8px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)',
     borderRadius: '22px',
     padding: '28px 28px 32px',
     width: '92%',
