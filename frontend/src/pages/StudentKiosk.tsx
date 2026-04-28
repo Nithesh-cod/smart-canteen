@@ -366,7 +366,7 @@ const StudentKiosk: React.FC = () => {
         <BallpitBoundary>
           <Orb
             hue={200}
-            hoverIntensity={0.5}
+            hoverIntensity={5}
             rotateOnHover={true}
             forceHoverState={false}
             backgroundColor="#0a0a1a"
