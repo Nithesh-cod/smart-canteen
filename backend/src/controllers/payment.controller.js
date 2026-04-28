@@ -225,7 +225,12 @@ const verifyPayment = asyncHandler(async (req, res) => {
     billPrinted = true; // optimistic
     setImmediate(async () => {
       try {
-        await printerService.printBill(completeOrder);
+        const printResult = await printerService.printBill(completeOrder);
+        if (printResult?.printed) {
+          logger.info(`🖨️  Receipt printed for order #${order.order_number}`);
+        } else {
+          logger.warn(`⚠️  Printer returned false for order #${order.order_number} — check PRINTER_NAME in .env`);
+        }
       } catch (printErr) {
         logger.warn(`Background print error for order #${order.order_number}:`, printErr.message);
       }
