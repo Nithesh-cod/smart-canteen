@@ -549,35 +549,16 @@ const handleWebhook = asyncHandler(async (req, res) => {
 
         logger.success(`Webhook: order #${order.order_number} marked as paid via payment.captured`);
 
-        // Run the full post-payment pipeline so a webhook-only completion
-        // doesn't strand the order (FIX T3). The webhook context can't
-        // ship a base64 PDF, so skipBill suppresses the sync/PDF branch;
-        // Windows GDI background print still fires.
+        // finalisePayment runs the post-payment side-effects (status, points,
+        // stats, sockets, bill). The webhook context can't return a base64
+        // PDF, so we pass skipBill: true; Windows GDI background print still
+        // fires. It is the single source of socket fanout — do not emit
+        // payment:confirmed again here (was a leftover Round-2 block that
+        // fired every event twice per webhook delivery).
         try {
           await finalisePayment(order, { io: req.app.get('io'), skipBill: true });
         } catch (finErr) {
           logger.error('finalisePayment from webhook failed', finErr);
-        }
-
-        // Notify via socket. Guests have no student_id, so always fan out on
-        // the per-order room (joined by OrderTracking) and only hit the
-        // student room when the order is owned by a logged-in user.
-        // (finalisePayment already emits payment:confirmed; this is an
-        // additional shorter "Payment confirmed!" beacon kept for backward
-        // compatibility with older clients that listened for this name.)
-        const io = req.app.get('io');
-        if (io) {
-          const socketPayload = {
-            orderId:     order.id,
-            orderNumber: order.order_number,
-            amount:      order.total_amount,
-            message:     'Payment confirmed!',
-            timestamp:   new Date().toISOString()
-          };
-          if (order.student_id) {
-            io.to(`student:${order.student_id}`).emit('payment:confirmed', socketPayload);
-          }
-          io.to(`order:${order.id}`).emit('payment:confirmed', socketPayload);
         }
       }
     }
