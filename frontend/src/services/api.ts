@@ -36,11 +36,27 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Request interceptor: attach JWT token from localStorage
+// Request interceptor: attach JWT token from localStorage.
+//
+// Precedence (highest first):
+//   1. Caller-set Authorization header on the request config
+//      (e.g. the per-order guest token from payment.service for guest
+//      checkouts) — kept verbatim, never overwritten or stripped.
+//   2. skipAuth=true → send anonymously (no localStorage lookup).
+//   3. Default → attach the stored student JWT if one exists.
+//
+// The previous version deleted the caller-set header whenever skipAuth was
+// truthy, which silently dropped the guest token and nullified the Round-1
+// C2 IDOR fix.
 api.interceptors.request.use((config) => {
+  const callerAuth = (config.headers as any)?.Authorization;
+  if (callerAuth) return config;
+
+  if ((config as any).skipAuth) return config;
+
   const token = localStorage.getItem('canteen_token');
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    (config.headers as any).Authorization = `Bearer ${token}`;
   }
   return config;
 });
