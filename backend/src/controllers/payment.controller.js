@@ -522,8 +522,18 @@ const handleWebhook = asyncHandler(async (req, res) => {
   const webhookSecret    = process.env.RAZORPAY_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-    logger.warn('RAZORPAY_WEBHOOK_SECRET is not set — skipping webhook verification');
-    return res.status(500).json({ success: false, message: 'Webhook secret not configured' });
+    // Production boot in app.js refuses to start without the secret, so
+    // this branch only fires in dev / staging. Razorpay treats 5xx as
+    // retryable — returning 200 here makes a "Test webhook" click from
+    // the dashboard terminal instead of triggering retry storms (FIX V6).
+    logger.warn(
+      'RAZORPAY_WEBHOOK_SECRET not set — acknowledging without verification ' +
+      '(set the secret to enable signature checks).'
+    );
+    return res.status(200).json({
+      success: false,
+      message: 'Webhook secret not configured; acknowledged without verification',
+    });
   }
 
   // This route is mounted with express.raw() in app.js, so req.body is always

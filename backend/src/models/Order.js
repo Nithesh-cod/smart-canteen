@@ -6,6 +6,15 @@
 
 const { query, transaction } = require('../config/database');
 
+// Mutating helpers below take an optional pg PoolClient so the controller
+// can group several writes inside one transaction. `runner` falls back to
+// the pool-based `query` when no client is supplied so existing callers
+// don't need to change.
+const runner = (client) =>
+  client
+    ? (text, params) => client.query(text, params)
+    : query;
+
 // ============================================================================
 // CREATE OPERATION
 // ============================================================================
@@ -297,9 +306,10 @@ const updateStatus = async (id, status, fromStatus = null) => {
  * @param {Object} paymentData - Payment details
  * @returns {Promise<Object>} Updated order
  */
-const updatePayment = async (id, paymentData) => {
-  const result = await query(
-    `UPDATE orders 
+const updatePayment = async (id, paymentData, client = null) => {
+  const run = runner(client);
+  const result = await run(
+    `UPDATE orders
      SET payment_status = $1,
          payment_method = $2,
          razorpay_order_id = $3,
@@ -324,13 +334,14 @@ const updatePayment = async (id, paymentData) => {
  * @param {number} id - Order ID
  * @returns {Promise<Object>} Updated order
  */
-const cancel = async (id) => {
+const cancel = async (id, client = null) => {
   // payment_status is NOT auto-flipped to 'refunded' here. Marking money
   // returned without actually calling Razorpay was a books-of-record lie.
   // The cancel controller now drives the Razorpay refund first and the
   // refund path itself sets payment_status via Order.updatePayment when
   // the gateway confirms (FIX T1).
-  const result = await query(
+  const run = runner(client);
+  const result = await run(
     `UPDATE orders
         SET status = 'cancelled'
       WHERE id = $1
@@ -353,9 +364,7 @@ const cancel = async (id) => {
  * @returns {Promise<Array<{id, stock_quantity, is_available, name}>>}
  */
 const restoreStock = async (orderId, client = null) => {
-  const run = client
-    ? (text, params) => client.query(text, params)
-    : query;
+  const run = runner(client);
 
   const { rows: items } = await run(
     'SELECT menu_item_id, quantity FROM order_items WHERE order_id = $1',

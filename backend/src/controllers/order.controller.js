@@ -487,22 +487,44 @@ const cancel = asyncHandler(async (req, res) => {
     }
   }
 
-  // FIX T2 — restore inventory before flipping the order to cancelled, so
-  // the stock returns are still visible if anyone looks at this order's
-  // status mid-flight.
-  const stockRestored = await Order.restoreStock(order.id);
-
-  const cancelledOrder = await Order.cancel(orderId);
-
-  // If we actually refunded above, record the gateway state on the order.
-  let finalOrder = cancelledOrder;
-  if (refund) {
-    finalOrder = await Order.updatePayment(order.id, {
-      payment_status:      'refunded',
-      payment_method:      order.payment_method,
-      razorpay_order_id:   order.razorpay_order_id,
-      razorpay_payment_id: order.razorpay_payment_id,
-      razorpay_signature:  order.razorpay_signature
+  // FIX V7 — DB writes (stock restore, cancel, refund mark) run inside a
+  // single transaction so a mid-flow failure rolls back cleanly. The
+  // gateway refund above can't be reversed; making the DB steps atomic
+  // means a transient error after the refund leaves the order in its
+  // original state instead of half-applied, and the admin can safely
+  // retry (the next attempt would skip the refund branch entirely since
+  // payment_status is unchanged… but Razorpay rejects double refunds, so
+  // the admin needs to use a dedicated path — see error message below).
+  let finalOrder;
+  let stockRestored;
+  try {
+    const result = await transaction(async (client) => {
+      const restored = await Order.restoreStock(order.id, client);
+      const cancelled = await Order.cancel(order.id, client);
+      let updated = cancelled;
+      if (refund) {
+        updated = await Order.updatePayment(order.id, {
+          payment_status:      'refunded',
+          payment_method:      order.payment_method,
+          razorpay_order_id:   order.razorpay_order_id,
+          razorpay_payment_id: order.razorpay_payment_id,
+          razorpay_signature:  order.razorpay_signature
+        }, client);
+      }
+      return { finalOrder: updated, stockRestored: restored };
+    });
+    finalOrder = result.finalOrder;
+    stockRestored = result.stockRestored;
+  } catch (dbErr) {
+    logger.error(
+      `Cancel DB updates failed AFTER successful refund for order #${order.order_number}. ` +
+      `Manual reconciliation required (refund id: ${refund?.refundId})`,
+      dbErr
+    );
+    return res.status(500).json({
+      success: false,
+      message: 'Cancel partially failed. Refund landed but DB updates rolled back. ' +
+               'Please contact support — refund id logged.',
     });
   }
 
