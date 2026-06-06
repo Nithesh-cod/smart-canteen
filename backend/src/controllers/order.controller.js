@@ -9,6 +9,7 @@ const Order          = require('../models/Order');
 const Student        = require('../models/Student');
 const MenuItem       = require('../models/MenuItem');
 const printerService = require('../services/printer.service');
+const razorpayService = require('../services/razorpay.service');
 const logger         = require('../utils/logger');
 const { query }      = require('../config/database');
 const { asyncHandler }                  = require('../middleware/error.middleware');
@@ -461,7 +462,49 @@ const cancel = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
 
+  // FIX T1 — money first, DB state second. If this order has already been
+  // paid via Razorpay we must actually issue a refund through the gateway
+  // before flipping payment_status; otherwise the DB silently lies about
+  // money having been returned. On gateway failure we surface 502 and do
+  // NOT cancel the order, keeping DB + Razorpay state in sync.
+  let refund = null;
+  if (order.payment_status === 'paid' && order.razorpay_payment_id) {
+    try {
+      refund = await razorpayService.processRefund(
+        order.razorpay_payment_id,
+        null, // full refund
+        {
+          reason: reason || `Cancelled by ${role}`,
+          canteen_order_id: order.id,
+        }
+      );
+    } catch (refundErr) {
+      logger.error(`Razorpay refund failed on cancel of order #${order.order_number}`, refundErr);
+      return res.status(502).json({
+        success: false,
+        message: 'Refund failed; order not cancelled. Please retry or process the refund via the Razorpay dashboard.'
+      });
+    }
+  }
+
+  // FIX T2 — restore inventory before flipping the order to cancelled, so
+  // the stock returns are still visible if anyone looks at this order's
+  // status mid-flight.
+  const stockRestored = await Order.restoreStock(order.id);
+
   const cancelledOrder = await Order.cancel(orderId);
+
+  // If we actually refunded above, record the gateway state on the order.
+  let finalOrder = cancelledOrder;
+  if (refund) {
+    finalOrder = await Order.updatePayment(order.id, {
+      payment_status:      'refunded',
+      payment_method:      order.payment_method,
+      razorpay_order_id:   order.razorpay_order_id,
+      razorpay_payment_id: order.razorpay_payment_id,
+      razorpay_signature:  order.razorpay_signature
+    });
+  }
 
   // Socket notifications
   const io = req.app.get('io');
@@ -482,11 +525,23 @@ const cancel = asyncHandler(async (req, res) => {
     io.to(`order:${order.id}`).emit('order:cancelled', cancelPayload);
     io.to('kitchen').emit('order:cancelled', cancelPayload);
     io.to('admin').emit('order:cancelled', cancelPayload);
+
+    // Broadcast stock returns so menus refresh in real time.
+    for (const row of stockRestored) {
+      io.emit('menu:stock-updated', {
+        id: row.id,
+        stock_quantity: row.stock_quantity,
+        is_available:   row.is_available
+      });
+      if (row.is_available) {
+        io.emit('menu:availability-changed', row);
+      }
+    }
   }
 
-  logger.warn(`Order #${order.order_number} cancelled — reason: ${reason}`);
+  logger.warn(`Order #${order.order_number} cancelled — reason: ${reason}${refund ? ` (refund ${refund.refundId})` : ''}`);
 
-  return res.json({ success: true, data: { order: cancelledOrder } });
+  return res.json({ success: true, data: { order: finalOrder } });
 });
 
 // ============================================================================

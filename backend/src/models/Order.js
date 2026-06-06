@@ -312,18 +312,59 @@ const updatePayment = async (id, paymentData) => {
  * @returns {Promise<Object>} Updated order
  */
 const cancel = async (id) => {
+  // payment_status is NOT auto-flipped to 'refunded' here. Marking money
+  // returned without actually calling Razorpay was a books-of-record lie.
+  // The cancel controller now drives the Razorpay refund first and the
+  // refund path itself sets payment_status via Order.updatePayment when
+  // the gateway confirms (FIX T1).
   const result = await query(
-    `UPDATE orders 
-     SET status = 'cancelled', 
-         payment_status = CASE 
-           WHEN payment_status = 'paid' THEN 'refunded' 
-           ELSE payment_status 
-         END
-     WHERE id = $1
-     RETURNING *`,
+    `UPDATE orders
+        SET status = 'cancelled'
+      WHERE id = $1
+      RETURNING *`,
     [id]
   );
   return result.rows[0];
+};
+
+/**
+ * Restore stock for every line item on an order (FIX T2).
+ *
+ * Untracked items (stock_quantity = -1) are skipped. When a previously-zero
+ * row goes back above zero we auto-flip is_available back on, mirroring the
+ * decrement-on-create behaviour. Run optionally inside a caller-supplied
+ * transaction client.
+ *
+ * @param {number} orderId
+ * @param {import('pg').PoolClient} [client]
+ * @returns {Promise<Array<{id, stock_quantity, is_available, name}>>}
+ */
+const restoreStock = async (orderId, client = null) => {
+  const run = client
+    ? (text, params) => client.query(text, params)
+    : query;
+
+  const { rows: items } = await run(
+    'SELECT menu_item_id, quantity FROM order_items WHERE order_id = $1',
+    [orderId]
+  );
+
+  const restored = [];
+  for (const it of items) {
+    const r = await run(
+      `UPDATE menu_items
+          SET stock_quantity = stock_quantity + $1,
+              is_available   = CASE
+                WHEN stock_quantity + $1 > 0 AND is_available = false
+                THEN true ELSE is_available
+              END
+        WHERE id = $2 AND stock_quantity <> -1
+        RETURNING id, stock_quantity, is_available, name`,
+      [it.quantity, it.menu_item_id]
+    );
+    if (r.rows[0]) restored.push(r.rows[0]);
+  }
+  return restored;
 };
 
 // ============================================================================
@@ -431,6 +472,7 @@ module.exports = {
   updateStatus,
   updatePayment,
   cancel,
+  restoreStock,
   getStats,
   getRevenueData,
   generateOrderNumber
