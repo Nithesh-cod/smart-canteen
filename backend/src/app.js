@@ -15,6 +15,20 @@ require('dotenv').config();
 
 const app = express();
 
+// Production hard-stop: a missing webhook secret silently turns every
+// payment.captured into a 500, which Razorpay treats as retryable and
+// hammers in a redelivery storm. Fail fast on boot so the operator notices
+// and sets the env var before payments start landing.
+if (process.env.NODE_ENV === 'production' && !process.env.RAZORPAY_WEBHOOK_SECRET) {
+  console.error(
+    '\n❌  RAZORPAY_WEBHOOK_SECRET is not set.\n' +
+    '    Refusing to start in production — every webhook would otherwise\n' +
+    '    return 500 and Razorpay would retry indefinitely.\n' +
+    '    Set the secret in your Render/host env, then restart.\n'
+  );
+  process.exit(1);
+}
+
 // Trust the first proxy hop (Render / Vercel / nginx sit in front of Express).
 // Required for express-rate-limit to read X-Forwarded-For correctly.
 app.set('trust proxy', 1);
@@ -66,6 +80,16 @@ app.use(helmet());
 
 // CORS — allow all dashboard ports
 app.use(cors(corsOptions));
+
+// Razorpay webhook (FIX C3) — MUST be mounted before express.json() so the
+// HMAC verifier sees the untouched request body. If express.json() runs first
+// it re-stringifies the body with different whitespace/key-ordering and the
+// signature check fails on every webhook.
+app.post(
+  '/api/payments/webhook',
+  express.raw({ type: 'application/json' }),
+  require('./controllers/payment.controller').handleWebhook
+);
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));

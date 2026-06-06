@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import * as orderService from '../services/order.service';
+import * as authService from '../services/auth.service';
 import socketService from '../services/socket.service';
 import type { Order } from '../types';
 
@@ -270,6 +271,11 @@ const OrderTracking: React.FC = () => {
 
   // Load recent orders on mount
   useEffect(() => {
+    // Public page: skip the authenticated /api/orders call entirely when no
+    // token is stored — otherwise the 401 fires window 'auth:unauthorized'
+    // for every drive-by visitor (FIX L3).
+    if (!authService.getStoredToken()) return;
+
     const loadRecent = async () => {
       setLoadingRecent(true);
       try {
@@ -351,18 +357,34 @@ const OrderTracking: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramOrderNumber]);
 
-  // Socket: real-time status update
+  // Socket: real-time status update via the per-order room (FIX M4 + M3).
+  // Backend emits 'order:status-change' to both `student:<id>` (logged-in)
+  // and `order:<id>` (everyone subscribed via order:join), so this page —
+  // which is public — joins the per-order room and listens for it.
   useEffect(() => {
     if (!order) return;
     socketService.connect();
-    const handler = (data: any) => {
-      if (data.order_number === order.order_number) {
+    socketService.joinOrderRoom(order.id);
+
+    const statusHandler = (data: any) => {
+      const matches = data.orderId === order.id || data.order_number === order.order_number;
+      if (matches && data.status) {
         setOrder(prev => prev ? { ...prev, status: data.status } : prev);
       }
     };
-    socketService.on('order:status-updated', handler);
-    return () => { socketService.off('order:status-updated', handler); };
-  }, [order?.order_number]);
+    const cancelledHandler = (data: any) => {
+      const matches = data.orderId === order.id || data.order_number === order.order_number;
+      if (matches) {
+        setOrder(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+      }
+    };
+    socketService.on('order:status-change', statusHandler);
+    socketService.on('order:cancelled', cancelledHandler);
+    return () => {
+      socketService.off('order:status-change', statusHandler);
+      socketService.off('order:cancelled', cancelledHandler);
+    };
+  }, [order?.id, order?.order_number]);
 
   // Auto-refresh every 30s for active orders
   useEffect(() => {
