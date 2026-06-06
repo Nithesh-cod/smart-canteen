@@ -366,11 +366,13 @@ const OrderTracking: React.FC = () => {
     socketService.connect();
     socketService.joinOrderRoom(order.id);
 
+    // Status / paid / refunded transitions are all driven through a full
+    // re-fetch of the order (FIX T7). Patching only `status` would drop
+    // payment_status changes that arrived via the webhook path, leaving
+    // the user stuck on "Payment Pending" until the 30s poll.
     const statusHandler = (data: any) => {
       const matches = data.orderId === order.id || data.order_number === order.order_number;
-      if (matches && data.status) {
-        setOrder(prev => prev ? { ...prev, status: data.status } : prev);
-      }
+      if (matches) handleRefresh();
     };
     const cancelledHandler = (data: any) => {
       const matches = data.orderId === order.id || data.order_number === order.order_number;
@@ -384,15 +386,25 @@ const OrderTracking: React.FC = () => {
         setOrder(prev => prev ? { ...prev, payment_status: 'refunded' } : prev);
       }
     };
+    // Webhook-only completion: the verify callback never ran (browser closed
+    // mid-redirect on mobile), but payment.captured still landed and the
+    // backend ran the full finalisePayment pipeline. A re-fetch picks up
+    // the new payment_status + status without waiting for the 30s poll.
+    const paidHandler = (data: any) => {
+      const matches = data.orderId === order.id || data.order_number === order.order_number;
+      if (matches) handleRefresh();
+    };
     socketService.on('order:status-change', statusHandler);
     socketService.on('order:cancelled', cancelledHandler);
     socketService.on('payment:refunded', refundedHandler);
+    socketService.on('payment:confirmed', paidHandler);
     return () => {
       socketService.off('order:status-change', statusHandler);
       socketService.off('order:cancelled', cancelledHandler);
       socketService.off('payment:refunded', refundedHandler);
+      socketService.off('payment:confirmed', paidHandler);
     };
-  }, [order?.id, order?.order_number]);
+  }, [order?.id, order?.order_number, handleRefresh]);
 
   // Auto-refresh every 30s for active orders
   useEffect(() => {
