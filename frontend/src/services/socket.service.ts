@@ -68,6 +68,17 @@ class SocketService {
   }
 
   /**
+   * Subscribe to events for a specific order. Used by the public
+   * OrderTracking page and by guest checkouts — neither has a student
+   * room to fall back on, so the backend fans out payment:confirmed /
+   * order:status-change / order:cancelled / payment:refunded on
+   * `order:<id>` as well.
+   */
+  joinOrderRoom(orderId: number | string): void {
+    this.emit('order:join', orderId);
+  }
+
+  /**
    * Join the chef room to receive new order notifications.
    */
   joinAsChef(): void {
