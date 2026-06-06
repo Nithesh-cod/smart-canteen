@@ -373,6 +373,12 @@ const processRefund = asyncHandler(async (req, res) => {
     razorpay_signature:  order.razorpay_signature
   });
 
+  // FIX T2 — return inventory to the menu BEFORE Order.cancel so the
+  // stock returns aren't gated on the cancel step succeeding (the gateway
+  // refund has already landed; a transient DB error here is recoverable
+  // via re-run, but the money must not be left as 'paid').
+  const stockRestored = await Order.restoreStock(order.id);
+
   // Cancel the order too so it no longer appears in kitchen queue
   if (!['completed', 'cancelled'].includes(order.status)) {
     await Order.cancel(order.id);
@@ -408,6 +414,18 @@ const processRefund = asyncHandler(async (req, res) => {
       message:     'Your payment has been refunded',
       timestamp:   new Date().toISOString()
     });
+
+    // Stock returns (FIX T2)
+    for (const row of stockRestored) {
+      io.emit('menu:stock-updated', {
+        id: row.id,
+        stock_quantity: row.stock_quantity,
+        is_available:   row.is_available
+      });
+      if (row.is_available) {
+        io.emit('menu:availability-changed', row);
+      }
+    }
   }
 
   logger.success(`Refund processed for order #${order.order_number} — Razorpay refund ${refund.refundId}`);
