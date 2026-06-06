@@ -161,8 +161,23 @@ const verifyPayment = asyncHandler(async (req, res) => {
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
 
+  // Idempotent — webhook may have beaten us to it. Common mobile flow:
+  // Razorpay redirects through a UPI app, the kiosk tab goes background,
+  // payment.captured lands first, then the user foregrounds the tab and
+  // the verify handler() finally fires. Don't error on what's actually a
+  // success — finalisePayment already ran from the webhook path (FIX V4).
   if (order.payment_status === 'paid') {
-    return res.status(400).json({ success: false, message: 'Order is already paid' });
+    const completeOrder = await Order.getById(order.id);
+    return res.json({
+      success: true,
+      data: {
+        order:          completeOrder,
+        points_earned:  completeOrder.points_earned,
+        points_used:    completeOrder.points_used,
+        bill_printed:   true,
+        already_paid:   true,
+      },
+    });
   }
 
   // 3. Mark the order as paid
@@ -217,7 +232,17 @@ async function finalisePayment(order, { io, skipBill = false } = {}) {
   // 1. Status advance
   if (order.status === 'pending') {
     try {
-      await Order.updateStatus(order.id, 'preparing');
+      // Optimistic WHERE-guard: only advance if still 'pending'. A chef or
+      // admin may have cancelled the order in the window between the
+      // controller's getById and our updateStatus call; without the guard
+      // we'd silently un-cancel it (FIX V5).
+      const advanced = await Order.updateStatus(order.id, 'preparing', 'pending');
+      if (!advanced) {
+        logger.warn(
+          `finalisePayment: status guard rejected — order #${order.order_number} ` +
+          `was no longer 'pending' (likely cancelled in flight)`
+        );
+      }
     } catch (statusErr) {
       logger.error(`finalisePayment: status advance failed for order #${order.order_number}`, statusErr);
     }

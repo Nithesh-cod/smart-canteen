@@ -258,24 +258,37 @@ const getAll = async (filters = {}) => {
 // ============================================================================
 
 /**
- * Update order status
- * @param {number} id - Order ID
- * @param {string} status - New status
- * @returns {Promise<Object>} Updated order
+ * Update order status.
+ *
+ * When `fromStatus` is supplied the UPDATE only fires if the row is still
+ * in that status — used by finalisePayment so a webhook-vs-chef race can't
+ * silently rewrite a freshly-cancelled order back to 'preparing'. Returns
+ * null when the guard didn't match. Existing callers can omit the arg and
+ * behave unchanged (FIX V5).
+ *
+ * @param {number} id
+ * @param {string} status
+ * @param {string} [fromStatus] Optional WHERE status = $? guard
+ * @returns {Promise<Object|null>}
  */
-const updateStatus = async (id, status) => {
+const updateStatus = async (id, status, fromStatus = null) => {
   let queryText = 'UPDATE orders SET status = $1';
   const params = [status, id];
-  
+
   // Set completed_at timestamp if status is completed
   if (status === 'completed') {
     queryText += ', completed_at = NOW()';
   }
-  
-  queryText += ' WHERE id = $2 RETURNING *';
-  
+
+  queryText += ' WHERE id = $2';
+  if (fromStatus) {
+    params.push(fromStatus);
+    queryText += ` AND status = $${params.length}`;
+  }
+  queryText += ' RETURNING *';
+
   const result = await query(queryText, params);
-  return result.rows[0];
+  return result.rows[0] || null;
 };
 
 /**
