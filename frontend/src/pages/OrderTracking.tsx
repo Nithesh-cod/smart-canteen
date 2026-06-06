@@ -378,11 +378,19 @@ const OrderTracking: React.FC = () => {
         setOrder(prev => prev ? { ...prev, status: 'cancelled' } : prev);
       }
     };
+    const refundedHandler = (data: any) => {
+      const matches = data.orderId === order.id || data.order_number === order.order_number;
+      if (matches) {
+        setOrder(prev => prev ? { ...prev, payment_status: 'refunded' } : prev);
+      }
+    };
     socketService.on('order:status-change', statusHandler);
     socketService.on('order:cancelled', cancelledHandler);
+    socketService.on('payment:refunded', refundedHandler);
     return () => {
       socketService.off('order:status-change', statusHandler);
       socketService.off('order:cancelled', cancelledHandler);
+      socketService.off('payment:refunded', refundedHandler);
     };
   }, [order?.id, order?.order_number]);
 

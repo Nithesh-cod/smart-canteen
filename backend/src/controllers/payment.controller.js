@@ -174,44 +174,89 @@ const verifyPayment = asyncHandler(async (req, res) => {
     razorpay_signature
   });
 
-  // Also move order status from 'pending' to 'preparing' if it was still pending
-  if (order.status === 'pending') {
-    await Order.updateStatus(order.id, 'preparing');
-  }
+  // 4–6. Status advance, point/stat reconciliation, sockets, bill print.
+  //      Shared with handleWebhook so a webhook-only completion (the
+  //      browser closed before /verify ran) doesn't strand the order at
+  //      status=pending with no points awarded and no receipt (FIX T3).
+  const finalised = await finalisePayment(order, { io: req.app.get('io') });
 
-  // 4. Update student loyalty points and spending stats — only for logged-in
-  //    students. Runs in a single transaction so a mid-sequence failure
-  //    can't leave the student record in a half-updated state (FIX M7).
-  let updatedStudent = null;
-  if (studentId && order.student_id) {
+  logger.success(`Payment verified for order #${order.order_number} — ₹${order.total_amount}`);
+
+  return res.json({
+    success: true,
+    data: {
+      order:          updatedOrder,
+      points_earned:  order.points_earned,
+      points_used:    order.points_used,
+      student_tier:   finalised.student?.tier,
+      student_points: finalised.student?.points,
+      bill_printed:   finalised.billPrinted,
+      // base64 PDF — present only when printer is offline
+      ...(finalised.billPdfBase64 && { bill_pdf: finalised.billPdfBase64 }),
+    }
+  });
+});
+
+// ============================================================================
+// SHARED POST-PAYMENT PIPELINE  (FIX T3)
+// ============================================================================
+/**
+ * Run every "after we know the payment landed" side-effect:
+ *   1. pending → preparing transition
+ *   2. points / stats / tier reconciliation (transactional)
+ *   3. socket emits to student (or guest order room), kitchen, admin
+ *   4. bill print (skipped on the webhook path — no res to return a PDF to)
+ *
+ * @param {Object}   order       - Order BEFORE payment_status was flipped
+ * @param {Object}   opts
+ * @param {Object}   opts.io     - socket.io instance (may be undefined)
+ * @param {boolean} [opts.skipBill=false] - webhook path skips synchronous bill
+ * @returns {Promise<{ student: object|null, billPrinted: boolean, billPdfBase64: string|null }>}
+ */
+async function finalisePayment(order, { io, skipBill = false } = {}) {
+  // 1. Status advance
+  if (order.status === 'pending') {
     try {
-      updatedStudent = await transaction(async (client) => {
-        if (order.points_used > 0) {
-          await Student.deductPoints(studentId, order.points_used, client);
-        }
-        if (order.points_earned > 0) {
-          await Student.addPoints(studentId, order.points_earned, client);
-        }
-        await Student.updateStats(studentId, parseFloat(order.total_amount), client);
-        return await Student.updateTier(studentId, client);
-      });
-    } catch (pointsErr) {
-      logger.error('Failed to update student points/stats after payment', pointsErr);
+      await Order.updateStatus(order.id, 'preparing');
+    } catch (statusErr) {
+      logger.error(`finalisePayment: status advance failed for order #${order.order_number}`, statusErr);
     }
   }
 
-  // 5. Emit payment:success socket event
-  const io = req.app.get('io');
+  // 2. Points / stats / tier — only for logged-in students. Transactional
+  //    so a mid-sequence failure can't leave the row half-updated.
+  let updatedStudent = null;
+  if (order.student_id) {
+    try {
+      updatedStudent = await transaction(async (client) => {
+        if (order.points_used > 0) {
+          await Student.deductPoints(order.student_id, order.points_used, client);
+        }
+        if (order.points_earned > 0) {
+          await Student.addPoints(order.student_id, order.points_earned, client);
+        }
+        await Student.updateStats(order.student_id, parseFloat(order.total_amount), client);
+        return await Student.updateTier(order.student_id, client);
+      });
+    } catch (pointsErr) {
+      logger.error('finalisePayment: points reconciliation failed', pointsErr);
+    }
+  }
+
+  // 3. Sockets
   if (io) {
-    const socketRoom = studentId ? `student:${studentId}` : `order:${order.id}`;
-    io.to(socketRoom).emit('payment:confirmed', {
+    const confirmedPayload = {
       orderId:       order.id,
       orderNumber:   order.order_number,
       amount:        order.total_amount,
       points_earned: order.points_earned,
       message:       'Payment successful! Your order is being prepared.',
       timestamp:     new Date().toISOString()
-    });
+    };
+    if (order.student_id) {
+      io.to(`student:${order.student_id}`).emit('payment:confirmed', confirmedPayload);
+    }
+    io.to(`order:${order.id}`).emit('payment:confirmed', confirmedPayload);
 
     io.to('kitchen').emit('order:updated', {
       orderId:     order.id,
@@ -221,31 +266,26 @@ const verifyPayment = asyncHandler(async (req, res) => {
     });
 
     io.to('admin').emit('payment:success', {
-      orderId:      order.id,
-      orderNumber:  order.order_number,
-      studentId,
-      amount:       order.total_amount,
-      timestamp:    new Date().toISOString()
+      orderId:     order.id,
+      orderNumber: order.order_number,
+      studentId:   order.student_id,
+      amount:      order.total_amount,
+      timestamp:   new Date().toISOString()
     });
   }
 
-  // 6. Print the bill.
-  //    • Windows GDI (PRINTER_TYPE=windows):
-  //        Fire-and-forget in the background so the HTTP response is instant.
-  //        Return bill_printed:true optimistically — the spooler takes it from here.
-  //    • ESC/POS (bluetooth/usb/network):
-  //        Try synchronously (fast, <1 s).  If it fails, fall back to a base64 PDF.
-  //    • none:
-  //        Always generate a PDF for the browser to download.
-  const printerType     = (process.env.PRINTER_TYPE || 'none').toLowerCase();
-  let   billPrinted     = false;
-  let   billPdfBase64   = null;
+  // 4. Bill print. Webhook path always skips the synchronous/PDF branches —
+  //    there's no response to return base64 against. Windows GDI still
+  //    fires via setImmediate so the printer prints in the background.
+  const printerType   = (process.env.PRINTER_TYPE || 'none').toLowerCase();
+  let   billPrinted   = false;
+  let   billPdfBase64 = null;
 
   const completeOrder = await Order.getById(order.id);
 
   if (printerType === 'windows') {
-    // Background print — don't block the response
-    billPrinted = true; // optimistic
+    // Optimistic + background — same as the verify path before the refactor.
+    billPrinted = true;
     setImmediate(async () => {
       try {
         const printResult = await printerService.printBill(completeOrder);
@@ -258,8 +298,9 @@ const verifyPayment = asyncHandler(async (req, res) => {
         logger.warn(`Background print error for order #${order.order_number}:`, printErr.message);
       }
     });
-  } else {
-    // ESC/POS: synchronous (fast) or PDF fallback
+  } else if (!skipBill) {
+    // ESC/POS sync attempt + base64 PDF fallback. Only the verify path
+    // exercises this — the webhook has no response to attach the PDF to.
     try {
       const printResult = await printerService.printBill(completeOrder);
       billPrinted = printResult.printed;
@@ -277,22 +318,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
     }
   }
 
-  logger.success(`Payment verified for order #${order.order_number} — ₹${order.total_amount}`);
-
-  return res.json({
-    success: true,
-    data: {
-      order:          updatedOrder,
-      points_earned:  order.points_earned,
-      points_used:    order.points_used,
-      student_tier:   updatedStudent ? updatedStudent.tier   : undefined,
-      student_points: updatedStudent ? updatedStudent.points : undefined,
-      bill_printed:   billPrinted,
-      // base64 PDF — present only when printer is offline
-      ...(billPdfBase64 && { bill_pdf: billPdfBase64 }),
-    }
-  });
-});
+  return { student: updatedStudent, billPrinted, billPdfBase64 };
+}
 
 // ============================================================================
 // GET PAYMENT HISTORY
@@ -384,11 +411,11 @@ const processRefund = asyncHandler(async (req, res) => {
     await Order.cancel(order.id);
   }
 
-  // Reconcile points in a single transaction so a mid-sequence failure
-  // can't leave the student with a deducted earning but no restored
-  // redemption (or vice-versa). Mirrors the verifyPayment fix (M7).
-  // Skip entirely for guest orders (no student_id to update).
-  if (order.student_id && (order.points_earned > 0 || order.points_used > 0)) {
+  // Reconcile loyalty points AND spending stats in a single transaction,
+  // then re-evaluate tier (FIX T5). updateStats clamps both columns at 0
+  // so a refund issued before stats ever incremented (or partial edge
+  // cases) won't push them below zero. Skip entirely for guest orders.
+  if (order.student_id) {
     try {
       await transaction(async (client) => {
         if (order.points_earned > 0) {
@@ -397,23 +424,33 @@ const processRefund = asyncHandler(async (req, res) => {
         if (order.points_used > 0) {
           await Student.addPoints(order.student_id, order.points_used, client);
         }
+        await Student.updateStats(
+          order.student_id,
+          -parseFloat(order.total_amount), // negative delta reverses
+          client
+        );
+        await Student.updateTier(order.student_id, client);
       });
     } catch (pointsErr) {
-      logger.error('Failed to reconcile points on refund', pointsErr);
+      logger.error('Failed to reconcile points/stats on refund', pointsErr);
     }
   }
 
-  // Notify the student
+  // Notify the student and any guest tracker (FIX T4).
   const io = req.app.get('io');
   if (io) {
-    io.to(`student:${order.student_id}`).emit('payment:refunded', {
+    const refundPayload = {
       orderId:     order.id,
       orderNumber: order.order_number,
       amount:      order.total_amount,
       reason:      reason || 'Refund processed',
       message:     'Your payment has been refunded',
       timestamp:   new Date().toISOString()
-    });
+    };
+    if (order.student_id) {
+      io.to(`student:${order.student_id}`).emit('payment:refunded', refundPayload);
+    }
+    io.to(`order:${order.id}`).emit('payment:refunded', refundPayload);
 
     // Stock returns (FIX T2)
     for (const row of stockRestored) {
@@ -512,12 +549,25 @@ const handleWebhook = asyncHandler(async (req, res) => {
 
         logger.success(`Webhook: order #${order.order_number} marked as paid via payment.captured`);
 
+        // Run the full post-payment pipeline so a webhook-only completion
+        // doesn't strand the order (FIX T3). The webhook context can't
+        // ship a base64 PDF, so skipBill suppresses the sync/PDF branch;
+        // Windows GDI background print still fires.
+        try {
+          await finalisePayment(order, { io: req.app.get('io'), skipBill: true });
+        } catch (finErr) {
+          logger.error('finalisePayment from webhook failed', finErr);
+        }
+
         // Notify via socket. Guests have no student_id, so always fan out on
         // the per-order room (joined by OrderTracking) and only hit the
         // student room when the order is owned by a logged-in user.
+        // (finalisePayment already emits payment:confirmed; this is an
+        // additional shorter "Payment confirmed!" beacon kept for backward
+        // compatibility with older clients that listened for this name.)
         const io = req.app.get('io');
         if (io) {
-          const payload = {
+          const socketPayload = {
             orderId:     order.id,
             orderNumber: order.order_number,
             amount:      order.total_amount,
@@ -525,9 +575,9 @@ const handleWebhook = asyncHandler(async (req, res) => {
             timestamp:   new Date().toISOString()
           };
           if (order.student_id) {
-            io.to(`student:${order.student_id}`).emit('payment:confirmed', payload);
+            io.to(`student:${order.student_id}`).emit('payment:confirmed', socketPayload);
           }
-          io.to(`order:${order.id}`).emit('payment:confirmed', payload);
+          io.to(`order:${order.id}`).emit('payment:confirmed', socketPayload);
         }
       }
     }

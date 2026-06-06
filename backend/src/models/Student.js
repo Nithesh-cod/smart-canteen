@@ -204,20 +204,31 @@ const updateTier = async (id, client = null) => {
 };
 
 /**
- * Update student stats after order
+ * Update student stats after order or refund.
+ *
+ * `amount` may be negative on refund — total_spent and total_orders are
+ * both clamped at zero via GREATEST(0, …) so partial refunds and edge
+ * cases (e.g. a refund issued before stats ever incremented) can't push
+ * the columns below zero (FIX T5).
+ *
+ * On refund the caller passes -order.total_amount; total_orders is
+ * decremented by one when amount < 0, incremented by one otherwise.
+ *
  * @param {string} id - Student ID
- * @param {number} amount - Order amount
+ * @param {number} amount - Order amount (positive on pay, negative on refund)
+ * @param {import('pg').PoolClient} [client]
  * @returns {Promise<Object>} Updated student
  */
 const updateStats = async (id, amount, client = null) => {
   const run = runner(client);
+  const orderDelta = amount < 0 ? -1 : 1;
   const result = await run(
     `UPDATE students
-     SET total_spent = total_spent + $1,
-         total_orders = total_orders + 1
-     WHERE id = $2
+     SET total_spent  = GREATEST(0, total_spent  + $1),
+         total_orders = GREATEST(0, total_orders + $2)
+     WHERE id = $3
      RETURNING *`,
-    [amount, id]
+    [amount, orderDelta, id]
   );
   return result.rows[0];
 };
