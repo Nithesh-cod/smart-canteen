@@ -11,6 +11,7 @@ const MenuItem       = require('../models/MenuItem');
 const printerService = require('../services/printer.service');
 const logger         = require('../utils/logger');
 const { asyncHandler }                  = require('../middleware/error.middleware');
+const { issueGuestToken }               = require('../middleware/auth.middleware');
 const { calculatePoints, generateOrderNumber } = require('../utils/helpers');
 
 // Valid status transition map
@@ -131,12 +132,16 @@ const create = asyncHandler(async (req, res) => {
       });
     }
 
-    const maxDiscountAmount = originalAmount * 0.5;
-    const requestedDiscount = points_to_redeem * 0.10;
-    const actualDiscount    = Math.min(requestedDiscount, maxDiscountAmount);
+    // Work in paise (integers) — float math on 0.10 produces off-by-one
+     // results because 0.1 is not exactly representable in IEEE-754.
+    // 1 pt = 10 paise; cap discount at 50% of order total.
+    const originalPaise     = Math.round(originalAmount * 100);
+    const maxDiscountPaise  = Math.floor(originalPaise / 2);
+    const requestedPaise    = points_to_redeem * 10;
+    const actualDiscPaise   = Math.min(requestedPaise, maxDiscountPaise);
 
-    pointsUsed  = Math.floor(actualDiscount / 0.10);
-    totalAmount = originalAmount - actualDiscount;
+    pointsUsed  = Math.floor(actualDiscPaise / 10);
+    totalAmount = (originalPaise - actualDiscPaise) / 100;
   }
 
   // Points earned — only for logged-in students
@@ -158,31 +163,25 @@ const create = asyncHandler(async (req, res) => {
     guest_roll:  isGuest ? (guest_roll  || null) : null
   };
 
+  // Order.create now atomically decrements stock inside the transaction
+  // (FIX H4). If any item is short, it throws with .status = 400 — let
+  // asyncHandler propagate that to the global error middleware.
   const newOrder = await Order.create(orderData, orderItems);
 
-  // Decrement stock for each ordered item (items with tracked stock only)
+  // Broadcast post-commit stock updates so kiosks/chef screens stay in sync.
+  // _stockChanges is attached by Order.create() and only used here; it is
+  // not persisted to the DB.
   const io = req.app.get('io');
-  for (const item of orderItems) {
-    try {
-      const updated = await MenuItem.decrementStock(item.menu_item_id, item.quantity);
-      if (updated) {
-        // Auto-mark unavailable when stock reaches 0
-        if (updated.stock_quantity === 0) {
-          await MenuItem.toggleAvailability(updated.id, false);
-          if (io) {
-            io.emit('menu:availability-changed', { ...updated, is_available: false });
-          }
-        }
-        if (io) {
-          io.emit('menu:stock-updated', {
-            id: updated.id,
-            stock_quantity: updated.stock_quantity,
-            is_available: updated.stock_quantity === 0 ? false : updated.is_available
-          });
-        }
+  if (io && Array.isArray(newOrder._stockChanges)) {
+    for (const row of newOrder._stockChanges) {
+      if (row.stock_quantity === 0) {
+        io.emit('menu:availability-changed', { ...row, is_available: false });
       }
-    } catch (e) {
-      console.warn('⚠️  Stock decrement warning for item', item.menu_item_id, ':', e.message);
+      io.emit('menu:stock-updated', {
+        id: row.id,
+        stock_quantity: row.stock_quantity,
+        is_available: row.is_available
+      });
     }
   }
 
@@ -202,13 +201,19 @@ const create = asyncHandler(async (req, res) => {
 
   logger.success(`Order created: #${newOrder.order_number} for ${isGuest ? `guest ${guest_name}` : `student ${studentId}`}`);
 
+  // Guest checkout: hand the client a short-lived token scoped to this order
+  // so /payments/create and /payments/verify can verify ownership without
+  // requiring a student login (FIX C2 — IDOR on payment endpoints).
+  const guestToken = isGuest ? issueGuestToken(newOrder.id) : null;
+
   return res.status(201).json({
     success: true,
     data: {
       order:            newOrder,
       points_earned:    pointsEarned,
       points_used:      pointsUsed,
-      discount_applied: parseFloat((originalAmount - totalAmount).toFixed(2))
+      discount_applied: parseFloat((originalAmount - totalAmount).toFixed(2)),
+      ...(guestToken ? { guest_token: guestToken } : {})
     }
   });
 });
@@ -263,7 +268,7 @@ const getAll = asyncHandler(async (req, res) => {
   // --- Chef: kitchen-relevant statuses (pending / preparing / ready) ---
   if (role === 'chef') {
     const statusFilter = req.query.status;
-    const allOrders    = await Order.getAll({ limit: 200, offset: 0 });
+    const { orders: allOrders } = await Order.getAll({ limit: 200, offset: 0 });
 
     const kitchenOrders = statusFilter
       ? allOrders.filter(o => o.status === statusFilter)
@@ -297,13 +302,13 @@ const getAll = asyncHandler(async (req, res) => {
     offset:         parsedOffset
   };
 
-  const orders = await Order.getAll(filters);
+  const { orders, total } = await Order.getAll(filters);
 
   return res.json({
     success: true,
     data: {
       orders,
-      total: orders.length,
+      total,
       page:  parseInt(page),
       limit: parsedLimit
     }
@@ -358,8 +363,12 @@ const updateStatus = asyncHandler(async (req, res) => {
       timestamp:   new Date().toISOString()
     };
 
-    // Notify the student in their personal room
-    io.to(`student:${order.student_id}`).emit('order:status-change', statusPayload);
+    // Notify the student in their personal room (logged-in students)
+    if (order.student_id) {
+      io.to(`student:${order.student_id}`).emit('order:status-change', statusPayload);
+    }
+    // Always fan out on the per-order room so guests + tracking page get it.
+    io.to(`order:${order.id}`).emit('order:status-change', statusPayload);
 
     // Notify kitchen and admin rooms
     io.to('kitchen').emit('order:updated', statusPayload);
@@ -367,13 +376,17 @@ const updateStatus = asyncHandler(async (req, res) => {
 
     // Sound alert when order is ready for pickup
     if (status === 'ready') {
-      io.to(`student:${order.student_id}`).emit('order:ready-alert', {
+      const readyPayload = {
         orderId:     order.id,
         orderNumber: order.order_number,
         message:     'Your order is ready for pickup!',
         sound:       true,
         timestamp:   new Date().toISOString()
-      });
+      };
+      if (order.student_id) {
+        io.to(`student:${order.student_id}`).emit('order:ready-alert', readyPayload);
+      }
+      io.to(`order:${order.id}`).emit('order:ready-alert', readyPayload);
     }
   }
 
@@ -459,7 +472,11 @@ const cancel = asyncHandler(async (req, res) => {
       timestamp:   new Date().toISOString()
     };
 
-    io.to(`student:${order.student_id}`).emit('order:cancelled', cancelPayload);
+    if (order.student_id) {
+      io.to(`student:${order.student_id}`).emit('order:cancelled', cancelPayload);
+    }
+    // Per-order room — guests on OrderTracking subscribe via order:join.
+    io.to(`order:${order.id}`).emit('order:cancelled', cancelPayload);
     io.to('kitchen').emit('order:cancelled', cancelPayload);
     io.to('admin').emit('order:cancelled', cancelPayload);
   }
@@ -513,7 +530,7 @@ const track = asyncHandler(async (req, res) => {
 const getStats = asyncHandler(async (req, res) => {
   const stats        = await Order.getStats();
   const topItems     = await MenuItem.getTopSelling(5);
-  const recentOrders = await Order.getAll({ limit: 10, offset: 0 });
+  const { orders: recentOrders } = await Order.getAll({ limit: 10, offset: 0 });
 
   return res.json({
     success: true,
@@ -562,22 +579,16 @@ const getStatusMessage = (status) => {
  * Admin only — revenue aggregated by day for the last N days.
  */
 const getRevenueData = asyncHandler(async (req, res) => {
-  const days   = parseInt(req.query.days) || 30;
-  const orders = await Order.getAll({ payment_status: 'paid', limit: 1000, offset: 0 });
+  const days = parseInt(req.query.days) || 30;
+  const rows = await Order.getRevenueData(days);
 
-  // Group revenue by date
-  const revenueByDate = {};
-  const now = Date.now();
-  for (const o of orders) {
-    const created = new Date(o.created_at);
-    if ((now - created.getTime()) / 86400000 > days) continue;
-    const dateKey = created.toISOString().split('T')[0];
-    if (!revenueByDate[dateKey]) revenueByDate[dateKey] = { date: dateKey, revenue: 0, orders: 0 };
-    revenueByDate[dateKey].revenue += parseFloat(o.total_amount || 0);
-    revenueByDate[dateKey].orders  += 1;
-  }
-
-  const data = Object.values(revenueByDate).sort((a, b) => a.date.localeCompare(b.date));
+  // Order.getRevenueData returns { date, order_count, revenue }; reshape
+  // to the chart-friendly { date, revenue, orders } shape callers expect.
+  const data = rows.map(r => ({
+    date:    r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date,
+    revenue: parseFloat(r.revenue) || 0,
+    orders:  parseInt(r.order_count, 10) || 0
+  }));
 
   return res.json({ success: true, data });
 });

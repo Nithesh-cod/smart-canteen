@@ -7,6 +7,7 @@
 
 const Order          = require('../models/Order');
 const Student        = require('../models/Student');
+const { transaction }  = require('../config/database');
 const razorpayService = require('../services/razorpay.service');
 const printerService  = require('../services/printer.service');
 const logger          = require('../utils/logger');
@@ -38,9 +39,18 @@ const createPaymentOrder = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
 
-  // For logged-in students verify ownership; guest orders have null student_id
-  if (studentId && order.student_id && order.student_id !== studentId) {
-    return res.status(403).json({ success: false, message: 'Access denied' });
+  // Ownership: either a student JWT whose id matches, or a guest token whose
+  // scoped order_id matches. verifyTokenOrGuest guarantees at least one set.
+  if (req.user) {
+    if (order.student_id && order.student_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+  } else if (req.guestOrderId) {
+    if (order.id !== req.guestOrderId) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+  } else {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
   }
 
   // Prevent double-payment
@@ -137,9 +147,18 @@ const verifyPayment = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
 
-  // For logged-in students verify ownership; guest orders have null student_id
-  if (studentId && order.student_id && order.student_id !== studentId) {
-    return res.status(403).json({ success: false, message: 'Access denied' });
+  // Ownership: either a student JWT whose id matches, or a guest token whose
+  // scoped order_id matches. verifyTokenOrGuest guarantees at least one set.
+  if (req.user) {
+    if (order.student_id && order.student_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+  } else if (req.guestOrderId) {
+    if (order.id !== req.guestOrderId) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+  } else {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
   }
 
   if (order.payment_status === 'paid') {
@@ -160,18 +179,22 @@ const verifyPayment = asyncHandler(async (req, res) => {
     await Order.updateStatus(order.id, 'preparing');
   }
 
-  // 4. Update student loyalty points and spending stats — only for logged-in students
+  // 4. Update student loyalty points and spending stats — only for logged-in
+  //    students. Runs in a single transaction so a mid-sequence failure
+  //    can't leave the student record in a half-updated state (FIX M7).
   let updatedStudent = null;
   if (studentId && order.student_id) {
     try {
-      if (order.points_used > 0) {
-        await Student.deductPoints(studentId, order.points_used);
-      }
-      if (order.points_earned > 0) {
-        await Student.addPoints(studentId, order.points_earned);
-      }
-      updatedStudent = await Student.updateStats(studentId, parseFloat(order.total_amount));
-      updatedStudent = await Student.updateTier(studentId);
+      updatedStudent = await transaction(async (client) => {
+        if (order.points_used > 0) {
+          await Student.deductPoints(studentId, order.points_used, client);
+        }
+        if (order.points_earned > 0) {
+          await Student.addPoints(studentId, order.points_earned, client);
+        }
+        await Student.updateStats(studentId, parseFloat(order.total_amount), client);
+        return await Student.updateTier(studentId, client);
+      });
     } catch (pointsErr) {
       logger.error('Failed to update student points/stats after payment', pointsErr);
     }
@@ -355,12 +378,22 @@ const processRefund = asyncHandler(async (req, res) => {
     await Order.cancel(order.id);
   }
 
-  // Deduct points that were earned from this order
-  if (order.points_earned > 0) {
+  // Reconcile points in a single transaction so a mid-sequence failure
+  // can't leave the student with a deducted earning but no restored
+  // redemption (or vice-versa). Mirrors the verifyPayment fix (M7).
+  // Skip entirely for guest orders (no student_id to update).
+  if (order.student_id && (order.points_earned > 0 || order.points_used > 0)) {
     try {
-      await Student.deductPoints(order.student_id, order.points_earned);
+      await transaction(async (client) => {
+        if (order.points_earned > 0) {
+          await Student.deductPoints(order.student_id, order.points_earned, client);
+        }
+        if (order.points_used > 0) {
+          await Student.addPoints(order.student_id, order.points_used, client);
+        }
+      });
     } catch (pointsErr) {
-      logger.error('Failed to deduct refunded order points', pointsErr);
+      logger.error('Failed to reconcile points on refund', pointsErr);
     }
   }
 
@@ -413,10 +446,13 @@ const handleWebhook = asyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: 'Webhook secret not configured' });
   }
 
-  // req.body is the raw Buffer when express.raw() is used on this route
-  const rawBody = Buffer.isBuffer(req.body)
-    ? req.body.toString('utf8')
-    : JSON.stringify(req.body);
+  // This route is mounted with express.raw() in app.js, so req.body is always
+  // a Buffer containing the byte-exact request body — required for HMAC.
+  if (!Buffer.isBuffer(req.body)) {
+    logger.error('Webhook body is not a Buffer — express.raw() not mounted for this route');
+    return res.status(500).json({ success: false, message: 'Webhook body parser misconfigured' });
+  }
+  const rawBody = req.body.toString('utf8');
 
   const isValid = razorpayService.verifyWebhookSignature(
     rawBody,
@@ -429,12 +465,9 @@ const handleWebhook = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
   }
 
-  // Parse the payload (handle both Buffer and already-parsed object)
   let payload;
   try {
-    payload = typeof req.body === 'object' && !Buffer.isBuffer(req.body)
-      ? req.body
-      : JSON.parse(rawBody);
+    payload = JSON.parse(rawBody);
   } catch {
     return res.status(400).json({ success: false, message: 'Invalid JSON payload' });
   }
@@ -448,10 +481,7 @@ const handleWebhook = asyncHandler(async (req, res) => {
     const razorpayOrderId = razorpayPayment.order_id;
 
     if (razorpayOrderId) {
-      // Locate the canteen order by razorpay_order_id using getAll with a filter
-      // (Order model does not have getByRazorpayOrderId, so we use getAll)
-      const orders = await Order.getAll({ payment_status: 'pending', limit: 200, offset: 0 });
-      const order  = orders.find(o => o.razorpay_order_id === razorpayOrderId);
+      const order = await Order.findByRazorpayOrderId(razorpayOrderId);
 
       if (order && order.payment_status !== 'paid') {
         await Order.updatePayment(order.id, {
@@ -464,16 +494,22 @@ const handleWebhook = asyncHandler(async (req, res) => {
 
         logger.success(`Webhook: order #${order.order_number} marked as paid via payment.captured`);
 
-        // Notify via socket
+        // Notify via socket. Guests have no student_id, so always fan out on
+        // the per-order room (joined by OrderTracking) and only hit the
+        // student room when the order is owned by a logged-in user.
         const io = req.app.get('io');
         if (io) {
-          io.to(`student:${order.student_id}`).emit('payment:confirmed', {
+          const payload = {
             orderId:     order.id,
             orderNumber: order.order_number,
             amount:      order.total_amount,
             message:     'Payment confirmed!',
             timestamp:   new Date().toISOString()
-          });
+          };
+          if (order.student_id) {
+            io.to(`student:${order.student_id}`).emit('payment:confirmed', payload);
+          }
+          io.to(`order:${order.id}`).emit('payment:confirmed', payload);
         }
       }
     }
@@ -497,13 +533,13 @@ const getAllPayments = asyncHandler(async (req, res) => {
   const offset = parseInt(req.query.offset) || 0;
 
   const filters = { payment_status: 'paid', limit, offset };
-  const orders  = await Order.getAll(filters);
+  const { orders, total } = await Order.getAll(filters);
 
   return res.json({
     success: true,
     data: {
       payments: orders,
-      total:    orders.length
+      total
     }
   });
 });
