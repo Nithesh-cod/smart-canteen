@@ -11,7 +11,7 @@ const MenuItem       = require('../models/MenuItem');
 const printerService = require('../services/printer.service');
 const razorpayService = require('../services/razorpay.service');
 const logger         = require('../utils/logger');
-const { query }      = require('../config/database');
+const { query, transaction } = require('../config/database');
 const { asyncHandler }                  = require('../middleware/error.middleware');
 const { issueGuestToken }               = require('../middleware/auth.middleware');
 const { calculatePoints, generateOrderNumber } = require('../utils/helpers');
@@ -504,6 +504,36 @@ const cancel = asyncHandler(async (req, res) => {
       razorpay_payment_id: order.razorpay_payment_id,
       razorpay_signature:  order.razorpay_signature
     });
+  }
+
+  // FIX V3 — reverse points + spending stats + tier in a single transaction.
+  // Mirrors processRefund(): without this, /orders/:id/cancel and
+  // /payments/refund would land the order in the same state but leak the
+  // student's points_earned / total_spent depending on which endpoint the
+  // admin clicked. Skipped when no refund happened (order was pending) or
+  // there's no student_id (guest).
+  if (refund && order.student_id) {
+    try {
+      await transaction(async (client) => {
+        if (order.points_earned > 0) {
+          await Student.deductPoints(order.student_id, order.points_earned, client);
+        }
+        if (order.points_used > 0) {
+          await Student.addPoints(order.student_id, order.points_used, client);
+        }
+        await Student.updateStats(
+          order.student_id,
+          -parseFloat(order.total_amount), // negative delta reverses
+          client
+        );
+        await Student.updateTier(order.student_id, client);
+      });
+    } catch (pointsErr) {
+      logger.error(
+        `Failed to reconcile points/stats on cancel-refund of order #${order.order_number}`,
+        pointsErr
+      );
+    }
   }
 
   // Socket notifications
