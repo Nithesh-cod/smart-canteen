@@ -10,6 +10,7 @@ const Student        = require('../models/Student');
 const MenuItem       = require('../models/MenuItem');
 const printerService = require('../services/printer.service');
 const logger         = require('../utils/logger');
+const { query }      = require('../config/database');
 const { asyncHandler }                  = require('../middleware/error.middleware');
 const { issueGuestToken }               = require('../middleware/auth.middleware');
 const { calculatePoints, generateOrderNumber } = require('../utils/helpers');
@@ -61,26 +62,41 @@ const create = asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate each item and build the server-authoritative item list
-  const orderItems    = [];
-  let   originalAmount = 0;
-
+  // Validate each item and build the server-authoritative item list.
+  // The transactional UPDATE inside Order.create is the authoritative stock
+  // check (FIX H4), so the pre-flight only fast-fails on bad ids or items
+  // marked unavailable. Menu rows are fetched in a single batched query —
+  // the previous per-item MenuItem.getById was N+1.
+  const ids = [];
   for (const requestedItem of items) {
     const { menu_item_id, quantity } = requestedItem;
-
     if (!menu_item_id || !quantity || parseInt(quantity) < 1) {
       return res.status(400).json({
         success: false,
         message: 'Each item must have a valid menu_item_id and quantity >= 1'
       });
     }
+    ids.push(parseInt(menu_item_id));
+  }
 
-    const menuItem = await MenuItem.getById(menu_item_id);
+  const { rows: menuRows } = await query(
+    'SELECT id, name, price, is_available FROM menu_items WHERE id = ANY($1::int[])',
+    [ids]
+  );
+  const menuMap = new Map(menuRows.map(r => [r.id, r]));
+
+  const orderItems    = [];
+  let   originalAmount = 0;
+
+  for (const requestedItem of items) {
+    const menuItemId = parseInt(requestedItem.menu_item_id);
+    const quantity   = parseInt(requestedItem.quantity);
+    const menuItem   = menuMap.get(menuItemId);
 
     if (!menuItem) {
       return res.status(404).json({
         success: false,
-        message: `Menu item with ID ${menu_item_id} not found`
+        message: `Menu item with ID ${menuItemId} not found`
       });
     }
 
@@ -91,26 +107,13 @@ const create = asyncHandler(async (req, res) => {
       });
     }
 
-    // Stock check: stock_quantity of -1 means unlimited; 0 or above is tracked
-    const stock = menuItem.stock_quantity;
-    if (stock !== null && stock !== undefined && stock !== -1) {
-      if (stock < parseInt(quantity)) {
-        return res.status(400).json({
-          success: false,
-          message: stock === 0
-            ? `"${menuItem.name}" is out of stock`
-            : `"${menuItem.name}" only has ${stock} left in stock`
-        });
-      }
-    }
-
-    const lineTotal  = parseFloat(menuItem.price) * parseInt(quantity);
+    const lineTotal  = parseFloat(menuItem.price) * quantity;
     originalAmount  += lineTotal;
 
     orderItems.push({
       menu_item_id: menuItem.id,
       item_name:    menuItem.name,
-      quantity:     parseInt(quantity),
+      quantity,
       price:        parseFloat(menuItem.price)
     });
   }
