@@ -29,8 +29,8 @@ function saveRecentStudent(student: Student): void {
 
 const glowKeyframes = `
 @keyframes glow-cycle {
-  0%, 100% { text-shadow: 0 0 10px #00f5ff, 0 0 20px #00f5ff, 0 0 40px #00f5ff; }
-  50% { text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 80px #ff00ff; }
+  0%, 100% { text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88; }
+  50% { text-shadow: 0 0 20px #00d166, 0 0 40px #00d166, 0 0 80px #00d166; }
 }
 @keyframes float-logo {
   0%, 100% { transform: translateY(0px); }
@@ -41,15 +41,15 @@ const glowKeyframes = `
   100% { top: 100vh; }
 }
 @keyframes border-pulse {
-  0%, 100% { box-shadow: 0 0 30px rgba(0,245,255,0.12), 0 0 60px rgba(255,0,255,0.06), inset 0 1px 0 rgba(255,255,255,0.1); }
-  50% { box-shadow: 0 0 50px rgba(0,245,255,0.22), 0 0 100px rgba(255,0,255,0.1), inset 0 1px 0 rgba(255,255,255,0.15); }
+  0%, 100% { box-shadow: 0 0 30px rgba(0, 255, 136,0.12), 0 0 60px rgba(0, 209, 102,0.06), inset 0 1px 0 rgba(255,255,255,0.1); }
+  50% { box-shadow: 0 0 50px rgba(0, 255, 136,0.22), 0 0 100px rgba(0, 209, 102,0.1), inset 0 1px 0 rgba(255,255,255,0.15); }
 }
 `;
 
 const cyberBg: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'linear-gradient(135deg, #0a0a1a, #1a0a2e, #0f0a1f)',
+  background: 'linear-gradient(135deg, #050a0c, #0a1614, #07100e)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -64,8 +64,8 @@ const gridOverlay: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
   backgroundImage: `
-    linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px)
+    linear-gradient(rgba(0, 255, 136,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 136,0.03) 1px, transparent 1px)
   `,
   backgroundSize: '50px 50px',
   pointerEvents: 'none',
@@ -78,9 +78,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [signupName, setSignupName] = useState('');
   const [signupRoll, setSignupRoll] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
   const [signupDept, setSignupDept] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -93,14 +95,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginIdentifier.trim()) {
-      setError('Please enter your roll number or phone');
+    if (!loginIdentifier.trim() || !loginPassword) {
+      setError('Please enter your roll number/phone and password');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const res = await authService.login(loginIdentifier.trim());
+      const res = await authService.login(loginIdentifier.trim(), loginPassword);
       if (!res.success || !res.data) throw new Error(res.message ?? 'Login failed');
       const { student, token } = res.data;
       dispatch(setCredentials({ student, token }));
@@ -119,8 +121,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signupName.trim() || !signupRoll.trim() || !signupPhone.trim()) {
-      setError('Name, Roll Number, and Phone are required');
+    if (!signupName.trim() || !signupRoll.trim() || !signupPhone.trim() || !signupPassword) {
+      setError('Name, Roll Number, Phone, and Password are required');
+      return;
+    }
+    if (signupPassword.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
     setLoading(true);
@@ -130,6 +136,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         name: signupName.trim(),
         roll_number: signupRoll.trim(),
         phone: signupPhone.trim(),
+        password: signupPassword,
         department: signupDept.trim() || undefined,
       });
       if (!res.success || !res.data) throw new Error(res.message ?? 'Signup failed');
@@ -151,7 +158,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const getInputStyle = (name: string): React.CSSProperties => ({
     width: '100%',
     background: 'rgba(255,255,255,0.05)',
-    border: `1px solid ${focusedInput === name ? '#00f5ff' : 'rgba(0,245,255,0.25)'}`,
+    border: `1px solid ${focusedInput === name ? '#00ff88' : 'rgba(0, 255, 136,0.25)'}`,
     borderRadius: '10px',
     color: '#fff',
     padding: '14px 18px',
@@ -160,7 +167,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     outline: 'none',
     transition: 'border-color 0.2s, box-shadow 0.2s',
     boxSizing: 'border-box',
-    boxShadow: focusedInput === name ? '0 0 12px rgba(0,245,255,0.2)' : 'none',
+    boxShadow: focusedInput === name ? '0 0 12px rgba(0, 255, 136,0.2)' : 'none',
   });
 
   const labelStyle: React.CSSProperties = {
@@ -187,7 +194,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     fontSize: '0.85rem',
     fontWeight: 700,
     letterSpacing: '0.12em',
-    boxShadow: disabled ? 'none' : '0 0 22px rgba(0,245,255,0.25)',
+    boxShadow: disabled ? 'none' : '0 0 22px rgba(0, 255, 136,0.25)',
     transition: 'all 0.25s',
     opacity: disabled ? 0.6 : 1,
     textTransform: 'uppercase',
@@ -204,7 +211,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           position: 'fixed',
           left: 0, right: 0,
           height: '2px',
-          background: 'linear-gradient(90deg, transparent, rgba(0,245,255,0.25), transparent)',
+          background: 'linear-gradient(90deg, transparent, rgba(0, 255, 136,0.25), transparent)',
           animation: 'scanline-move 6s linear infinite',
           pointerEvents: 'none',
           zIndex: 1,
@@ -215,7 +222,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           maxWidth: '560px',
           background: 'rgba(255,255,255,0.03)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(0,245,255,0.35)',
+          border: '1px solid rgba(0, 255, 136,0.35)',
           borderRadius: '24px',
           padding: '44px 40px',
           position: 'relative',
@@ -225,10 +232,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
           {/* Corner accents */}
           {[
-            { top: -1, left: -1, borderTop: '2px solid #00f5ff', borderLeft: '2px solid #00f5ff', borderRadius: '24px 0 0 0' },
-            { top: -1, right: -1, borderTop: '2px solid #ff00ff', borderRight: '2px solid #ff00ff', borderRadius: '0 24px 0 0' },
-            { bottom: -1, left: -1, borderBottom: '2px solid #ff00ff', borderLeft: '2px solid #ff00ff', borderRadius: '0 0 0 24px' },
-            { bottom: -1, right: -1, borderBottom: '2px solid #00f5ff', borderRight: '2px solid #00f5ff', borderRadius: '0 0 24px 0' },
+            { top: -1, left: -1, borderTop: '2px solid #00ff88', borderLeft: '2px solid #00ff88', borderRadius: '24px 0 0 0' },
+            { top: -1, right: -1, borderTop: '2px solid #00d166', borderRight: '2px solid #00d166', borderRadius: '0 24px 0 0' },
+            { bottom: -1, left: -1, borderBottom: '2px solid #00d166', borderLeft: '2px solid #00d166', borderRadius: '0 0 0 24px' },
+            { bottom: -1, right: -1, borderBottom: '2px solid #00ff88', borderRight: '2px solid #00ff88', borderRadius: '0 0 24px 0' },
           ].map((s, i) => (
             <div key={i} style={{ position: 'absolute', width: '24px', height: '24px', ...s }} />
           ))}
@@ -242,7 +249,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
               fontFamily: "'Orbitron', sans-serif",
               fontSize: '1.9rem',
               fontWeight: 900,
-              background: 'linear-gradient(135deg, #00f5ff 0%, #ff00ff 100%)',
+              background: 'linear-gradient(135deg, #00ff88 0%, #00d166 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -288,10 +295,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                   letterSpacing: '0.12em',
                   transition: 'all 0.25s',
                   background: tab === t
-                    ? 'linear-gradient(135deg, rgba(0,245,255,0.18), rgba(255,0,255,0.18))'
+                    ? 'linear-gradient(135deg, rgba(0, 255, 136,0.18), rgba(0, 209, 102,0.18))'
                     : 'transparent',
-                  color: tab === t ? '#00f5ff' : 'rgba(255,255,255,0.38)',
-                  boxShadow: tab === t ? '0 0 15px rgba(0,245,255,0.15)' : 'none',
+                  color: tab === t ? '#00ff88' : 'rgba(255,255,255,0.38)',
+                  boxShadow: tab === t ? '0 0 15px rgba(0, 255, 136,0.15)' : 'none',
                   textTransform: 'uppercase',
                 }}
               >
@@ -332,10 +339,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                   onBlur={() => setFocusedInput(null)}
                 />
               </div>
+              <div style={{ marginBottom: '22px' }}>
+                <label style={labelStyle}>Password</label>
+                <input
+                  type="password"
+                  style={getInputStyle('login-pw')}
+                  placeholder="••••••••"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  onFocus={() => setFocusedInput('login-pw')}
+                  onBlur={() => setFocusedInput(null)}
+                />
+              </div>
               <button
                 type="submit"
                 disabled={loading}
-                style={primaryBtnStyle('linear-gradient(135deg, rgba(0,245,255,0.85), rgba(255,0,255,0.85))', loading)}
+                style={primaryBtnStyle('linear-gradient(135deg, rgba(0, 255, 136,0.85), rgba(0, 209, 102,0.85))', loading)}
               >
                 {loading ? '⏳ Authenticating...' : '⚡ Login'}
               </button>
@@ -380,6 +399,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                   />
                 </div>
                 <div>
+                  <label style={labelStyle}>Password * (min 6 characters)</label>
+                  <input
+                    type="password"
+                    style={getInputStyle('s-pw')}
+                    placeholder="••••••••"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    onFocus={() => setFocusedInput('s-pw')}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </div>
+                <div>
                   <label style={labelStyle}>Department (optional)</label>
                   <input
                     style={getInputStyle('s-dept')}
@@ -393,7 +424,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  style={primaryBtnStyle('linear-gradient(135deg, rgba(0,255,136,0.85), rgba(0,245,255,0.85))', loading)}
+                  style={primaryBtnStyle('linear-gradient(135deg, rgba(0,255,136,0.85), rgba(0, 255, 136,0.85))', loading)}
                 >
                   {loading ? '⏳ Creating Account...' : '✨ Create Account'}
                 </button>
@@ -445,9 +476,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(0,245,255,0.5)';
-                      e.currentTarget.style.background = 'rgba(0,245,255,0.07)';
-                      e.currentTarget.style.color = '#00f5ff';
+                      e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.5)';
+                      e.currentTarget.style.background = 'rgba(0, 255, 136,0.07)';
+                      e.currentTarget.style.color = '#00ff88';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
@@ -458,9 +489,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                     <span style={{
                       width: '24px', height: '24px',
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+                      background: 'linear-gradient(135deg, #00ff88, #00d166)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.65rem', fontWeight: 700, color: '#0a0a1a',
+                      fontSize: '0.65rem', fontWeight: 700, color: '#050a0c',
                       flexShrink: 0,
                     }}>
                       {s.name.charAt(0).toUpperCase()}

@@ -26,8 +26,8 @@ interface CheckoutProps {
 type CheckoutState = 'info' | 'idle' | 'creating' | 'paying' | 'verifying' | 'success' | 'error';
 
 const CONFETTI_COLORS = [
-  '#00f5ff',
-  '#ff00ff',
+  '#00ff88',
+  '#00d166',
   '#ffed4e',
   '#00ff88',
   '#ff3366',
@@ -78,6 +78,9 @@ const Checkout: React.FC<CheckoutProps> = ({
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
   const [confettiParticles] = useState<ConfettiParticle[]>(generateConfetti);
   const [billPrinted, setBillPrinted] = useState<boolean | null>(null);
+  // Guest-checkout token returned by POST /orders. Authorises the matching
+  // /payments/create + /payments/verify calls without a student login.
+  const [guestToken, setGuestToken] = useState<string | null>(null);
 
   // Guest info — collected locally; never sent to auth endpoints
   const [guestInfo, setGuestInfo] = useState({ name: '', roll: '', phone: '' });
@@ -91,6 +94,7 @@ const Checkout: React.FC<CheckoutProps> = ({
       setGuestInfo({ name: '', roll: '', phone: '' });
       setCompletedOrder(null);
       setBillPrinted(null);
+      setGuestToken(null);
     }
     wasOpenRef.current = isOpen;
   }, [isOpen]); // intentionally NOT including currentStudent
@@ -120,6 +124,9 @@ const Checkout: React.FC<CheckoutProps> = ({
 
     try {
       let order: Order;
+      // Local copy so a fresh token from this turn's create() is used even
+      // before the React state update applies.
+      let activeGuestToken: string | null = guestToken;
 
       if (completedOrder) {
         // ── Retry after payment failure ────────────────────────────────────
@@ -146,7 +153,7 @@ const Checkout: React.FC<CheckoutProps> = ({
           return;
         }
 
-        // Backend returns { order: {...}, points_earned, ... }
+        // Backend returns { order: {...}, points_earned, guest_token?, ... }
         const rawData = orderResult.data as any;
         order = rawData?.order ?? rawData;
 
@@ -154,6 +161,13 @@ const Checkout: React.FC<CheckoutProps> = ({
           setCheckoutState('error');
           setError('Failed to create order: invalid response from server.');
           return;
+        }
+
+        // Capture the per-order guest token (present only for guest orders).
+        // Required by /payments/create + /payments/verify to prove ownership.
+        if (rawData?.guest_token) {
+          activeGuestToken = rawData.guest_token;
+          setGuestToken(rawData.guest_token);
         }
 
         dispatch(setCurrentOrder(order));
@@ -168,6 +182,7 @@ const Checkout: React.FC<CheckoutProps> = ({
         amount: order.total_amount,
         studentName,
         studentPhone,
+        guestToken: activeGuestToken,
         onSuccess: (paymentData: any) => {
           setCheckoutState('success');
 
@@ -275,8 +290,8 @@ const Checkout: React.FC<CheckoutProps> = ({
         width: 48,
         height: 48,
         borderRadius: '50%',
-        border: '3px solid rgba(0,245,255,0.2)',
-        borderTop: '3px solid #00f5ff',
+        border: '3px solid rgba(0, 255, 136,0.2)',
+        borderTop: '3px solid #00ff88',
         animation: 'spin 0.8s linear infinite',
         margin: '0 auto',
       }}
@@ -403,7 +418,7 @@ const Checkout: React.FC<CheckoutProps> = ({
           <div
             style={{
               textAlign: 'center',
-              color: '#00f5ff',
+              color: '#00ff88',
               fontSize: '0.82rem',
               fontFamily: 'Rajdhani, sans-serif',
               marginTop: 2,
@@ -423,26 +438,26 @@ const Checkout: React.FC<CheckoutProps> = ({
           padding: '18px',
           borderRadius: 14,
           border: 'none',
-          background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+          background: 'linear-gradient(135deg, #00ff88, #00d166)',
           color: '#ffffff',
           fontSize: '1.15rem',
           fontFamily: 'Orbitron, sans-serif',
           fontWeight: 900,
           cursor: 'pointer',
           letterSpacing: '1px',
-          boxShadow: '0 0 30px rgba(0,245,255,0.35), 0 0 60px rgba(255,0,255,0.2)',
+          boxShadow: '0 0 30px rgba(0, 255, 136,0.35), 0 0 60px rgba(0, 209, 102,0.2)',
           transition: 'all 0.3s',
           textShadow: '0 0 10px rgba(0,0,0,0.5)',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)';
           e.currentTarget.style.boxShadow =
-            '0 0 40px rgba(0,245,255,0.5), 0 0 80px rgba(255,0,255,0.3)';
+            '0 0 40px rgba(0, 255, 136,0.5), 0 0 80px rgba(0, 209, 102,0.3)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.boxShadow =
-            '0 0 30px rgba(0,245,255,0.35), 0 0 60px rgba(255,0,255,0.2)';
+            '0 0 30px rgba(0, 255, 136,0.35), 0 0 60px rgba(0, 209, 102,0.2)';
         }}
       >
         💳 Pay ₹{finalTotal.toFixed(2)} via Razorpay
@@ -556,7 +571,7 @@ const Checkout: React.FC<CheckoutProps> = ({
             }}
           >
             Order{' '}
-            <span style={{ color: '#00f5ff', fontWeight: 700 }}>
+            <span style={{ color: '#00ff88', fontWeight: 700 }}>
               #{completedOrder.order_number}
             </span>
           </div>
@@ -592,16 +607,16 @@ const Checkout: React.FC<CheckoutProps> = ({
               color: billPrinted === true
                 ? '#00ff88'
                 : billPrinted === false
-                ? '#00f5ff'
+                ? '#00ff88'
                 : 'rgba(255,255,255,0.45)',
               background: billPrinted === true
                 ? 'rgba(0,255,136,0.08)'
                 : billPrinted === false
-                ? 'rgba(0,245,255,0.08)'
+                ? 'rgba(0, 255, 136,0.08)'
                 : 'rgba(255,255,255,0.04)',
               border: `1px solid ${
                 billPrinted === true ? 'rgba(0,255,136,0.3)'
-                : billPrinted === false ? 'rgba(0,245,255,0.3)'
+                : billPrinted === false ? 'rgba(0, 255, 136,0.3)'
                 : 'rgba(255,255,255,0.1)'
               }`,
               borderRadius: 10,
@@ -623,9 +638,9 @@ const Checkout: React.FC<CheckoutProps> = ({
           marginTop: 8,
           padding: '13px 32px',
           borderRadius: 12,
-          border: '1px solid #00f5ff',
-          background: 'rgba(0,245,255,0.1)',
-          color: '#00f5ff',
+          border: '1px solid #00ff88',
+          background: 'rgba(0, 255, 136,0.1)',
+          color: '#00ff88',
           fontSize: '1rem',
           fontFamily: 'Rajdhani, sans-serif',
           fontWeight: 700,
@@ -636,11 +651,11 @@ const Checkout: React.FC<CheckoutProps> = ({
           position: 'relative',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(0,245,255,0.2)';
-          e.currentTarget.style.boxShadow = '0 0 20px rgba(0,245,255,0.3)';
+          e.currentTarget.style.background = 'rgba(0, 255, 136,0.2)';
+          e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 136,0.3)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(0,245,255,0.1)';
+          e.currentTarget.style.background = 'rgba(0, 255, 136,0.1)';
           e.currentTarget.style.boxShadow = 'none';
         }}
       >
@@ -706,9 +721,9 @@ const Checkout: React.FC<CheckoutProps> = ({
           style={{
             padding: '12px 28px',
             borderRadius: 10,
-            border: '1px solid #00f5ff',
-            background: 'rgba(0,245,255,0.1)',
-            color: '#00f5ff',
+            border: '1px solid #00ff88',
+            background: 'rgba(0, 255, 136,0.1)',
+            color: '#00ff88',
             fontSize: '1rem',
             fontFamily: 'Rajdhani, sans-serif',
             fontWeight: 700,
@@ -716,8 +731,8 @@ const Checkout: React.FC<CheckoutProps> = ({
             transition: 'all 0.2s',
             letterSpacing: '0.5px',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,245,255,0.2)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,245,255,0.1)'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 255, 136,0.2)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0, 255, 136,0.1)'; }}
         >
           🔄 Try Again
         </button>
@@ -750,7 +765,7 @@ const Checkout: React.FC<CheckoutProps> = ({
       width: '100%',
       padding: '12px 16px',
       borderRadius: '10px',
-      border: '1px solid rgba(0,245,255,0.3)',
+      border: '1px solid rgba(0, 255, 136,0.3)',
       background: 'rgba(255,255,255,0.04)',
       color: '#fff',
       fontFamily: 'Rajdhani, sans-serif',
@@ -786,8 +801,8 @@ const Checkout: React.FC<CheckoutProps> = ({
             placeholder="e.g. Arjun Sharma"
             value={guestInfo.name}
             onChange={e => setGuestInfo(g => ({ ...g, name: e.target.value }))}
-            onFocus={e => { e.currentTarget.style.borderColor = '#00f5ff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,245,255,0.12)'; }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,245,255,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
+            onFocus={e => { e.currentTarget.style.borderColor = '#00ff88'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 255, 136,0.12)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
             style={inputStyle}
           />
         </div>
@@ -799,8 +814,8 @@ const Checkout: React.FC<CheckoutProps> = ({
             placeholder="e.g. 21CS101"
             value={guestInfo.roll}
             onChange={e => setGuestInfo(g => ({ ...g, roll: e.target.value }))}
-            onFocus={e => { e.currentTarget.style.borderColor = '#00f5ff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,245,255,0.12)'; }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,245,255,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
+            onFocus={e => { e.currentTarget.style.borderColor = '#00ff88'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 255, 136,0.12)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
             style={inputStyle}
           />
         </div>
@@ -813,8 +828,8 @@ const Checkout: React.FC<CheckoutProps> = ({
             value={guestInfo.phone}
             onChange={e => setGuestInfo(g => ({ ...g, phone: e.target.value }))}
             onKeyDown={e => e.key === 'Enter' && handleGuestInfo()}
-            onFocus={e => { e.currentTarget.style.borderColor = '#00f5ff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,245,255,0.12)'; }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,245,255,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
+            onFocus={e => { e.currentTarget.style.borderColor = '#00ff88'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 255, 136,0.12)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
             style={inputStyle}
           />
         </div>
@@ -840,18 +855,18 @@ const Checkout: React.FC<CheckoutProps> = ({
             padding: '16px',
             borderRadius: 14,
             border: 'none',
-            background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+            background: 'linear-gradient(135deg, #00ff88, #00d166)',
             color: '#fff',
             fontSize: '1.05rem',
             fontFamily: 'Orbitron, sans-serif',
             fontWeight: 900,
             cursor: 'pointer',
             letterSpacing: '1px',
-            boxShadow: '0 0 25px rgba(0,245,255,0.3)',
+            boxShadow: '0 0 25px rgba(0, 255, 136,0.3)',
             transition: 'all 0.3s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(0,245,255,0.5)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 25px rgba(0,245,255,0.3)'; }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(0, 255, 136,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 25px rgba(0, 255, 136,0.3)'; }}
         >
           Continue to Checkout →
         </button>

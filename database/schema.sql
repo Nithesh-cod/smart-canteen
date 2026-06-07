@@ -77,16 +77,17 @@ CREATE TABLE orders (
     original_amount     DECIMAL(10,2),
     points_used         INTEGER       DEFAULT 0 CHECK (points_used >= 0),
     points_earned       INTEGER       DEFAULT 0 CHECK (points_earned >= 0),
+    -- 'refunding' is a transient state used by the atomic claim guards in
+    -- order.controller.cancel and payment.controller.processRefund to
+    -- serialise concurrent admin clicks (Round-5 Y6, Round-6 Z5). Migration
+    -- 005 retro-fits the same constraint for databases created before this
+    -- state existed.
     payment_status      VARCHAR(20)   DEFAULT 'pending'
-                          CHECK (payment_status IN ('pending','paid','failed','refunded')),
+                          CHECK (payment_status IN ('pending','paid','refunding','failed','refunded')),
     payment_method      VARCHAR(50),
     razorpay_order_id   VARCHAR(255),
     razorpay_payment_id VARCHAR(255),
     razorpay_signature  VARCHAR(255),
-    -- Guest checkout fields (null for logged-in students)
-    guest_name          VARCHAR(255),
-    guest_phone         VARCHAR(20),
-    guest_roll          VARCHAR(50),
     created_at          TIMESTAMPTZ   DEFAULT NOW(),
     updated_at          TIMESTAMPTZ   DEFAULT NOW(),
     completed_at        TIMESTAMPTZ
@@ -186,3 +187,5 @@ INSERT INTO menu_items (name, description, category, price, image_url, rating, i
 ('Chocolate Brownie', 'Rich fudgy chocolate brownie',           'desserts',   70, 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400', 4.7, true,  10, -1),
 ('Veg Burger',        'Crispy veggie patty with fresh toppings','mains',     110, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400', 4.2, true,  15, -1),
 ('Fresh Lime Soda',   'Chilled lime with soda and mint',        'beverages',  40, 'https://images.unsplash.com/photo-1570831739435-6601aa3fa4fb?w=400', 4.5, true,   5, -1);
+
+

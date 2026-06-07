@@ -47,8 +47,8 @@ const TYPE_CONFIG: Record<
   },
   info: {
     icon: 'ℹ️',
-    borderColor: '#00f5ff',
-    iconBg: 'rgba(0,245,255,0.15)',
+    borderColor: '#00ff88',
+    iconBg: 'rgba(0, 255, 136,0.15)',
   },
 };
 

@@ -1,162 +1,99 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useCallback } from 'react';
 import * as authService from '../../services/auth.service';
 
-// ─── JWT decoder (no verification — just reads the payload) ───────────────────
-const decodeJWT = (token: string): Record<string, unknown> | null => {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch {
-    return null;
-  }
-};
+// ============================================================================
+// AdminAuthGate  (FIX S1/S2)
+// ============================================================================
+// Gates the Chef / Owner dashboards behind REAL authentication:
+//   • No client-side JWT decoding — the role is verified server-side via
+//     GET /api/auth/me on every mount.
+//   • No autoLoginRoll, no silent login, no auto-create-admin. Those made the
+//     dashboards accessible to anyone who knew a roll number.
+//   • A real identifier + password form. Accounts are created offline with
+//     backend/scripts/create-admin.js.
+// ============================================================================
 
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated' | 'wrong_role';
 
 interface AdminAuthGateProps {
   requiredRoles: string[];
   dashboardName: string;
-  /** Env-var roll number for silent auto-login (no form shown) */
-  autoLoginRoll?: string;
   children: React.ReactNode;
 }
 
 const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
   requiredRoles,
   dashboardName,
-  autoLoginRoll,
   children,
 }) => {
   const [status, setStatus] = useState<AuthStatus>('checking');
-  const [roll, setRoll] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const autoLoggingIn = useRef(false);
 
-  // ── Silent auto-login ──────────────────────────────────────────────────────
-  // 1. Try login.  2. If 404 (account never created), auto-signup then login.
-  const silentLogin = useCallback(async (rollNum: string) => {
-    if (autoLoggingIn.current) return;
-    autoLoggingIn.current = true;
-
-    const attemptLogin = async (): Promise<{ token: string; student: import('../../types').Student } | null> => {
-      try {
-        const result = await authService.login(rollNum.trim());
-        if (result.success && result.data) return result.data;
-        return null;
-      } catch (err) {
-        // 404 → account not created yet; anything else → real failure
-        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-        throw err;
-      }
-    };
-
+  // ── Verify the stored token's role with the server (never trust the client) ──
+  const verifyAccess = useCallback(async () => {
+    const token = authService.getStoredToken();
+    if (!token) {
+      setStatus('unauthenticated');
+      return;
+    }
     try {
-      let authData = await attemptLogin();
-
-      // Account doesn't exist yet — auto-create it so the dashboard never blocks
-      if (!authData) {
-        try {
-          await authService.signup({
-            name:        dashboardName,   // e.g. "Chef Display" or "Owner Dashboard"
-            roll_number: rollNum.trim(),
-            phone:       rollNum.trim(),  // use roll as placeholder phone (unique)
-          });
-          authData = await attemptLogin();
-        } catch {
-          // signup failed (e.g. duplicate) — try login one more time
-          authData = await attemptLogin();
-        }
-      }
-
-      if (!authData) {
-        autoLoggingIn.current = false;
-        setStatus('unauthenticated');
-        return;
-      }
-
-      const payload = decodeJWT(authData.token);
-      const role = payload?.role as string | undefined;
-      if (!role || !requiredRoles.includes(role)) {
-        autoLoggingIn.current = false;
+      const me = await authService.getMe();
+      if (me.success && me.data && requiredRoles.includes(me.data.role)) {
+        setStatus('authenticated');
+      } else if (me.success && me.data) {
         setStatus('wrong_role');
-        return;
+      } else {
+        authService.clearAuthData();
+        setStatus('unauthenticated');
       }
-      authService.saveAuthData(authData.token, authData.student);
-      setStatus('authenticated');
     } catch {
-      autoLoggingIn.current = false;
-      setStatus('unauthenticated');
-    }
-  }, [requiredRoles, dashboardName]);
-
-  // ── Check stored token / trigger auto-login ────────────────────────────────
-  const checkToken = useCallback(() => {
-    const token = localStorage.getItem('canteen_token');
-    if (token) {
-      const payload = decodeJWT(token);
-      if (payload) {
-        const expired = !payload.exp || (payload.exp as number) * 1000 < Date.now();
-        if (!expired) {
-          const role = payload.role as string | undefined;
-          if (role && requiredRoles.includes(role)) {
-            setStatus('authenticated');
-            return;
-          }
-          // Token is valid but wrong role (e.g. stale student token)
-          // Fall through to auto-login below instead of showing wrong_role immediately
-        }
-      }
+      // 401/expired/invalid — drop the token and show the login form
       authService.clearAuthData();
-    }
-    // No usable token — auto-login silently if roll configured
-    if (autoLoginRoll) {
-      silentLogin(autoLoginRoll);
-    } else {
       setStatus('unauthenticated');
     }
-  }, [requiredRoles, autoLoginRoll, silentLogin]);
+  }, [requiredRoles]);
 
   useEffect(() => {
-    checkToken();
+    verifyAccess();
 
-    // On 401: if auto-roll configured, re-login silently; else show login form
     const handleUnauth = () => {
-      autoLoggingIn.current = false;
-      if (autoLoginRoll) {
-        setStatus('checking');
-        silentLogin(autoLoginRoll);
-      } else {
-        setStatus('unauthenticated');
-        setError('Session expired. Please log in again.');
-      }
+      setStatus('unauthenticated');
+      setError('Session expired. Please log in again.');
     };
     window.addEventListener('auth:unauthorized', handleUnauth);
     return () => window.removeEventListener('auth:unauthorized', handleUnauth);
-  }, [checkToken, autoLoginRoll, silentLogin]);
+  }, [verifyAccess]);
 
-  // ── Manual login (shown only when no autoLoginRoll configured) ───────────
+  // ── Manual login ───────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!roll.trim()) return;
+    if (!identifier.trim() || !password) return;
     setLoading(true);
     setError('');
     try {
-      const result = await authService.login(roll.trim());
+      const result = await authService.login(identifier.trim(), password);
       if (!result.success || !result.data) {
-        setError(result.message || 'Login failed. Check your roll number.');
+        setError(result.message || 'Login failed. Check your credentials.');
         return;
       }
-      const payload = decodeJWT(result.data.token);
-      const role = payload?.role as string | undefined;
-      if (!role || !requiredRoles.includes(role)) {
-        setError(`Access denied. This dashboard requires: ${requiredRoles.join(' / ')} role.`);
+      const role = result.data.student.role || 'student';
+      if (!requiredRoles.includes(role)) {
+        // Do NOT keep a session that lacks the required role.
+        authService.clearAuthData();
+        setError(`Access denied. This dashboard requires: ${requiredRoles.join(' / ')}.`);
+        setStatus('unauthenticated');
         return;
       }
       authService.saveAuthData(result.data.token, result.data.student);
       setStatus('authenticated');
-    } catch {
-      setError('Login failed. Please try again.');
+    } catch (err) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Login failed. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -176,38 +113,6 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
     return <>{children}</>;
   }
 
-  // If autoLoginRoll is set but role is wrong → backend env var is not configured
-  if (autoLoginRoll && status === 'wrong_role') {
-    return (
-      <div style={pageStyle}>
-        <div style={cardStyle}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>⚠️</div>
-            <h1 style={headingStyle}>{dashboardName}</h1>
-            <p style={{ ...subStyle, marginTop: 12, lineHeight: 1.6 }}>
-              Account <strong style={{ color: '#00f5ff' }}>{autoLoginRoll}</strong> logged in but has <em>student</em> role.
-              <br /><br />
-              On Render, set:<br />
-              <code style={{ color: '#ffed4e', fontSize: '0.85rem' }}>
-                ADMIN_ROLLS={autoLoginRoll}<br />
-                CHEF_ROLLS={autoLoginRoll}
-              </code>
-              <br /><br />
-              Then redeploy the backend.
-            </p>
-            <button
-              onClick={() => { authService.clearAuthData(); autoLoggingIn.current = false; silentLogin(autoLoginRoll); }}
-              style={{ ...btnStyle, marginTop: 16 }}
-            >
-              🔄 Retry
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Wrong role or unauthenticated (manual login form — only when no autoLoginRoll)
   return (
     <div style={pageStyle}>
       <div style={cardStyle}>
@@ -219,42 +124,51 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
           <p style={subStyle}>
             {status === 'wrong_role'
               ? `Your account doesn't have ${requiredRoles.join('/')} access.`
-              : 'Sign in with your roll number to continue.'}
+              : 'Sign in to continue.'}
           </p>
         </div>
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label style={labelStyle}>Roll Number</label>
+            <label style={labelStyle}>Roll Number or Phone</label>
             <input
               type="text"
-              value={roll}
-              onChange={(e) => setRoll(e.target.value)}
-              placeholder="e.g. ADMIN001"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="e.g. OWNER001"
               style={inputStyle}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#00f5ff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,245,255,0.12)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(0,245,255,0.25)'; e.currentTarget.style.boxShadow = 'none'; }}
               autoFocus
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              style={inputStyle}
             />
           </div>
           {error && <div style={errorStyle}>{error}</div>}
           <button
             type="submit"
-            disabled={loading || !roll.trim()}
-            style={{ ...btnStyle, opacity: loading || !roll.trim() ? 0.6 : 1, cursor: loading || !roll.trim() ? 'not-allowed' : 'pointer' }}
+            disabled={loading || !identifier.trim() || !password}
+            style={{
+              ...btnStyle,
+              opacity: loading || !identifier.trim() || !password ? 0.6 : 1,
+              cursor: loading || !identifier.trim() || !password ? 'not-allowed' : 'pointer',
+            }}
           >
             {loading ? 'Signing in…' : 'Sign In →'}
           </button>
         </form>
 
-        {status === 'wrong_role' && (
-          <button
-            onClick={() => { authService.clearAuthData(); setStatus('unauthenticated'); setError(''); }}
-            style={{ ...btnStyle, marginTop: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)' }}
-          >
-            Use a different account
-          </button>
-        )}
+        <p style={{ ...subStyle, marginTop: 18, fontSize: '0.78rem', textAlign: 'center' }}>
+          Admin / chef accounts are created by an administrator with
+          <br />
+          <code style={{ color: '#ffed4e' }}>npm run create-admin</code>
+        </p>
       </div>
     </div>
   );
@@ -262,18 +176,18 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)',
+  background: 'linear-gradient(135deg, #050a0c 0%, #0a1614 50%, #07100e 100%)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 const cardStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(0,245,255,0.2)',
+  border: '1px solid rgba(0, 255, 136,0.2)',
   borderRadius: 20, padding: '40px 36px', width: '100%', maxWidth: 400,
-  boxShadow: '0 0 60px rgba(0,245,255,0.08)',
+  boxShadow: '0 0 60px rgba(0, 255, 136,0.08)',
 };
 const headingStyle: React.CSSProperties = {
   fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 900,
-  background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+  background: 'linear-gradient(135deg, #00ff88, #00d166)',
   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0,
 };
 const subStyle: React.CSSProperties = {
@@ -287,15 +201,15 @@ const labelStyle: React.CSSProperties = {
 };
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '12px 16px', borderRadius: 10,
-  border: '1px solid rgba(0,245,255,0.25)', background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(0, 255, 136,0.25)', background: 'rgba(255,255,255,0.04)',
   color: '#fff', fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem',
-  outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s',
+  outline: 'none', boxSizing: 'border-box',
 };
 const btnStyle: React.CSSProperties = {
   width: '100%', padding: '13px', borderRadius: 12, border: 'none',
-  background: 'linear-gradient(135deg, rgba(0,245,255,0.25), rgba(255,0,255,0.25))',
-  color: '#00f5ff', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
-  fontSize: '0.95rem', letterSpacing: '0.5px', transition: 'all 0.2s',
+  background: 'linear-gradient(135deg, rgba(0, 255, 136,0.25), rgba(0, 209, 102,0.25))',
+  color: '#00ff88', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
+  fontSize: '0.95rem', letterSpacing: '0.5px',
 };
 const errorStyle: React.CSSProperties = {
   background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.35)',

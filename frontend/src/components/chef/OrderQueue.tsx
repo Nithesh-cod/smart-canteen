@@ -9,7 +9,7 @@ interface OrderQueueProps {
 
 const COLUMNS: Array<{ status: OrderStatus; label: string; color: string; glow: string }> = [
   { status: 'pending', label: 'Pending', color: '#ffed4e', glow: 'rgba(255,237,78,0.12)' },
-  { status: 'preparing', label: 'Preparing', color: '#00f5ff', glow: 'rgba(0,245,255,0.12)' },
+  { status: 'preparing', label: 'Preparing', color: '#00ff88', glow: 'rgba(0, 255, 136,0.12)' },
   { status: 'ready', label: 'Ready', color: '#00ff88', glow: 'rgba(0,255,136,0.12)' },
 ];
 

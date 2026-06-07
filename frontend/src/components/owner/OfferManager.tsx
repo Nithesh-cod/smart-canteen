@@ -209,8 +209,8 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.currentTarget.style.borderColor = '#00f5ff';
-    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,245,255,0.12)';
+    e.currentTarget.style.borderColor = '#00ff88';
+    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 255, 136,0.12)';
   };
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
@@ -233,7 +233,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
             fontFamily: 'Orbitron, sans-serif',
             fontSize: '1.3rem',
             fontWeight: 700,
-            color: '#00f5ff',
+            color: '#00ff88',
             margin: 0,
           }}
         >
@@ -243,8 +243,8 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
           onClick={openCreate}
           style={{
             background: 'transparent',
-            border: '2px solid #00f5ff',
-            color: '#00f5ff',
+            border: '2px solid #00ff88',
+            color: '#00ff88',
             borderRadius: 12,
             padding: '10px 22px',
             fontFamily: 'Rajdhani, sans-serif',
@@ -256,7 +256,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLButtonElement).style.background =
-              'rgba(0,245,255,0.15)';
+              'rgba(0, 255, 136,0.15)';
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
@@ -312,7 +312,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
               style={{
                 background: 'rgba(255,255,255,0.03)',
                 backdropFilter: 'blur(20px)',
-                border: `1px solid ${offer.is_active ? 'rgba(0,245,255,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                border: `1px solid ${offer.is_active ? 'rgba(0, 255, 136,0.25)' : 'rgba(255,255,255,0.08)'}`,
                 borderRadius: 18,
                 padding: 22,
                 transition: 'transform 0.2s, box-shadow 0.2s',
@@ -321,7 +321,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)';
                 (e.currentTarget as HTMLDivElement).style.boxShadow =
-                  '0 8px 30px rgba(0,245,255,0.1)';
+                  '0 8px 30px rgba(0, 255, 136,0.1)';
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
@@ -424,9 +424,9 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                 {offer.min_order_amount != null && (
                   <span
                     style={{
-                      background: 'rgba(0,245,255,0.08)',
-                      border: '1px solid rgba(0,245,255,0.2)',
-                      color: '#00f5ff',
+                      background: 'rgba(0, 255, 136,0.08)',
+                      border: '1px solid rgba(0, 255, 136,0.2)',
+                      color: '#00ff88',
                       borderRadius: 8,
                       padding: '4px 12px',
                       fontSize: '0.8rem',
@@ -456,9 +456,9 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                   onClick={() => openEdit(offer)}
                   style={{
                     flex: 1,
-                    background: 'rgba(0,245,255,0.1)',
-                    border: '1px solid rgba(0,245,255,0.3)',
-                    color: '#00f5ff',
+                    background: 'rgba(0, 255, 136,0.1)',
+                    border: '1px solid rgba(0, 255, 136,0.3)',
+                    color: '#00ff88',
                     borderRadius: 9,
                     padding: '8px 0',
                     fontFamily: 'Rajdhani, sans-serif',
@@ -469,11 +469,11 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                   }}
                   onMouseEnter={(e) =>
                     ((e.currentTarget as HTMLButtonElement).style.background =
-                      'rgba(0,245,255,0.2)')
+                      'rgba(0, 255, 136,0.2)')
                   }
                   onMouseLeave={(e) =>
                     ((e.currentTarget as HTMLButtonElement).style.background =
-                      'rgba(0,245,255,0.1)')
+                      'rgba(0, 255, 136,0.1)')
                   }
                 >
                   ✏️ Edit
@@ -568,7 +568,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                       fontWeight: 600,
                       color:
                         formData.discountType === dt
-                          ? '#00f5ff'
+                          ? '#00ff88'
                           : 'rgba(255,255,255,0.5)',
                       fontSize: '0.9rem',
                     }}
@@ -581,7 +581,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                       onChange={() =>
                         setFormData((f) => ({ ...f, discountType: dt }))
                       }
-                      style={{ accentColor: '#00f5ff' }}
+                      style={{ accentColor: '#00ff88' }}
                     />
                     {dt === 'percentage' ? '% Percentage' : '₹ Fixed Amount'}
                   </label>
@@ -732,10 +732,10 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                 style={{
                   flex: 1,
                   background: saving
-                    ? 'rgba(0,245,255,0.1)'
-                    : 'linear-gradient(135deg, rgba(0,245,255,0.25), rgba(255,0,255,0.25))',
-                  border: '1px solid rgba(0,245,255,0.5)',
-                  color: '#00f5ff',
+                    ? 'rgba(0, 255, 136,0.1)'
+                    : 'linear-gradient(135deg, rgba(0, 255, 136,0.25), rgba(0, 209, 102,0.25))',
+                  border: '1px solid rgba(0, 255, 136,0.5)',
+                  color: '#00ff88',
                   borderRadius: 12,
                   padding: '13px 0',
                   fontFamily: 'Rajdhani, sans-serif',

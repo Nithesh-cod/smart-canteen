@@ -6,6 +6,15 @@
 
 const { query } = require('../config/database');
 
+// Some methods accept an optional `client` arg so callers can run them inside
+// a transaction (config/database.js `transaction(async (client) => …)`). When
+// no client is supplied, the default pool-based `query()` runs the statement
+// in its own connection.
+const runner = (client) =>
+  client
+    ? (text, params) => client.query(text, params)
+    : query;
+
 // ============================================================================
 // FIND OPERATIONS
 // ============================================================================
@@ -71,12 +80,16 @@ const findByIdentifier = async (identifier) => {
  * @param {Object} studentData - Student information
  * @returns {Promise<Object>} Created student object
  */
-const create = async ({ name, roll_number, phone, email, department }) => {
+const create = async ({ name, roll_number, phone, email, department, password_hash, role }) => {
   const result = await query(
-    `INSERT INTO students (name, roll_number, phone, email, department, points, tier, created_at, last_login)
-     VALUES ($1, $2, $3, $4, $5, 0, 'Bronze', NOW(), NOW())
+    `INSERT INTO students
+       (name, roll_number, phone, email, department, password_hash, role, points, tier, created_at, last_login)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 'Bronze', NOW(), NOW())
      RETURNING *`,
-    [name, roll_number, phone, email || null, department || null]
+    [
+      name, roll_number, phone, email || null, department || null,
+      password_hash || null, role || 'student',
+    ]
   );
   return result.rows[0];
 };
@@ -144,8 +157,9 @@ const updateLastLogin = async (id) => {
  * @param {number} points - Points to add
  * @returns {Promise<Object>} Updated student
  */
-const addPoints = async (id, points) => {
-  const result = await query(
+const addPoints = async (id, points, client = null) => {
+  const run = runner(client);
+  const result = await run(
     'UPDATE students SET points = points + $1 WHERE id = $2 RETURNING *',
     [points, id]
   );
@@ -158,8 +172,9 @@ const addPoints = async (id, points) => {
  * @param {number} points - Points to deduct
  * @returns {Promise<Object>} Updated student
  */
-const deductPoints = async (id, points) => {
-  const result = await query(
+const deductPoints = async (id, points, client = null) => {
+  const run = runner(client);
+  const result = await run(
     'UPDATE students SET points = GREATEST(0, points - $1) WHERE id = $2 RETURNING *',
     [points, id]
   );
@@ -171,10 +186,11 @@ const deductPoints = async (id, points) => {
  * @param {string} id - Student ID
  * @returns {Promise<Object>} Updated student
  */
-const updateTier = async (id) => {
-  const result = await query(
-    `UPDATE students 
-     SET tier = CASE 
+const updateTier = async (id, client = null) => {
+  const run = runner(client);
+  const result = await run(
+    `UPDATE students
+     SET tier = CASE
        WHEN total_spent >= 5000 THEN 'Platinum'
        WHEN total_spent >= 3000 THEN 'Gold'
        WHEN total_spent >= 1000 THEN 'Silver'
@@ -188,19 +204,31 @@ const updateTier = async (id) => {
 };
 
 /**
- * Update student stats after order
+ * Update student stats after order or refund.
+ *
+ * `amount` may be negative on refund — total_spent and total_orders are
+ * both clamped at zero via GREATEST(0, …) so partial refunds and edge
+ * cases (e.g. a refund issued before stats ever incremented) can't push
+ * the columns below zero (FIX T5).
+ *
+ * On refund the caller passes -order.total_amount; total_orders is
+ * decremented by one when amount < 0, incremented by one otherwise.
+ *
  * @param {string} id - Student ID
- * @param {number} amount - Order amount
+ * @param {number} amount - Order amount (positive on pay, negative on refund)
+ * @param {import('pg').PoolClient} [client]
  * @returns {Promise<Object>} Updated student
  */
-const updateStats = async (id, amount) => {
-  const result = await query(
-    `UPDATE students 
-     SET total_spent = total_spent + $1,
-         total_orders = total_orders + 1
-     WHERE id = $2
+const updateStats = async (id, amount, client = null) => {
+  const run = runner(client);
+  const orderDelta = amount < 0 ? -1 : 1;
+  const result = await run(
+    `UPDATE students
+     SET total_spent  = GREATEST(0, total_spent  + $1),
+         total_orders = GREATEST(0, total_orders + $2)
+     WHERE id = $3
      RETURNING *`,
-    [amount, id]
+    [amount, orderDelta, id]
   );
   return result.rows[0];
 };
@@ -275,24 +303,51 @@ const isFavorite = async (studentId, menuItemId) => {
 // ============================================================================
 
 /**
- * Get all students with pagination
- * @param {number} limit - Number of records
- * @param {number} offset - Offset for pagination
- * @returns {Promise<Object>} Students array and total count
+ * Get students with server-side filtering and pagination.
+ *
+ * Pushes tier and search into SQL with a matching COUNT(*).
+ *
+ * @param {Object} [opts]
+ * @param {number} [opts.limit=50]
+ * @param {number} [opts.offset=0]
+ * @param {string} [opts.tier]    Bronze|Silver|Gold|Platinum
+ * @param {string} [opts.search]  Matched against name / roll_number / phone / email
+ * @returns {Promise<{ students: Array, total: number }>}
  */
-const getAll = async (limit = 50, offset = 0) => {
+const getAll = async (opts = {}) => {
+  const { limit = 50, offset = 0, tier = null, search = null } = opts;
+
+  const where  = ['1=1'];
+  const params = [];
+
+  if (tier) {
+    params.push(tier);
+    where.push(`tier = $${params.length}`);
+  }
+  if (search) {
+    params.push(`%${search}%`);
+    const idx = params.length;
+    where.push(`(name ILIKE $${idx} OR roll_number ILIKE $${idx} OR phone ILIKE $${idx} OR email ILIKE $${idx})`);
+  }
+  const whereSql = where.join(' AND ');
+
+  const countResult = await query(
+    `SELECT COUNT(*) FROM students WHERE ${whereSql}`,
+    params
+  );
+
+  params.push(limit, offset);
   const result = await query(
     `SELECT * FROM students
+     WHERE ${whereSql}
      ORDER BY created_at DESC
-     LIMIT $1 OFFSET $2`,
-    [limit, offset]
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
   );
-  
-  const countResult = await query('SELECT COUNT(*) FROM students');
-  
+
   return {
     students: result.rows,
-    total: parseInt(countResult.rows[0].count)
+    total:    parseInt(countResult.rows[0].count, 10),
   };
 };
 
