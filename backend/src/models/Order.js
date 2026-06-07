@@ -486,6 +486,30 @@ const generateOrderNumber = async () => {
   return `OZ${timestamp}${random}`;
 };
 
+/**
+ * Stamp bill_issued_at the FIRST time a receipt is produced (FIX Z3).
+ *
+ * The WHERE bill_issued_at IS NULL guard makes this idempotent — repeat
+ * calls don't refresh the timestamp, and the row count tells the caller
+ * whether they were the one to actually claim issuance. Used by both
+ * finalisePayment (verify path) and the verifyPayment idempotent branch
+ * so a kiosk refresh / retry doesn't spool a fresh print on every hit.
+ *
+ * @param {number} id
+ * @param {import('pg').PoolClient} [client]
+ * @returns {Promise<boolean>} true when this call set the timestamp
+ */
+const markBillIssued = async (id, client = null) => {
+  const run = runner(client);
+  const r = await run(
+    `UPDATE orders
+        SET bill_issued_at = NOW()
+      WHERE id = $1 AND bill_issued_at IS NULL`,
+    [id]
+  );
+  return r.rowCount > 0;
+};
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -502,5 +526,6 @@ module.exports = {
   restoreStock,
   getStats,
   getRevenueData,
-  generateOrderNumber
+  generateOrderNumber,
+  markBillIssued
 };

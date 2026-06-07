@@ -467,8 +467,29 @@ const cancel = asyncHandler(async (req, res) => {
   // before flipping payment_status; otherwise the DB silently lies about
   // money having been returned. On gateway failure we surface 502 and do
   // NOT cancel the order, keeping DB + Razorpay state in sync.
+  //
+  // FIX Z5 — atomic claim into the transient 'refunding' state mirrors
+  // Round-5 Y6 in processRefund. Two concurrent admin cancels on the
+  // same paid order used to both pass this branch's guard and both fire
+  // razorpayService.processRefund; the second got a gateway 502 ("already
+  // refunded") and the admin saw "Refund failed" on a successful refund.
+  // The UPDATE … WHERE payment_status='paid' is race-free: only one
+  // request wins; the other gets a clean 409.
   let refund = null;
   if (order.payment_status === 'paid' && order.razorpay_payment_id) {
+    const claim = await query(
+      `UPDATE orders
+          SET payment_status = 'refunding'
+        WHERE id = $1 AND payment_status = 'paid'
+        RETURNING *`,
+      [order.id]
+    );
+    if (claim.rowCount === 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'A concurrent cancel/refund is already in progress for this order.',
+      });
+    }
     try {
       refund = await razorpayService.processRefund(
         order.razorpay_payment_id,
@@ -479,6 +500,15 @@ const cancel = asyncHandler(async (req, res) => {
         }
       );
     } catch (refundErr) {
+      // Gateway refused — roll the row back to 'paid' so cancel/refund
+      // can be retried. (If this rollback itself fails the row is stuck
+      // at 'refunding' and the next attempt's claim will 409 — same
+      // recovery shape Round-5 Y6's processRefund uses.)
+      await query(
+        `UPDATE orders SET payment_status = 'paid'
+          WHERE id = $1 AND payment_status = 'refunding'`,
+        [order.id]
+      );
       logger.error(`Razorpay refund failed on cancel of order #${order.order_number}`, refundErr);
       return res.status(502).json({
         success: false,
@@ -521,6 +551,30 @@ const cancel = asyncHandler(async (req, res) => {
       `Manual reconciliation required (refund id: ${refund?.refundId})`,
       dbErr
     );
+
+    // FIX Z5 (mirroring Z2 in processRefund) — the Z5 atomic claim above
+    // committed payment_status='refunding' OUTSIDE the V7 transaction, so
+    // a transaction rollback doesn't unwind it. Without this fallback the
+    // row sits at 'refunding' forever and the next cancel/refund attempt's
+    // claim guard (WHERE payment_status='paid') rejects every retry. Force
+    // 'refunded' so the books at least mirror the gateway.
+    if (refund) {
+      try {
+        await query(
+          `UPDATE orders SET payment_status = 'refunded'
+            WHERE id = $1 AND payment_status = 'refunding'`,
+          [order.id]
+        );
+      } catch (rollbackErr) {
+        logger.error(
+          `Even the fallback payment_status update failed. ` +
+          `Order #${order.order_number} is stuck in 'refunding'. ` +
+          `Razorpay refund id: ${refund.refundId}`,
+          rollbackErr
+        );
+      }
+    }
+
     return res.status(500).json({
       success: false,
       message: 'Cancel partially failed. Refund landed but DB updates rolled back. ' +
