@@ -308,21 +308,26 @@ const updateStatus = async (id, status, fromStatus = null) => {
  */
 const updatePayment = async (id, paymentData, client = null) => {
   const run = runner(client);
+  // COALESCE on razorpay_* fields so a partial update (e.g. the webhook
+  // path which has no signature, or createPaymentOrder which only knows
+  // the order id) doesn't wipe values an earlier verify call already
+  // wrote (FIX M6 + V7). The `?? null` on the call site turns undefined
+  // args into NULL so COALESCE then preserves the existing DB value.
   const result = await run(
     `UPDATE orders
-     SET payment_status = $1,
-         payment_method = $2,
-         razorpay_order_id = $3,
-         razorpay_payment_id = $4,
-         razorpay_signature = $5
+     SET payment_status      = $1,
+         payment_method      = $2,
+         razorpay_order_id   = COALESCE($3, razorpay_order_id),
+         razorpay_payment_id = COALESCE($4, razorpay_payment_id),
+         razorpay_signature  = COALESCE($5, razorpay_signature)
      WHERE id = $6
      RETURNING *`,
     [
       paymentData.payment_status || 'paid',
       paymentData.payment_method || 'Razorpay',
-      paymentData.razorpay_order_id,
-      paymentData.razorpay_payment_id,
-      paymentData.razorpay_signature,
+      paymentData.razorpay_order_id   ?? null,
+      paymentData.razorpay_payment_id ?? null,
+      paymentData.razorpay_signature  ?? null,
       id
     ]
   );
