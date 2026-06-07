@@ -7,7 +7,7 @@
 
 const Order          = require('../models/Order');
 const Student        = require('../models/Student');
-const { transaction }  = require('../config/database');
+const { query, transaction } = require('../config/database');
 const razorpayService = require('../services/razorpay.service');
 const printerService  = require('../services/printer.service');
 const logger          = require('../utils/logger');
@@ -212,7 +212,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
   }
 
   // 3. Mark the order as paid
-  const updatedOrder = await Order.updatePayment(order.id, {
+  await Order.updatePayment(order.id, {
     payment_status:      'paid',
     payment_method:      'Razorpay',
     razorpay_order_id,
@@ -226,14 +226,19 @@ const verifyPayment = asyncHandler(async (req, res) => {
   //      status=pending with no points awarded and no receipt (FIX T3).
   const finalised = await finalisePayment(order, { io: req.app.get('io') });
 
+  // FIX Y5 — re-fetch after finalisePayment so the response carries the
+  // post-pipeline status ('preparing') and the COALESCEd razorpay fields,
+  // not the stale snapshot updatePayment returned before finalisePayment ran.
+  const freshOrder = await Order.getById(order.id);
+
   logger.success(`Payment verified for order #${order.order_number} — ₹${order.total_amount}`);
 
   return res.json({
     success: true,
     data: {
-      order:          updatedOrder,
-      points_earned:  order.points_earned,
-      points_used:    order.points_used,
+      order:          freshOrder,
+      points_earned:  freshOrder.points_earned,
+      points_used:    freshOrder.points_used,
       student_tier:   finalised.student?.tier,
       student_points: finalised.student?.points,
       bill_printed:   finalised.billPrinted,
@@ -436,13 +441,6 @@ const processRefund = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
 
-  if (order.payment_status !== 'paid') {
-    return res.status(400).json({
-      success: false,
-      message: `Cannot refund an order with payment_status="${order.payment_status}". Only paid orders can be refunded.`
-    });
-  }
-
   if (!order.razorpay_payment_id) {
     return res.status(400).json({
       success: false,
@@ -450,12 +448,48 @@ const processRefund = asyncHandler(async (req, res) => {
     });
   }
 
-  // Issue the refund via Razorpay
-  const refund = await razorpayService.processRefund(
-    order.razorpay_payment_id,
-    null, // full refund
-    { reason: reason || 'Refund requested by admin', canteen_order_id: order.id }
+  // FIX Y6 — double-click guard via atomic transition into a transient
+  // 'refunding' state. Two concurrent admin clicks both passed the
+  // `payment_status === 'paid'` check before, then both fired Razorpay's
+  // processRefund; the second got back a 502 ("already refunded") and the
+  // admin saw a confusing error after a successful refund. The
+  // UPDATE … WHERE payment_status='paid' is race-free: exactly one
+  // request flips the row, the other sees rowCount === 0 and 400s out.
+  const claim = await query(
+    `UPDATE orders
+        SET payment_status = 'refunding'
+      WHERE id = $1 AND payment_status = 'paid'
+      RETURNING *`,
+    [order_id]
   );
+  if (claim.rowCount === 0) {
+    return res.status(400).json({
+      success: false,
+      message: `Cannot refund an order with payment_status="${order.payment_status}". ` +
+               `Only paid orders can be refunded (a concurrent refund may already be in progress).`
+    });
+  }
+
+  // Issue the refund via Razorpay
+  let refund;
+  try {
+    refund = await razorpayService.processRefund(
+      order.razorpay_payment_id,
+      null, // full refund
+      { reason: reason || 'Refund requested by admin', canteen_order_id: order.id }
+    );
+  } catch (rzpErr) {
+    // Gateway refused — roll the row back to 'paid' so the admin can retry.
+    await query(
+      `UPDATE orders SET payment_status = 'paid' WHERE id = $1 AND payment_status = 'refunding'`,
+      [order_id]
+    );
+    logger.error(`Razorpay refund call failed for order #${order.order_number}`, rzpErr);
+    return res.status(502).json({
+      success: false,
+      message: 'Razorpay refund failed. Please retry or check the Razorpay dashboard.',
+    });
+  }
 
   // FIX Y2 — the DB writes (updatePayment + restoreStock + cancel) run
   // inside ONE transaction so a mid-flow failure after a successful
