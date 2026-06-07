@@ -119,8 +119,8 @@ const MenuGrid: React.FC<MenuGridProps> = ({
             transition: 'border-color 0.25s, box-shadow 0.25s',
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(0,245,255,0.5)';
-            e.currentTarget.style.boxShadow = '0 0 16px rgba(0,245,255,0.1)';
+            e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.5)';
+            e.currentTarget.style.boxShadow = '0 0 16px rgba(0, 255, 136,0.1)';
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -152,9 +152,9 @@ const MenuGrid: React.FC<MenuGridProps> = ({
                 flexShrink: 0,
                 padding: '7px 16px',
                 borderRadius: 50,
-                border: isActive ? '1px solid #00f5ff' : '1px solid rgba(255,255,255,0.12)',
-                background: isActive ? 'rgba(0,245,255,0.14)' : 'rgba(255,255,255,0.03)',
-                color: isActive ? '#00f5ff' : 'rgba(255,255,255,0.65)',
+                border: isActive ? '1px solid #00ff88' : '1px solid rgba(255,255,255,0.12)',
+                background: isActive ? 'rgba(0, 255, 136,0.14)' : 'rgba(255,255,255,0.03)',
+                color: isActive ? '#00ff88' : 'rgba(255,255,255,0.65)',
                 fontSize: '0.85rem',
                 fontFamily: 'Rajdhani, sans-serif',
                 fontWeight: isActive ? 700 : 500,
@@ -166,7 +166,7 @@ const MenuGrid: React.FC<MenuGridProps> = ({
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.borderColor = 'rgba(0,245,255,0.35)';
+                  e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.35)';
                   e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
                 }
               }}
@@ -210,7 +210,7 @@ const MenuGrid: React.FC<MenuGridProps> = ({
                 <div style={{ height: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 5, marginBottom: 6, width: '90%' }} />
                 <div style={{ height: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 5, marginBottom: 18, width: '55%' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ height: 20, background: 'rgba(0,245,255,0.08)', borderRadius: 5, width: '28%' }} />
+                  <div style={{ height: 20, background: 'rgba(0, 255, 136,0.08)', borderRadius: 5, width: '28%' }} />
                   <div style={{ height: 32, background: 'rgba(255,255,255,0.06)', borderRadius: 7, width: '35%' }} />
                 </div>
               </div>

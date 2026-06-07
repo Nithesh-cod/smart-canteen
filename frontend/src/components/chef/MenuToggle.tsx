@@ -46,7 +46,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
           background: rgba(255,255,255,0.03);
         }
         .menu-toggle-bar::-webkit-scrollbar-thumb {
-          background: rgba(0,245,255,0.3);
+          background: rgba(0, 255, 136,0.3);
           border-radius: 2px;
         }
         @keyframes chipAppear {
@@ -63,8 +63,8 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
         background: 'rgba(10,10,26,0.92)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        borderTop: '1px solid rgba(0,245,255,0.3)',
-        boxShadow: '0 -4px 30px rgba(0,245,255,0.1)',
+        borderTop: '1px solid rgba(0, 255, 136,0.3)',
+        boxShadow: '0 -4px 30px rgba(0, 255, 136,0.1)',
         padding: '12px 40px',
       }}>
         <div style={{
@@ -86,18 +86,18 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
               width: '8px',
               height: '8px',
               borderRadius: '50%',
-              background: '#00f5ff',
-              boxShadow: '0 0 8px #00f5ff',
+              background: '#00ff88',
+              boxShadow: '0 0 8px #00ff88',
               animation: 'none',
             }} />
             <span style={{
               fontFamily: 'Orbitron, monospace',
               fontSize: '11px',
-              color: '#00f5ff',
+              color: '#00ff88',
               letterSpacing: '2px',
               whiteSpace: 'nowrap',
               textTransform: 'uppercase',
-              textShadow: '0 0 10px rgba(0,245,255,0.6)',
+              textShadow: '0 0 10px rgba(0, 255, 136,0.6)',
             }}>
               Menu Availability
             </span>
@@ -107,7 +107,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
           <div style={{
             width: '1px',
             height: '32px',
-            background: 'rgba(0,245,255,0.2)',
+            background: 'rgba(0, 255, 136,0.2)',
             flexShrink: 0,
           }} />
 
