@@ -16,13 +16,13 @@ export const useAuth = () => {
   );
 
   /**
-   * Log in using a roll number or phone number identifier.
+   * Log in using a roll number or phone number identifier, plus a password.
    */
-  const login = async (identifier: string): Promise<boolean> => {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     dispatch(setLoading(true));
     dispatch(setError(null));
     try {
-      const response = await authService.login(identifier);
+      const response = await authService.login(identifier, password);
       if (response.success && response.data) {
         const { token: authToken, student } = response.data;
         authService.saveAuthData(authToken, student);

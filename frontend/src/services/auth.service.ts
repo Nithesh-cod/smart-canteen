@@ -8,17 +8,27 @@ export interface SignupData {
   name: string;
   roll_number: string;
   phone: string;
+  password: string;
   email?: string;
   department?: string;
 }
 
 export interface AuthResponseData {
   token: string;
+  refresh_token?: string;
   student: Student;
 }
 
+/** Server-authoritative identity — returned by GET /auth/me. */
+export interface MeData {
+  id: string;
+  role: 'student' | 'chef' | 'admin';
+  name: string;
+  roll_number: string;
+}
+
 /**
- * Register a new student account.
+ * Register a new student account (requires a password — FIX S1/S2).
  */
 export const signup = async (
   data: SignupData
@@ -28,14 +38,25 @@ export const signup = async (
 };
 
 /**
- * Log in using roll number or phone number.
+ * Log in with a roll number or phone number, plus a password (FIX S1/S2).
  */
 export const login = async (
-  identifier: string
+  identifier: string,
+  password: string
 ): Promise<ApiResponse<AuthResponseData>> => {
   const response = await api.post<ApiResponse<AuthResponseData>>('/auth/login', {
     identifier,
+    password,
   });
+  return response.data;
+};
+
+/**
+ * Server-authoritative identity + role check.
+ * Frontend route guards MUST use this instead of decoding the JWT client-side.
+ */
+export const getMe = async (): Promise<ApiResponse<MeData>> => {
+  const response = await api.get<ApiResponse<MeData>>('/auth/me');
   return response.data;
 };
 
