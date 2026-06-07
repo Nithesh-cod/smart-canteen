@@ -166,16 +166,47 @@ const verifyPayment = asyncHandler(async (req, res) => {
   // payment.captured lands first, then the user foregrounds the tab and
   // the verify handler() finally fires. Don't error on what's actually a
   // success — finalisePayment already ran from the webhook path (FIX V4).
+  //
+  // Bill handling here is HONEST (FIX Y3): the webhook ran with skipBill:
+  // true, so no bill was actually printed. Re-run the same print/PDF
+  // fallback finalisePayment uses for non-windows printers, so the user
+  // still walks away with a receipt or a downloadable PDF — not a lie.
   if (order.payment_status === 'paid') {
     const completeOrder = await Order.getById(order.id);
+    const printerType   = (process.env.PRINTER_TYPE || 'none').toLowerCase();
+    let   billPrinted   = false;
+    let   billPdfBase64 = null;
+
+    if (printerType === 'windows') {
+      // The webhook path already kicked a setImmediate background print.
+      // Treat as printed — there's no reliable status to wait for here.
+      billPrinted = true;
+    } else {
+      try {
+        const r = await printerService.printBill(completeOrder);
+        billPrinted = r.printed;
+      } catch (e) {
+        logger.warn('idempotent verify: bill print failed', e.message);
+      }
+      if (!billPrinted) {
+        try {
+          const buf = await printerService.generateBillPDF(completeOrder);
+          billPdfBase64 = buf.toString('base64');
+        } catch (e) {
+          logger.warn('idempotent verify: PDF fallback failed', e.message);
+        }
+      }
+    }
+
     return res.json({
       success: true,
       data: {
         order:          completeOrder,
         points_earned:  completeOrder.points_earned,
         points_used:    completeOrder.points_used,
-        bill_printed:   true,
+        bill_printed:   billPrinted,
         already_paid:   true,
+        ...(billPdfBase64 && { bill_pdf: billPdfBase64 }),
       },
     });
   }
@@ -229,7 +260,11 @@ const verifyPayment = asyncHandler(async (req, res) => {
  * @returns {Promise<{ student: object|null, billPrinted: boolean, billPdfBase64: string|null }>}
  */
 async function finalisePayment(order, { io, skipBill = false } = {}) {
-  // 1. Status advance
+  // 1. Status advance. Track whether we actually moved pending → preparing
+  // so the bill-print block (Section 4) can skip when a chef cancelled the
+  // order in flight — printing a receipt for an already-cancelled order is
+  // the worst kind of user-facing artefact (FIX Y4).
+  let statusAdvanced = true;
   if (order.status === 'pending') {
     try {
       // Optimistic WHERE-guard: only advance if still 'pending'. A chef or
@@ -238,9 +273,10 @@ async function finalisePayment(order, { io, skipBill = false } = {}) {
       // we'd silently un-cancel it (FIX V5).
       const advanced = await Order.updateStatus(order.id, 'preparing', 'pending');
       if (!advanced) {
+        statusAdvanced = false;
         logger.warn(
           `finalisePayment: status guard rejected — order #${order.order_number} ` +
-          `was no longer 'pending' (likely cancelled in flight)`
+          `was no longer 'pending' (likely cancelled in flight). Skipping bill print.`
         );
       }
     } catch (statusErr) {
@@ -302,43 +338,48 @@ async function finalisePayment(order, { io, skipBill = false } = {}) {
   // 4. Bill print. Webhook path always skips the synchronous/PDF branches —
   //    there's no response to return base64 against. Windows GDI still
   //    fires via setImmediate so the printer prints in the background.
+  //    Also skipped entirely when the V5 status guard rejected the
+  //    pending → preparing transition (the order got cancelled mid-flight
+  //    and we don't want to print a receipt for a cancelled order — FIX Y4).
   const printerType   = (process.env.PRINTER_TYPE || 'none').toLowerCase();
   let   billPrinted   = false;
   let   billPdfBase64 = null;
 
-  const completeOrder = await Order.getById(order.id);
+  if (statusAdvanced) {
+    const completeOrder = await Order.getById(order.id);
 
-  if (printerType === 'windows') {
-    // Optimistic + background — same as the verify path before the refactor.
-    billPrinted = true;
-    setImmediate(async () => {
+    if (printerType === 'windows') {
+      // Optimistic + background — same as the verify path before the refactor.
+      billPrinted = true;
+      setImmediate(async () => {
+        try {
+          const printResult = await printerService.printBill(completeOrder);
+          if (printResult?.printed) {
+            logger.info(`🖨️  Receipt printed for order #${order.order_number}`);
+          } else {
+            logger.warn(`⚠️  Printer returned false for order #${order.order_number} — check PRINTER_NAME in .env`);
+          }
+        } catch (printErr) {
+          logger.warn(`Background print error for order #${order.order_number}:`, printErr.message);
+        }
+      });
+    } else if (!skipBill) {
+      // ESC/POS sync attempt + base64 PDF fallback. Only the verify path
+      // exercises this — the webhook has no response to attach the PDF to.
       try {
         const printResult = await printerService.printBill(completeOrder);
-        if (printResult?.printed) {
-          logger.info(`🖨️  Receipt printed for order #${order.order_number}`);
-        } else {
-          logger.warn(`⚠️  Printer returned false for order #${order.order_number} — check PRINTER_NAME in .env`);
-        }
+        billPrinted = printResult.printed;
       } catch (printErr) {
-        logger.warn(`Background print error for order #${order.order_number}:`, printErr.message);
+        logger.warn('Bill print error (printer may be offline):', printErr.message);
       }
-    });
-  } else if (!skipBill) {
-    // ESC/POS sync attempt + base64 PDF fallback. Only the verify path
-    // exercises this — the webhook has no response to attach the PDF to.
-    try {
-      const printResult = await printerService.printBill(completeOrder);
-      billPrinted = printResult.printed;
-    } catch (printErr) {
-      logger.warn('Bill print error (printer may be offline):', printErr.message);
-    }
-    if (!billPrinted) {
-      try {
-        const pdfBuffer = await printerService.generateBillPDF(completeOrder);
-        billPdfBase64   = pdfBuffer.toString('base64');
-        logger.info(`PDF bill generated for order #${order.order_number}`);
-      } catch (pdfErr) {
-        logger.warn('PDF generation also failed:', pdfErr.message);
+      if (!billPrinted) {
+        try {
+          const pdfBuffer = await printerService.generateBillPDF(completeOrder);
+          billPdfBase64   = pdfBuffer.toString('base64');
+          logger.info(`PDF bill generated for order #${order.order_number}`);
+        } catch (pdfErr) {
+          logger.warn('PDF generation also failed:', pdfErr.message);
+        }
       }
     }
   }
@@ -416,24 +457,45 @@ const processRefund = asyncHandler(async (req, res) => {
     { reason: reason || 'Refund requested by admin', canteen_order_id: order.id }
   );
 
-  // Mark the order as refunded
-  const updatedOrder = await Order.updatePayment(order.id, {
-    payment_status:      'refunded',
-    payment_method:      order.payment_method,
-    razorpay_order_id:   order.razorpay_order_id,
-    razorpay_payment_id: order.razorpay_payment_id,
-    razorpay_signature:  order.razorpay_signature
-  });
-
-  // FIX T2 — return inventory to the menu BEFORE Order.cancel so the
-  // stock returns aren't gated on the cancel step succeeding (the gateway
-  // refund has already landed; a transient DB error here is recoverable
-  // via re-run, but the money must not be left as 'paid').
-  const stockRestored = await Order.restoreStock(order.id);
-
-  // Cancel the order too so it no longer appears in kitchen queue
-  if (!['completed', 'cancelled'].includes(order.status)) {
-    await Order.cancel(order.id);
+  // FIX Y2 — the DB writes (updatePayment + restoreStock + cancel) run
+  // inside ONE transaction so a mid-flow failure after a successful
+  // Razorpay refund leaves the DB consistent (rolls back to the original
+  // paid/preparing state) instead of half-applied. The points/stats
+  // reconciliation below stays in its own transaction — it's loyalty
+  // bookkeeping, not DB-integrity, and the order's books-of-record state
+  // must commit before we touch the student record.
+  let updatedOrder;
+  let stockRestored;
+  try {
+    const result = await transaction(async (client) => {
+      const updated = await Order.updatePayment(order.id, {
+        payment_status:      'refunded',
+        payment_method:      order.payment_method,
+        razorpay_order_id:   order.razorpay_order_id,
+        razorpay_payment_id: order.razorpay_payment_id,
+        razorpay_signature:  order.razorpay_signature
+      }, client);
+      const restored = await Order.restoreStock(order.id, client);
+      if (!['completed', 'cancelled'].includes(order.status)) {
+        await Order.cancel(order.id, client);
+      }
+      return { updated, restored };
+    });
+    updatedOrder  = result.updated;
+    stockRestored = result.restored;
+  } catch (dbErr) {
+    logger.error(
+      `Refund DB updates failed AFTER successful Razorpay refund for ` +
+      `order #${order.order_number}. Manual reconciliation required ` +
+      `(refund id: ${refund.refundId})`,
+      dbErr
+    );
+    return res.status(500).json({
+      success: false,
+      message: 'Refund partially failed. Razorpay refund landed but ' +
+               'DB updates rolled back. Please contact support — ' +
+               'refund id logged.',
+    });
   }
 
   // Reconcile loyalty points AND spending stats in a single transaction,
