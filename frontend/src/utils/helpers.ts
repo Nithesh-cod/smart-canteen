@@ -63,7 +63,7 @@ export const getStatusColor = (status: string): string => {
     pending: '#ffed4e',
     preparing: '#ff9500',
     ready: '#00ff88',
-    completed: '#00f5ff',
+    completed: '#00ff88',
     cancelled: '#ff3366',
   };
   return map[status] ?? '#c0c0c0';

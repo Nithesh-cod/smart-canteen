@@ -75,13 +75,13 @@ export const MenuItem: React.FC<MenuItemProps> = ({
         style={{
           background: 'rgba(255,255,255,0.03)',
           backdropFilter: 'blur(20px)',
-          border: `1px solid ${hovered ? 'rgba(0,245,255,0.45)' : 'rgba(255,255,255,0.08)'}`,
+          border: `1px solid ${hovered ? 'rgba(0, 255, 136,0.45)' : 'rgba(255,255,255,0.08)'}`,
           borderRadius: '16px',
           overflow: 'hidden',
           position: 'relative',
           transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
           boxShadow: hovered
-            ? '0 8px 32px rgba(0,245,255,0.15), 0 4px 16px rgba(0,0,0,0.4)'
+            ? '0 8px 32px rgba(0, 255, 136,0.15), 0 4px 16px rgba(0,0,0,0.4)'
             : '0 2px 12px rgba(0,0,0,0.3)',
           transition: 'all 0.28s cubic-bezier(0.34,1.56,0.64,1)',
           animation: 'card-float-in 0.4s ease both',
@@ -139,7 +139,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
         <div className="menu-item-img" style={{
           height: '180px',
           overflow: 'hidden',
-          background: 'linear-gradient(135deg, #1a0a2e, #0a0a1a)',
+          background: 'linear-gradient(135deg, #0a1614, #050a0c)',
           position: 'relative',
         }}>
           {!imgLoaded && (
@@ -169,7 +169,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
               width: '100%', height: '100%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '3.5rem',
-              background: 'linear-gradient(135deg, rgba(0,245,255,0.05), rgba(255,0,255,0.05))',
+              background: 'linear-gradient(135deg, rgba(0, 255, 136,0.05), rgba(0, 209, 102,0.05))',
             }}>
               🍽️
             </div>
@@ -293,8 +293,8 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                background: 'rgba(0,245,255,0.07)',
-                border: `1px solid ${atStockLimit ? 'rgba(255,237,78,0.5)' : 'rgba(0,245,255,0.35)'}`,
+                background: 'rgba(0, 255, 136,0.07)',
+                border: `1px solid ${atStockLimit ? 'rgba(255,237,78,0.5)' : 'rgba(0, 255, 136,0.35)'}`,
                 borderRadius: '10px',
                 overflow: 'hidden',
               }}>
@@ -306,7 +306,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                     padding: '10px',
                     border: 'none',
                     background: 'transparent',
-                    color: '#00f5ff',
+                    color: '#00ff88',
                     fontSize: '1.1rem',
                     cursor: 'pointer',
                     fontFamily: "'Orbitron', sans-serif",
@@ -340,7 +340,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                     padding: '10px',
                     border: 'none',
                     background: 'transparent',
-                    color: atStockLimit ? 'rgba(255,237,78,0.5)' : '#00f5ff',
+                    color: atStockLimit ? 'rgba(255,237,78,0.5)' : '#00ff88',
                     fontSize: '1.1rem',
                     cursor: atStockLimit ? 'not-allowed' : 'pointer',
                     fontFamily: "'Orbitron', sans-serif",
@@ -349,7 +349,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                     opacity: atStockLimit ? 0.5 : 1,
                   }}
                   onMouseEnter={(e) => {
-                    if (!atStockLimit) e.currentTarget.style.background = 'rgba(0,245,255,0.12)';
+                    if (!atStockLimit) e.currentTarget.style.background = 'rgba(0, 255, 136,0.12)';
                   }}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
@@ -366,10 +366,10 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                   padding: '11px',
                   borderRadius: '10px',
                   border: isAvailable
-                    ? '1px solid rgba(0,245,255,0.5)'
+                    ? '1px solid rgba(0, 255, 136,0.5)'
                     : '1px solid rgba(255,255,255,0.1)',
-                  background: isAvailable ? 'rgba(0,245,255,0.06)' : 'rgba(255,255,255,0.04)',
-                  color: isAvailable ? '#00f5ff' : 'rgba(255,255,255,0.3)',
+                  background: isAvailable ? 'rgba(0, 255, 136,0.06)' : 'rgba(255,255,255,0.04)',
+                  color: isAvailable ? '#00ff88' : 'rgba(255,255,255,0.3)',
                   cursor: isAvailable ? 'pointer' : 'not-allowed',
                   fontFamily: "'Orbitron', sans-serif",
                   fontSize: '0.75rem',
@@ -380,13 +380,13 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                 }}
                 onMouseEnter={(e) => {
                   if (isAvailable) {
-                    e.currentTarget.style.background = 'rgba(0,245,255,0.14)';
-                    e.currentTarget.style.boxShadow = '0 0 14px rgba(0,245,255,0.25)';
+                    e.currentTarget.style.background = 'rgba(0, 255, 136,0.14)';
+                    e.currentTarget.style.boxShadow = '0 0 14px rgba(0, 255, 136,0.25)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = isAvailable
-                    ? 'rgba(0,245,255,0.06)'
+                    ? 'rgba(0, 255, 136,0.06)'
                     : 'rgba(255,255,255,0.04)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
