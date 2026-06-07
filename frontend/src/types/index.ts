@@ -1,6 +1,12 @@
 export type Tier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
 export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled';
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+// 'refunding' is a transient state the backend uses while an admin refund is
+// in flight (atomic claim guard — see order.controller.cancel and
+// payment.controller.processRefund). The frontend rarely sees it because API
+// responses are issued after the transition out, but typing it correctly
+// here means any future code that checks `payment_status === 'refunding'`
+// narrows properly instead of being rejected by the type system.
+export type PaymentStatus = 'pending' | 'paid' | 'refunding' | 'failed' | 'refunded';
 export type Category = 'starters' | 'mains' | 'desserts' | 'beverages';
 
 export interface Student {
@@ -10,6 +16,7 @@ export interface Student {
   phone: string;
   email?: string;
   department?: string;
+  role?: 'student' | 'chef' | 'admin';
   points: number;
   total_spent: number;
   total_orders: number;
