@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Dashboard from '../components/owner/Dashboard';
-import SalesChart from '../components/owner/SalesChart';
 import OfferManager from '../components/owner/OfferManager';
+import OwnerStatGrid from '../components/owner/OwnerStatGrid';
+import SalesPanel from '../components/owner/SalesPanel';
+import OrdersPanel from '../components/owner/OrdersPanel';
 import Modal from '../components/common/Modal';
 import { useToast } from '../components/common/Toast';
 import api from '../services/api';
@@ -15,12 +17,12 @@ import type { Order, MenuItem, Student, DashboardStats, Offer } from '../types';
 type PageId = 'dashboard' | 'sales' | 'orders' | 'menu' | 'offers' | 'students';
 
 const navItems: Array<{ id: PageId; label: string; icon: string }> = [
-  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { id: 'sales',     label: 'Sales',     icon: '📈' },
-  { id: 'orders',    label: 'Orders',    icon: '📋' },
-  { id: 'menu',      label: 'Menu',      icon: '🍽️' },
-  { id: 'offers',    label: 'Offers',    icon: '🎁' },
-  { id: 'students',  label: 'Students',  icon: '👥' },
+  { id: 'dashboard', label: 'Command',  icon: '◈' },
+  { id: 'sales',     label: 'Revenue',  icon: '◊' },
+  { id: 'orders',    label: 'Manifest', icon: '▤' },
+  { id: 'menu',      label: 'Catalog',  icon: '⬡' },
+  { id: 'offers',    label: 'Drops',    icon: '✦' },
+  { id: 'students',  label: 'Roster',   icon: '◯' },
 ];
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
@@ -1335,6 +1337,25 @@ const OwnerDashboard: React.FC = () => {
     fetchRevenue(p);
   };
 
+  // Derive KPI tiles from live stats + recent orders/revenue. Includes a
+  // 7-point sparkline taken from revenueData so the tiles already have a
+  // sense of motion before any chart renders. Memoised so the count-up
+  // tween restarts only when the underlying number actually changes.
+  const dashboardTiles = useMemo(() => {
+    const todayRev   = stats?.todayRevenue   ?? 0;
+    const todayCount = stats?.todayOrders    ?? 0;
+    const weekRev    = stats?.weekRevenue    ?? 0;
+    const monthRev   = stats?.monthRevenue   ?? 0;
+    const sparkSrc   = revenueData.slice(-7).map(r => Number((r as any).revenue) || 0);
+    const trend      = sparkSrc.length >= 2 ? sparkSrc : [0, 0, 0, 0, 0, 0, 0];
+    return [
+      { label: "Today's Revenue", glyph: '◊', value: Math.round(Number(todayRev)),   prefix: '₹', trend, tone: 'green' as const },
+      { label: 'Today Orders',    glyph: '▤', value: Number(todayCount),                          trend, tone: 'green' as const },
+      { label: '7-Day Revenue',   glyph: '◈', value: Math.round(Number(weekRev)),    prefix: '₹', trend, tone: 'green' as const },
+      { label: '30-Day Revenue',  glyph: '✦', value: Math.round(Number(monthRev)),   prefix: '₹', trend, tone: 'amber' as const },
+    ];
+  }, [stats, revenueData]);
+
   const currentNav = navItems.find((n) => n.id === activePage);
 
   return (
@@ -1568,30 +1589,41 @@ const OwnerDashboard: React.FC = () => {
             </div>
           ) : (
             <>
-              {activePage === 'dashboard' && stats && (
-                <Dashboard stats={stats} />
-              )}
-              {activePage === 'dashboard' && !stats && (
-                <div
-                  style={{
-                    textAlign: 'center',
-                    padding: 60,
-                    color: 'rgba(255,255,255,0.35)',
-                    fontFamily: 'Rajdhani, sans-serif',
-                  }}
-                >
-                  No dashboard data available
-                </div>
+              {activePage === 'dashboard' && (
+                <>
+                  {/* KPI grid sits above the legacy Dashboard component —
+                      gives a strong, animated headline before any chart loads
+                      and keeps the surface from going black when stats are
+                      late or missing. */}
+                  <OwnerStatGrid
+                    tiles={dashboardTiles}
+                  />
+                  {stats ? (
+                    <Dashboard stats={stats} />
+                  ) : (
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        padding: 60,
+                        color: 'rgba(255,255,255,0.4)',
+                        fontFamily: 'Orbitron, sans-serif',
+                        letterSpacing: '0.25em',
+                      }}
+                    >
+                      ◯ Streaming data — first report incoming
+                    </div>
+                  )}
+                </>
               )}
               {activePage === 'sales' && (
-                <SalesChart
+                <SalesPanel
                   data={revenueData}
                   period={period}
                   onPeriodChange={handlePeriodChange}
                 />
               )}
               {activePage === 'orders' && (
-                <OrdersTable orders={orders} onRefresh={fetchOrders} />
+                <OrdersPanel orders={orders} onRefresh={fetchOrders} />
               )}
               {activePage === 'menu' && (
                 <MenuManagement items={menuItems} onRefresh={fetchMenu} />

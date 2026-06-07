@@ -25,10 +25,9 @@ import type { MenuItem, Order } from '../types';
 import api from '../services/api';
 // @ts-ignore — JSX component without types
 import Orb from '../components/student/Orb';
-import { ParticleField } from '../components/fx/ParticleField';
-import { ScanLine } from '../components/fx/ScanLine';
 import { CinematicHero } from '../components/fx/CinematicHero';
 import { HoloCursor } from '../components/fx/HoloCursor';
+import { GridFloor } from '../components/fx/GridFloor';
 import { useMagnetic } from '../hooks/useTilt';
 
 // ─── Offer Banner ─────────────────────────────────────────────────────────────
@@ -371,29 +370,10 @@ const StudentKiosk: React.FC = () => {
 
   return (
     <div style={bgStyle}>
-      {/* ── Orb full-screen background ───────────────────────────────────────── */}
-      {/* Dark teal gradient is the CSS fallback when WebGL is unavailable.
-          hue={-40} shifts the Orb shader's base purple-blue into the green
-          spectrum so the background reads as part of the unified cyber-green
-          palette instead of fighting it. */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
-                    background: 'linear-gradient(135deg, #050a0c 0%, #0a1614 50%, #07100e 100%)' }}>
-        <BallpitBoundary>
-          <Orb
-            hue={-40}
-            hoverIntensity={5}
-            rotateOnHover={true}
-            forceHoverState={false}
-            backgroundColor="#050a0c"
-          />
-        </BallpitBoundary>
-      </div>
-
-      {/* Floating particles (above Orb, below content) */}
-      <ParticleField color="#00ff88" intensity={0.6} />
-
-      {/* CRT scan-line overlay (above everything, click-through) */}
-      <ScanLine color="#00ff88" period={10} intensity={0.025} />
+      {/* Calm GridFloor background — replaces the Orb. Tron-style perspective
+          grid + cursor-following ambient glow, no chaotic swirls competing
+          with content. The Orb shader was beautiful but read as noise. */}
+      <GridFloor color="#00ff88" intensity={0.13} />
 
       {/* Custom HUD cursor — replaces system cursor on fine-pointer devices */}
       <HoloCursor />
