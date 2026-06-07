@@ -51,11 +51,14 @@ const css = `
 
 .crystal {
   position: relative;
+  /* Proper solid backdrop — was too transparent so the cursor-following
+     glow + grid floor bled through and obliterated the BEVERAGES chip on
+     bright food images. Now the card is a real surface that sits on top. */
   background:
-    linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 30%),
-    rgba(7,16,14,0.78);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+    linear-gradient(180deg, rgba(0,255,136,0.045) 0%, transparent 35%),
+    linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 18px;
   overflow: hidden;
   /* Notched top-right corner — this is what makes it a crystal and not a card */
@@ -68,17 +71,28 @@ const css = `
   );
   cursor: default;
   animation: crystal-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-  border: 1px solid rgba(0,255,136,0.18);
-  transition: border-color 0.25s, box-shadow 0.25s;
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
   display: flex;
   flex-direction: column;
 }
+.crystal::before {
+  /* Tiny inner highlight on the top edge — suggests the surface is
+     catching light from above, gives the crystal physical presence. */
+  content: '';
+  position: absolute;
+  top: 0; left: 8%; right: 28%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent);
+  pointer-events: none;
+  z-index: 2;
+}
 .crystal.hover {
-  border-color: rgba(0,255,136,0.55);
+  border-color: rgba(0,255,136,0.4);
   box-shadow:
-    0 24px 60px rgba(0,255,136,0.18),
-    0 4px 14px rgba(0,0,0,0.5),
-    inset 0 0 0 1px rgba(0,255,136,0.08);
+    0 28px 80px rgba(0,255,136,0.18),
+    0 6px 18px rgba(0,0,0,0.6),
+    inset 0 0 0 1px rgba(0,255,136,0.06);
 }
 .crystal-img {
   position: relative;
@@ -117,13 +131,16 @@ const css = `
   letter-spacing: 0.2em;
   font-weight: 700;
   color: #00ff88;
-  background: rgba(0,255,136,0.08);
-  border: 1px solid rgba(0,255,136,0.4);
+  /* Solid dark backing so the chip reads cleanly on any image — the old
+     translucent rgba was getting eaten by bright food photos. */
+  background: rgba(7,16,14,0.85);
+  border: 1px solid rgba(0,255,136,0.5);
   border-radius: 3px;
-  padding: 4px 9px;
+  padding: 5px 10px;
   text-transform: uppercase;
-  text-shadow: 0 0 8px rgba(0,255,136,0.5);
+  text-shadow: 0 0 6px rgba(0,255,136,0.6);
   backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.45);
 }
 .crystal-fav {
   position: absolute;
