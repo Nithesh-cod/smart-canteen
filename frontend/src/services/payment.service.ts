@@ -17,13 +17,26 @@ export interface VerifyPaymentData {
 
 /**
  * Ask the backend to create a Razorpay order for the given canteen order.
+ *
+ * When `guestToken` is provided (returned by POST /orders for guest checkouts)
+ * it is sent as a per-request Authorization header so the backend's
+ * verifyTokenOrGuest middleware can prove ownership of this specific order.
+ * It must NOT be written to localStorage — the kiosk's stored student token
+ * would otherwise be overwritten by an order-scoped token.
  */
 export const createPaymentOrder = async (
-  orderId: number
+  orderId: number,
+  guestToken?: string | null
 ): Promise<ApiResponse<RazorpayOrderData>> => {
+  const config: any = {};
+  if (guestToken) {
+    config.skipAuth = true;
+    config.headers  = { Authorization: `Bearer ${guestToken}` };
+  }
   const response = await api.post<ApiResponse<RazorpayOrderData>>(
     '/payments/create',
-    { order_id: orderId }
+    { order_id: orderId },
+    config
   );
   return response.data;
 };
@@ -44,13 +57,23 @@ export interface VerifyPaymentResponse {
 /**
  * Verify the Razorpay payment signature on the backend.
  * The response optionally includes a base64 PDF bill when no printer is connected.
+ *
+ * For guest checkouts, pass the per-order token returned by POST /orders so
+ * the backend can authorise the verify call without a student login.
  */
 export const verifyPayment = async (
-  data: VerifyPaymentData
+  data: VerifyPaymentData,
+  guestToken?: string | null
 ): Promise<ApiResponse<VerifyPaymentResponse>> => {
+  const config: any = {};
+  if (guestToken) {
+    config.skipAuth = true;
+    config.headers  = { Authorization: `Bearer ${guestToken}` };
+  }
   const response = await api.post<ApiResponse<VerifyPaymentResponse>>(
     '/payments/verify',
-    data
+    data,
+    config
   );
   return response.data;
 };
@@ -228,6 +251,8 @@ export interface InitiatePaymentOptions {
   amount: number;
   studentName: string;
   studentPhone: string;
+  /** Per-order token issued by POST /orders for guest checkouts. */
+  guestToken?: string | null;
   onSuccess: (paymentData: any) => void;
   onFailure: (error: any) => void;
 }
@@ -242,7 +267,7 @@ export interface InitiatePaymentOptions {
 export const initiateRazorpayPayment = async (
   options: InitiatePaymentOptions
 ): Promise<void> => {
-  const { orderId, amount, studentName, studentPhone, onSuccess, onFailure } = options;
+  const { orderId, amount, studentName, studentPhone, guestToken, onSuccess, onFailure } = options;
 
   const scriptLoaded = await loadRazorpayScript();
   if (!scriptLoaded) {
@@ -252,7 +277,7 @@ export const initiateRazorpayPayment = async (
 
   let razorpayOrderData: RazorpayOrderData;
   try {
-    const createResponse = await createPaymentOrder(orderId);
+    const createResponse = await createPaymentOrder(orderId, guestToken);
     if (!createResponse.success || !createResponse.data) {
       onFailure(new Error(createResponse.error ?? 'Failed to create payment order.'));
       return;
@@ -275,7 +300,7 @@ export const initiateRazorpayPayment = async (
       contact: studentPhone,
     },
     theme: {
-      color: '#00f5ff',
+      color: '#00ff88',
     },
     handler: async (response: any) => {
       try {
@@ -284,7 +309,7 @@ export const initiateRazorpayPayment = async (
           razorpay_payment_id: response.razorpay_payment_id,
           razorpay_signature:  response.razorpay_signature,
           order_id:            orderId,
-        });
+        }, guestToken);
         if (verifyResponse.success) {
           // Pass the full verify data (including bill_pdf if present)
           onSuccess({ ...response, ...verifyResponse.data });
