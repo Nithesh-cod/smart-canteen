@@ -44,7 +44,7 @@ const Modal: React.FC<ModalProps> = ({
     background: 'rgba(10,6,24,0.55)',
     backdropFilter: 'blur(28px) saturate(180%)',
     WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-    border: '1px solid rgba(0,245,255,0.18)',
+    border: '1px solid rgba(0, 255, 136,0.18)',
     boxShadow: '0 8px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)',
     borderRadius: '22px',
     padding: '28px 28px 32px',
@@ -55,7 +55,7 @@ const Modal: React.FC<ModalProps> = ({
     position: 'relative',
     animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
     scrollbarWidth: 'thin',
-    scrollbarColor: 'rgba(0,245,255,0.3) transparent',
+    scrollbarColor: 'rgba(0, 255, 136,0.3) transparent',
   };
 
   const headerStyle: React.CSSProperties = {
@@ -69,7 +69,7 @@ const Modal: React.FC<ModalProps> = ({
     fontFamily: "'Orbitron', monospace",
     fontWeight: 700,
     fontSize: '1.2rem',
-    background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+    background: 'linear-gradient(135deg, #00ff88, #00d166)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',

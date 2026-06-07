@@ -36,12 +36,12 @@ const tierConfig: Record<string, { color: string; bg: string; emoji: string; lab
 
 const pulseCss = `
 @keyframes points-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(0,245,255,0.3); }
-  50% { box-shadow: 0 0 20px rgba(0,245,255,0.6), 0 0 35px rgba(0,245,255,0.2); }
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 255, 136,0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 255, 136,0.6), 0 0 35px rgba(0, 255, 136,0.2); }
 }
 @keyframes avatar-glow {
-  0%, 100% { box-shadow: 0 0 12px rgba(0,245,255,0.4); }
-  50% { box-shadow: 0 0 22px rgba(255,0,255,0.5); }
+  0%, 100% { box-shadow: 0 0 12px rgba(0, 255, 136,0.4); }
+  50% { box-shadow: 0 0 22px rgba(0, 209, 102,0.5); }
 }
 `;
 
@@ -104,9 +104,9 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
           <div style={{
             width: '52px', height: '52px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+            background: 'linear-gradient(135deg, #00ff88, #00d166)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.1rem', fontWeight: 800, color: '#0a0a1a',
+            fontSize: '1.1rem', fontWeight: 800, color: '#050a0c',
             fontFamily: "'Orbitron', sans-serif",
             flexShrink: 0,
             animation: 'avatar-glow 3s ease-in-out infinite',
@@ -155,8 +155,8 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          background: 'rgba(0,245,255,0.06)',
-          border: '1px solid rgba(0,245,255,0.25)',
+          background: 'rgba(0, 255, 136,0.06)',
+          border: '1px solid rgba(0, 255, 136,0.25)',
           borderRadius: '12px',
           padding: '10px 20px',
           animation: 'points-pulse 2.5s ease-in-out infinite',
@@ -167,13 +167,13 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
               fontFamily: "'Orbitron', sans-serif",
               fontSize: '1.3rem',
               fontWeight: 800,
-              color: '#00f5ff',
+              color: '#00ff88',
               lineHeight: 1,
             }}>
               {(student.points ?? 0).toLocaleString()}
             </div>
             <div style={{
-              color: 'rgba(0,245,255,0.6)',
+              color: 'rgba(0, 255, 136,0.6)',
               fontSize: '0.68rem',
               letterSpacing: '0.15em',
               textTransform: 'uppercase',

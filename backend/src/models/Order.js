@@ -6,6 +6,15 @@
 
 const { query, transaction } = require('../config/database');
 
+// Mutating helpers below take an optional pg PoolClient so the controller
+// can group several writes inside one transaction. `runner` falls back to
+// the pool-based `query` when no client is supplied so existing callers
+// don't need to change.
+const runner = (client) =>
+  client
+    ? (text, params) => client.query(text, params)
+    : query;
+
 // ============================================================================
 // CREATE OPERATION
 // ============================================================================
@@ -258,24 +267,37 @@ const getAll = async (filters = {}) => {
 // ============================================================================
 
 /**
- * Update order status
- * @param {number} id - Order ID
- * @param {string} status - New status
- * @returns {Promise<Object>} Updated order
+ * Update order status.
+ *
+ * When `fromStatus` is supplied the UPDATE only fires if the row is still
+ * in that status — used by finalisePayment so a webhook-vs-chef race can't
+ * silently rewrite a freshly-cancelled order back to 'preparing'. Returns
+ * null when the guard didn't match. Existing callers can omit the arg and
+ * behave unchanged (FIX V5).
+ *
+ * @param {number} id
+ * @param {string} status
+ * @param {string} [fromStatus] Optional WHERE status = $? guard
+ * @returns {Promise<Object|null>}
  */
-const updateStatus = async (id, status) => {
+const updateStatus = async (id, status, fromStatus = null) => {
   let queryText = 'UPDATE orders SET status = $1';
   const params = [status, id];
-  
+
   // Set completed_at timestamp if status is completed
   if (status === 'completed') {
     queryText += ', completed_at = NOW()';
   }
-  
-  queryText += ' WHERE id = $2 RETURNING *';
-  
+
+  queryText += ' WHERE id = $2';
+  if (fromStatus) {
+    params.push(fromStatus);
+    queryText += ` AND status = $${params.length}`;
+  }
+  queryText += ' RETURNING *';
+
   const result = await query(queryText, params);
-  return result.rows[0];
+  return result.rows[0] || null;
 };
 
 /**
@@ -284,22 +306,28 @@ const updateStatus = async (id, status) => {
  * @param {Object} paymentData - Payment details
  * @returns {Promise<Object>} Updated order
  */
-const updatePayment = async (id, paymentData) => {
-  const result = await query(
-    `UPDATE orders 
-     SET payment_status = $1,
-         payment_method = $2,
-         razorpay_order_id = $3,
-         razorpay_payment_id = $4,
-         razorpay_signature = $5
+const updatePayment = async (id, paymentData, client = null) => {
+  const run = runner(client);
+  // COALESCE on razorpay_* fields so a partial update (e.g. the webhook
+  // path which has no signature, or createPaymentOrder which only knows
+  // the order id) doesn't wipe values an earlier verify call already
+  // wrote (FIX M6 + V7). The `?? null` on the call site turns undefined
+  // args into NULL so COALESCE then preserves the existing DB value.
+  const result = await run(
+    `UPDATE orders
+     SET payment_status      = $1,
+         payment_method      = $2,
+         razorpay_order_id   = COALESCE($3, razorpay_order_id),
+         razorpay_payment_id = COALESCE($4, razorpay_payment_id),
+         razorpay_signature  = COALESCE($5, razorpay_signature)
      WHERE id = $6
      RETURNING *`,
     [
       paymentData.payment_status || 'paid',
       paymentData.payment_method || 'Razorpay',
-      paymentData.razorpay_order_id,
-      paymentData.razorpay_payment_id,
-      paymentData.razorpay_signature,
+      paymentData.razorpay_order_id   ?? null,
+      paymentData.razorpay_payment_id ?? null,
+      paymentData.razorpay_signature  ?? null,
       id
     ]
   );
@@ -311,19 +339,59 @@ const updatePayment = async (id, paymentData) => {
  * @param {number} id - Order ID
  * @returns {Promise<Object>} Updated order
  */
-const cancel = async (id) => {
-  const result = await query(
-    `UPDATE orders 
-     SET status = 'cancelled', 
-         payment_status = CASE 
-           WHEN payment_status = 'paid' THEN 'refunded' 
-           ELSE payment_status 
-         END
-     WHERE id = $1
-     RETURNING *`,
+const cancel = async (id, client = null) => {
+  // payment_status is NOT auto-flipped to 'refunded' here. Marking money
+  // returned without actually calling Razorpay was a books-of-record lie.
+  // The cancel controller now drives the Razorpay refund first and the
+  // refund path itself sets payment_status via Order.updatePayment when
+  // the gateway confirms (FIX T1).
+  const run = runner(client);
+  const result = await run(
+    `UPDATE orders
+        SET status = 'cancelled'
+      WHERE id = $1
+      RETURNING *`,
     [id]
   );
   return result.rows[0];
+};
+
+/**
+ * Restore stock for every line item on an order (FIX T2).
+ *
+ * Untracked items (stock_quantity = -1) are skipped. When a previously-zero
+ * row goes back above zero we auto-flip is_available back on, mirroring the
+ * decrement-on-create behaviour. Run optionally inside a caller-supplied
+ * transaction client.
+ *
+ * @param {number} orderId
+ * @param {import('pg').PoolClient} [client]
+ * @returns {Promise<Array<{id, stock_quantity, is_available, name}>>}
+ */
+const restoreStock = async (orderId, client = null) => {
+  const run = runner(client);
+
+  const { rows: items } = await run(
+    'SELECT menu_item_id, quantity FROM order_items WHERE order_id = $1',
+    [orderId]
+  );
+
+  const restored = [];
+  for (const it of items) {
+    const r = await run(
+      `UPDATE menu_items
+          SET stock_quantity = stock_quantity + $1,
+              is_available   = CASE
+                WHEN stock_quantity + $1 > 0 AND is_available = false
+                THEN true ELSE is_available
+              END
+        WHERE id = $2 AND stock_quantity <> -1
+        RETURNING id, stock_quantity, is_available, name`,
+      [it.quantity, it.menu_item_id]
+    );
+    if (r.rows[0]) restored.push(r.rows[0]);
+  }
+  return restored;
 };
 
 // ============================================================================
@@ -418,6 +486,30 @@ const generateOrderNumber = async () => {
   return `OZ${timestamp}${random}`;
 };
 
+/**
+ * Stamp bill_issued_at the FIRST time a receipt is produced (FIX Z3).
+ *
+ * The WHERE bill_issued_at IS NULL guard makes this idempotent — repeat
+ * calls don't refresh the timestamp, and the row count tells the caller
+ * whether they were the one to actually claim issuance. Used by both
+ * finalisePayment (verify path) and the verifyPayment idempotent branch
+ * so a kiosk refresh / retry doesn't spool a fresh print on every hit.
+ *
+ * @param {number} id
+ * @param {import('pg').PoolClient} [client]
+ * @returns {Promise<boolean>} true when this call set the timestamp
+ */
+const markBillIssued = async (id, client = null) => {
+  const run = runner(client);
+  const r = await run(
+    `UPDATE orders
+        SET bill_issued_at = NOW()
+      WHERE id = $1 AND bill_issued_at IS NULL`,
+    [id]
+  );
+  return r.rowCount > 0;
+};
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -431,7 +523,9 @@ module.exports = {
   updateStatus,
   updatePayment,
   cancel,
+  restoreStock,
   getStats,
   getRevenueData,
-  generateOrderNumber
+  generateOrderNumber,
+  markBillIssued
 };

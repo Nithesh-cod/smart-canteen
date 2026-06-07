@@ -9,8 +9,11 @@ const Order          = require('../models/Order');
 const Student        = require('../models/Student');
 const MenuItem       = require('../models/MenuItem');
 const printerService = require('../services/printer.service');
+const razorpayService = require('../services/razorpay.service');
 const logger         = require('../utils/logger');
+const { query, transaction } = require('../config/database');
 const { asyncHandler }                  = require('../middleware/error.middleware');
+const { issueGuestToken }               = require('../middleware/auth.middleware');
 const { calculatePoints, generateOrderNumber } = require('../utils/helpers');
 
 // Valid status transition map
@@ -60,26 +63,41 @@ const create = asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate each item and build the server-authoritative item list
-  const orderItems    = [];
-  let   originalAmount = 0;
-
+  // Validate each item and build the server-authoritative item list.
+  // The transactional UPDATE inside Order.create is the authoritative stock
+  // check (FIX H4), so the pre-flight only fast-fails on bad ids or items
+  // marked unavailable. Menu rows are fetched in a single batched query —
+  // the previous per-item MenuItem.getById was N+1.
+  const ids = [];
   for (const requestedItem of items) {
     const { menu_item_id, quantity } = requestedItem;
-
     if (!menu_item_id || !quantity || parseInt(quantity) < 1) {
       return res.status(400).json({
         success: false,
         message: 'Each item must have a valid menu_item_id and quantity >= 1'
       });
     }
+    ids.push(parseInt(menu_item_id));
+  }
 
-    const menuItem = await MenuItem.getById(menu_item_id);
+  const { rows: menuRows } = await query(
+    'SELECT id, name, price, is_available FROM menu_items WHERE id = ANY($1::int[])',
+    [ids]
+  );
+  const menuMap = new Map(menuRows.map(r => [r.id, r]));
+
+  const orderItems    = [];
+  let   originalAmount = 0;
+
+  for (const requestedItem of items) {
+    const menuItemId = parseInt(requestedItem.menu_item_id);
+    const quantity   = parseInt(requestedItem.quantity);
+    const menuItem   = menuMap.get(menuItemId);
 
     if (!menuItem) {
       return res.status(404).json({
         success: false,
-        message: `Menu item with ID ${menu_item_id} not found`
+        message: `Menu item with ID ${menuItemId} not found`
       });
     }
 
@@ -90,26 +108,13 @@ const create = asyncHandler(async (req, res) => {
       });
     }
 
-    // Stock check: stock_quantity of -1 means unlimited; 0 or above is tracked
-    const stock = menuItem.stock_quantity;
-    if (stock !== null && stock !== undefined && stock !== -1) {
-      if (stock < parseInt(quantity)) {
-        return res.status(400).json({
-          success: false,
-          message: stock === 0
-            ? `"${menuItem.name}" is out of stock`
-            : `"${menuItem.name}" only has ${stock} left in stock`
-        });
-      }
-    }
-
-    const lineTotal  = parseFloat(menuItem.price) * parseInt(quantity);
+    const lineTotal  = parseFloat(menuItem.price) * quantity;
     originalAmount  += lineTotal;
 
     orderItems.push({
       menu_item_id: menuItem.id,
       item_name:    menuItem.name,
-      quantity:     parseInt(quantity),
+      quantity,
       price:        parseFloat(menuItem.price)
     });
   }
@@ -124,19 +129,49 @@ const create = asyncHandler(async (req, res) => {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
 
-    if (student.points < points_to_redeem) {
+    // The student.points balance is the FULL balance — including points
+    // already promised to other in-flight (unpaid + not-cancelled) orders.
+    // Without subtracting those, a student can create N concurrent pending
+    // orders that each pass the `points >= points_to_redeem` check and then
+    // pay for all of them, double-redeeming the same points. finalisePayment
+    // deducts via GREATEST(0, points - $1) so no DB error fires; the student
+    // just walks away with multiple discounts for one balance.
+    //
+    // Compute available = points - sum(points_used on in-flight pending
+    // orders) and gate on that instead. Race-free at scale would need a
+    // FOR UPDATE row lock at create time; under canteen concurrency this
+    // catches the common kiosk-double-tap and rapid mobile retries.
+    const reservedResult = await query(
+      `SELECT COALESCE(SUM(points_used), 0) AS reserved
+         FROM orders
+        WHERE student_id = $1
+          AND status        = 'pending'
+          AND payment_status IN ('pending', 'refunding')`,
+      [studentId]
+    );
+    const reserved  = parseInt(reservedResult.rows[0].reserved, 10) || 0;
+    const available = student.points - reserved;
+
+    if (available < points_to_redeem) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient points. You have ${student.points} points but requested ${points_to_redeem}`
+        message:
+          `Insufficient points. You have ${available} points available ` +
+          `(${student.points} balance minus ${reserved} reserved by ` +
+          `pending orders) but requested ${points_to_redeem}.`
       });
     }
 
-    const maxDiscountAmount = originalAmount * 0.5;
-    const requestedDiscount = points_to_redeem * 0.10;
-    const actualDiscount    = Math.min(requestedDiscount, maxDiscountAmount);
+    // Work in paise (integers) — float math on 0.10 produces off-by-one
+     // results because 0.1 is not exactly representable in IEEE-754.
+    // 1 pt = 10 paise; cap discount at 50% of order total.
+    const originalPaise     = Math.round(originalAmount * 100);
+    const maxDiscountPaise  = Math.floor(originalPaise / 2);
+    const requestedPaise    = points_to_redeem * 10;
+    const actualDiscPaise   = Math.min(requestedPaise, maxDiscountPaise);
 
-    pointsUsed  = Math.floor(actualDiscount / 0.10);
-    totalAmount = originalAmount - actualDiscount;
+    pointsUsed  = Math.floor(actualDiscPaise / 10);
+    totalAmount = (originalPaise - actualDiscPaise) / 100;
   }
 
   // Points earned — only for logged-in students
@@ -158,31 +193,25 @@ const create = asyncHandler(async (req, res) => {
     guest_roll:  isGuest ? (guest_roll  || null) : null
   };
 
+  // Order.create now atomically decrements stock inside the transaction
+  // (FIX H4). If any item is short, it throws with .status = 400 — let
+  // asyncHandler propagate that to the global error middleware.
   const newOrder = await Order.create(orderData, orderItems);
 
-  // Decrement stock for each ordered item (items with tracked stock only)
+  // Broadcast post-commit stock updates so kiosks/chef screens stay in sync.
+  // _stockChanges is attached by Order.create() and only used here; it is
+  // not persisted to the DB.
   const io = req.app.get('io');
-  for (const item of orderItems) {
-    try {
-      const updated = await MenuItem.decrementStock(item.menu_item_id, item.quantity);
-      if (updated) {
-        // Auto-mark unavailable when stock reaches 0
-        if (updated.stock_quantity === 0) {
-          await MenuItem.toggleAvailability(updated.id, false);
-          if (io) {
-            io.emit('menu:availability-changed', { ...updated, is_available: false });
-          }
-        }
-        if (io) {
-          io.emit('menu:stock-updated', {
-            id: updated.id,
-            stock_quantity: updated.stock_quantity,
-            is_available: updated.stock_quantity === 0 ? false : updated.is_available
-          });
-        }
+  if (io && Array.isArray(newOrder._stockChanges)) {
+    for (const row of newOrder._stockChanges) {
+      if (row.stock_quantity === 0) {
+        io.emit('menu:availability-changed', { ...row, is_available: false });
       }
-    } catch (e) {
-      console.warn('⚠️  Stock decrement warning for item', item.menu_item_id, ':', e.message);
+      io.emit('menu:stock-updated', {
+        id: row.id,
+        stock_quantity: row.stock_quantity,
+        is_available: row.is_available
+      });
     }
   }
 
@@ -202,13 +231,19 @@ const create = asyncHandler(async (req, res) => {
 
   logger.success(`Order created: #${newOrder.order_number} for ${isGuest ? `guest ${guest_name}` : `student ${studentId}`}`);
 
+  // Guest checkout: hand the client a short-lived token scoped to this order
+  // so /payments/create and /payments/verify can verify ownership without
+  // requiring a student login (FIX C2 — IDOR on payment endpoints).
+  const guestToken = isGuest ? issueGuestToken(newOrder.id) : null;
+
   return res.status(201).json({
     success: true,
     data: {
       order:            newOrder,
       points_earned:    pointsEarned,
       points_used:      pointsUsed,
-      discount_applied: parseFloat((originalAmount - totalAmount).toFixed(2))
+      discount_applied: parseFloat((originalAmount - totalAmount).toFixed(2)),
+      ...(guestToken ? { guest_token: guestToken } : {})
     }
   });
 });
@@ -263,7 +298,7 @@ const getAll = asyncHandler(async (req, res) => {
   // --- Chef: kitchen-relevant statuses (pending / preparing / ready) ---
   if (role === 'chef') {
     const statusFilter = req.query.status;
-    const allOrders    = await Order.getAll({ limit: 200, offset: 0 });
+    const { orders: allOrders } = await Order.getAll({ limit: 200, offset: 0 });
 
     const kitchenOrders = statusFilter
       ? allOrders.filter(o => o.status === statusFilter)
@@ -297,13 +332,13 @@ const getAll = asyncHandler(async (req, res) => {
     offset:         parsedOffset
   };
 
-  const orders = await Order.getAll(filters);
+  const { orders, total } = await Order.getAll(filters);
 
   return res.json({
     success: true,
     data: {
       orders,
-      total: orders.length,
+      total,
       page:  parseInt(page),
       limit: parsedLimit
     }
@@ -358,8 +393,12 @@ const updateStatus = asyncHandler(async (req, res) => {
       timestamp:   new Date().toISOString()
     };
 
-    // Notify the student in their personal room
-    io.to(`student:${order.student_id}`).emit('order:status-change', statusPayload);
+    // Notify the student in their personal room (logged-in students)
+    if (order.student_id) {
+      io.to(`student:${order.student_id}`).emit('order:status-change', statusPayload);
+    }
+    // Always fan out on the per-order room so guests + tracking page get it.
+    io.to(`order:${order.id}`).emit('order:status-change', statusPayload);
 
     // Notify kitchen and admin rooms
     io.to('kitchen').emit('order:updated', statusPayload);
@@ -367,13 +406,17 @@ const updateStatus = asyncHandler(async (req, res) => {
 
     // Sound alert when order is ready for pickup
     if (status === 'ready') {
-      io.to(`student:${order.student_id}`).emit('order:ready-alert', {
+      const readyPayload = {
         orderId:     order.id,
         orderNumber: order.order_number,
         message:     'Your order is ready for pickup!',
         sound:       true,
         timestamp:   new Date().toISOString()
-      });
+      };
+      if (order.student_id) {
+        io.to(`student:${order.student_id}`).emit('order:ready-alert', readyPayload);
+      }
+      io.to(`order:${order.id}`).emit('order:ready-alert', readyPayload);
     }
   }
 
@@ -445,7 +488,155 @@ const cancel = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
 
-  const cancelledOrder = await Order.cancel(orderId);
+  // FIX T1 — money first, DB state second. If this order has already been
+  // paid via Razorpay we must actually issue a refund through the gateway
+  // before flipping payment_status; otherwise the DB silently lies about
+  // money having been returned. On gateway failure we surface 502 and do
+  // NOT cancel the order, keeping DB + Razorpay state in sync.
+  //
+  // FIX Z5 — atomic claim into the transient 'refunding' state mirrors
+  // Round-5 Y6 in processRefund. Two concurrent admin cancels on the
+  // same paid order used to both pass this branch's guard and both fire
+  // razorpayService.processRefund; the second got a gateway 502 ("already
+  // refunded") and the admin saw "Refund failed" on a successful refund.
+  // The UPDATE … WHERE payment_status='paid' is race-free: only one
+  // request wins; the other gets a clean 409.
+  let refund = null;
+  if (order.payment_status === 'paid' && order.razorpay_payment_id) {
+    const claim = await query(
+      `UPDATE orders
+          SET payment_status = 'refunding'
+        WHERE id = $1 AND payment_status = 'paid'
+        RETURNING *`,
+      [order.id]
+    );
+    if (claim.rowCount === 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'A concurrent cancel/refund is already in progress for this order.',
+      });
+    }
+    try {
+      refund = await razorpayService.processRefund(
+        order.razorpay_payment_id,
+        null, // full refund
+        {
+          reason: reason || `Cancelled by ${role}`,
+          canteen_order_id: order.id,
+        }
+      );
+    } catch (refundErr) {
+      // Gateway refused — roll the row back to 'paid' so cancel/refund
+      // can be retried. (If this rollback itself fails the row is stuck
+      // at 'refunding' and the next attempt's claim will 409 — same
+      // recovery shape Round-5 Y6's processRefund uses.)
+      await query(
+        `UPDATE orders SET payment_status = 'paid'
+          WHERE id = $1 AND payment_status = 'refunding'`,
+        [order.id]
+      );
+      logger.error(`Razorpay refund failed on cancel of order #${order.order_number}`, refundErr);
+      return res.status(502).json({
+        success: false,
+        message: 'Refund failed; order not cancelled. Please retry or process the refund via the Razorpay dashboard.'
+      });
+    }
+  }
+
+  // FIX V7 — DB writes (stock restore, cancel, refund mark) run inside a
+  // single transaction so a mid-flow failure rolls back cleanly. The
+  // gateway refund above can't be reversed; making the DB steps atomic
+  // means a transient error after the refund leaves the order in its
+  // original state instead of half-applied, and the admin can safely
+  // retry (the next attempt would skip the refund branch entirely since
+  // payment_status is unchanged… but Razorpay rejects double refunds, so
+  // the admin needs to use a dedicated path — see error message below).
+  let finalOrder;
+  let stockRestored;
+  try {
+    const result = await transaction(async (client) => {
+      const restored = await Order.restoreStock(order.id, client);
+      const cancelled = await Order.cancel(order.id, client);
+      let updated = cancelled;
+      if (refund) {
+        updated = await Order.updatePayment(order.id, {
+          payment_status:      'refunded',
+          payment_method:      order.payment_method,
+          razorpay_order_id:   order.razorpay_order_id,
+          razorpay_payment_id: order.razorpay_payment_id,
+          razorpay_signature:  order.razorpay_signature
+        }, client);
+      }
+      return { finalOrder: updated, stockRestored: restored };
+    });
+    finalOrder = result.finalOrder;
+    stockRestored = result.stockRestored;
+  } catch (dbErr) {
+    logger.error(
+      `Cancel DB updates failed AFTER successful refund for order #${order.order_number}. ` +
+      `Manual reconciliation required (refund id: ${refund?.refundId})`,
+      dbErr
+    );
+
+    // FIX Z5 (mirroring Z2 in processRefund) — the Z5 atomic claim above
+    // committed payment_status='refunding' OUTSIDE the V7 transaction, so
+    // a transaction rollback doesn't unwind it. Without this fallback the
+    // row sits at 'refunding' forever and the next cancel/refund attempt's
+    // claim guard (WHERE payment_status='paid') rejects every retry. Force
+    // 'refunded' so the books at least mirror the gateway.
+    if (refund) {
+      try {
+        await query(
+          `UPDATE orders SET payment_status = 'refunded'
+            WHERE id = $1 AND payment_status = 'refunding'`,
+          [order.id]
+        );
+      } catch (rollbackErr) {
+        logger.error(
+          `Even the fallback payment_status update failed. ` +
+          `Order #${order.order_number} is stuck in 'refunding'. ` +
+          `Razorpay refund id: ${refund.refundId}`,
+          rollbackErr
+        );
+      }
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Cancel partially failed. Refund landed but DB updates rolled back. ' +
+               'Please contact support — refund id logged.',
+    });
+  }
+
+  // FIX V3 — reverse points + spending stats + tier in a single transaction.
+  // Mirrors processRefund(): without this, /orders/:id/cancel and
+  // /payments/refund would land the order in the same state but leak the
+  // student's points_earned / total_spent depending on which endpoint the
+  // admin clicked. Skipped when no refund happened (order was pending) or
+  // there's no student_id (guest).
+  if (refund && order.student_id) {
+    try {
+      await transaction(async (client) => {
+        if (order.points_earned > 0) {
+          await Student.deductPoints(order.student_id, order.points_earned, client);
+        }
+        if (order.points_used > 0) {
+          await Student.addPoints(order.student_id, order.points_used, client);
+        }
+        await Student.updateStats(
+          order.student_id,
+          -parseFloat(order.total_amount), // negative delta reverses
+          client
+        );
+        await Student.updateTier(order.student_id, client);
+      });
+    } catch (pointsErr) {
+      logger.error(
+        `Failed to reconcile points/stats on cancel-refund of order #${order.order_number}`,
+        pointsErr
+      );
+    }
+  }
 
   // Socket notifications
   const io = req.app.get('io');
@@ -459,14 +650,30 @@ const cancel = asyncHandler(async (req, res) => {
       timestamp:   new Date().toISOString()
     };
 
-    io.to(`student:${order.student_id}`).emit('order:cancelled', cancelPayload);
+    if (order.student_id) {
+      io.to(`student:${order.student_id}`).emit('order:cancelled', cancelPayload);
+    }
+    // Per-order room — guests on OrderTracking subscribe via order:join.
+    io.to(`order:${order.id}`).emit('order:cancelled', cancelPayload);
     io.to('kitchen').emit('order:cancelled', cancelPayload);
     io.to('admin').emit('order:cancelled', cancelPayload);
+
+    // Broadcast stock returns so menus refresh in real time.
+    for (const row of stockRestored) {
+      io.emit('menu:stock-updated', {
+        id: row.id,
+        stock_quantity: row.stock_quantity,
+        is_available:   row.is_available
+      });
+      if (row.is_available) {
+        io.emit('menu:availability-changed', row);
+      }
+    }
   }
 
-  logger.warn(`Order #${order.order_number} cancelled — reason: ${reason}`);
+  logger.warn(`Order #${order.order_number} cancelled — reason: ${reason}${refund ? ` (refund ${refund.refundId})` : ''}`);
 
-  return res.json({ success: true, data: { order: cancelledOrder } });
+  return res.json({ success: true, data: { order: finalOrder } });
 });
 
 // ============================================================================
@@ -513,7 +720,7 @@ const track = asyncHandler(async (req, res) => {
 const getStats = asyncHandler(async (req, res) => {
   const stats        = await Order.getStats();
   const topItems     = await MenuItem.getTopSelling(5);
-  const recentOrders = await Order.getAll({ limit: 10, offset: 0 });
+  const { orders: recentOrders } = await Order.getAll({ limit: 10, offset: 0 });
 
   return res.json({
     success: true,
@@ -562,22 +769,16 @@ const getStatusMessage = (status) => {
  * Admin only — revenue aggregated by day for the last N days.
  */
 const getRevenueData = asyncHandler(async (req, res) => {
-  const days   = parseInt(req.query.days) || 30;
-  const orders = await Order.getAll({ payment_status: 'paid', limit: 1000, offset: 0 });
+  const days = parseInt(req.query.days) || 30;
+  const rows = await Order.getRevenueData(days);
 
-  // Group revenue by date
-  const revenueByDate = {};
-  const now = Date.now();
-  for (const o of orders) {
-    const created = new Date(o.created_at);
-    if ((now - created.getTime()) / 86400000 > days) continue;
-    const dateKey = created.toISOString().split('T')[0];
-    if (!revenueByDate[dateKey]) revenueByDate[dateKey] = { date: dateKey, revenue: 0, orders: 0 };
-    revenueByDate[dateKey].revenue += parseFloat(o.total_amount || 0);
-    revenueByDate[dateKey].orders  += 1;
-  }
-
-  const data = Object.values(revenueByDate).sort((a, b) => a.date.localeCompare(b.date));
+  // Order.getRevenueData returns { date, order_count, revenue }; reshape
+  // to the chart-friendly { date, revenue, orders } shape callers expect.
+  const data = rows.map(r => ({
+    date:    r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date,
+    revenue: parseFloat(r.revenue) || 0,
+    orders:  parseInt(r.order_count, 10) || 0
+  }));
 
   return res.json({ success: true, data });
 });

@@ -5,6 +5,8 @@ import socketService from '../services/socket.service';
 import { subscribeToTable, unsubscribe } from '../services/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Order, MenuItem, OrderStatus } from '../types';
+import api from '../services/api';
+import { useToast } from '../components/common/Toast';
 
 // ─── Stats Row ────────────────────────────────────────────────────────────────
 
@@ -21,9 +23,9 @@ const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: Men
 
   const stats = [
     { label: 'Pending', value: pending, color: '#ffed4e', icon: '🕐' },
-    { label: 'Preparing', value: preparing, color: '#00f5ff', icon: '👨‍🍳' },
+    { label: 'Preparing', value: preparing, color: '#00ff88', icon: '👨‍🍳' },
     { label: 'Ready', value: ready, color: '#00ff88', icon: '🍽️' },
-    { label: "Today's Revenue", value: `₹${revenue.toLocaleString('en-IN')}`, color: '#ff00ff', icon: '💰' },
+    { label: "Today's Revenue", value: `₹${revenue.toLocaleString('en-IN')}`, color: '#00d166', icon: '💰' },
   ];
 
   return (
@@ -87,7 +89,7 @@ function timeAgo(dateStr: string): { text: string; isOld: boolean } {
 
 const STATUS_CONFIG: Record<string, { border: string; glow: string; label: string }> = {
   pending:   { border: '#ffed4e', glow: 'rgba(255,237,78,0.18)',   label: 'PENDING' },
-  preparing: { border: '#00f5ff', glow: 'rgba(0,245,255,0.18)',    label: 'PREPARING' },
+  preparing: { border: '#00ff88', glow: 'rgba(0, 255, 136,0.18)',    label: 'PREPARING' },
   ready:     { border: '#00ff88', glow: 'rgba(0,255,136,0.22)',    label: 'READY' },
   completed: { border: 'rgba(255,255,255,0.2)', glow: 'transparent', label: 'DONE' },
   cancelled: { border: '#ff3366', glow: 'rgba(255,51,102,0.18)',   label: 'CANCELLED' },
@@ -96,7 +98,9 @@ const STATUS_CONFIG: Record<string, { border: string; glow: string; label: strin
 const ChefOrderCard: React.FC<{
   order: Order;
   onStatusUpdate: (id: number, status: OrderStatus) => void;
-}> = ({ order, onStatusUpdate }) => {
+  onSpeak?: (order: Order) => void;
+  isSpeaking?: boolean;
+}> = ({ order, onStatusUpdate, onSpeak, isSpeaking }) => {
   const [, tick] = useState(0);
   useEffect(() => {
     const i = setInterval(() => tick(n => n + 1), 30000);
@@ -135,7 +139,7 @@ const ChefOrderCard: React.FC<{
         {isNew && (
           <div style={{
             position: 'absolute', top: 10, right: 10,
-            background: '#ffed4e', color: '#0a0a1a',
+            background: '#ffed4e', color: '#050a0c',
             fontSize: '9px', fontFamily: 'Orbitron, monospace', fontWeight: '700',
             padding: '2px 6px', borderRadius: '4px', letterSpacing: '1px',
             animation: 'newPulse 1s ease-in-out infinite',
@@ -212,7 +216,7 @@ const ChefOrderCard: React.FC<{
           <div style={{ display: 'flex', gap: '8px' }}>
             <ActionBtn
               label="✔ Accept"
-              color="#00f5ff"
+              color="#00ff88"
               onClick={() => onStatusUpdate(order.id, 'preparing')}
             />
             <ActionBtn
@@ -238,6 +242,43 @@ const ChefOrderCard: React.FC<{
             fullWidth
           />
         )}
+
+        {/* Speak order button */}
+        {onSpeak && (
+          <button
+            onClick={() => onSpeak(order)}
+            disabled={isSpeaking}
+            title="Read order aloud"
+            style={{
+              marginTop: '10px',
+              width: '100%',
+              padding: '8px',
+              background: isSpeaking ? 'rgba(255,165,0,0.15)' : 'rgba(255,237,78,0.07)',
+              border: `1px solid ${isSpeaking ? 'rgba(255,165,0,0.5)' : 'rgba(255,237,78,0.3)'}`,
+              borderRadius: '9px',
+              color: isSpeaking ? '#ffa500' : '#ffed4e',
+              fontSize: '12px',
+              fontFamily: 'Rajdhani, sans-serif',
+              fontWeight: '700',
+              letterSpacing: '1px',
+              cursor: isSpeaking ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+            }}
+          >
+            {isSpeaking ? (
+              <>
+                <span style={{ display: 'inline-block', animation: 'speakPulse 0.6s ease-in-out infinite' }}>🔊</span>
+                SPEAKING...
+              </>
+            ) : (
+              <>🔊 READ ALOUD</>
+            )}
+          </button>
+        )}
       </div>
     </>
   );
@@ -250,7 +291,9 @@ const ActionBtn: React.FC<{
   fullWidth?: boolean;
 }> = ({ label, color, onClick, fullWidth }) => {
   const [hover, setHover] = useState(false);
-  const rgb = color === '#00f5ff' ? '0,245,255' : color === '#00ff88' ? '0,255,136' : color === '#ff3366' ? '255,51,102' : '255,255,255';
+  // Round-7 palette swap collapsed the cyan vs green ternaries — both branches
+  // now resolve to the same unified green RGB triplet.
+  const rgb = color === '#00ff88' ? '0,255,136' : color === '#ff3366' ? '255,51,102' : '255,255,255';
   return (
     <button
       onClick={onClick}
@@ -324,9 +367,9 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
   }
 
   const summaryStats = [
-    { label: 'Total Orders',  value: todayAll.length,     color: '#00f5ff', icon: '📋' },
+    { label: 'Total Orders',  value: todayAll.length,     color: '#00ff88', icon: '📋' },
     { label: 'Completed',     value: completed.length,    color: '#00ff88', icon: '✅' },
-    { label: 'Items Sold',    value: totalItems,          color: '#ff00ff', icon: '🍽️' },
+    { label: 'Items Sold',    value: totalItems,          color: '#00d166', icon: '🍽️' },
     { label: "Today's Revenue", value: `₹${totalRev.toLocaleString('en-IN')}`, color: '#ffed4e', icon: '💰' },
   ];
 
@@ -351,7 +394,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
       </div>
 
       {/* Section label */}
-      <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(0,245,255,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
+      <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(0, 255, 136,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
         🍽️ Items Ordered Today — sorted by popularity
       </div>
 
@@ -360,7 +403,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
         {aggItems.map((item, idx) => (
           <div key={item.name} style={{
             background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
-            border: `1px solid ${idx === 0 ? 'rgba(255,237,78,0.45)' : 'rgba(0,245,255,0.12)'}`,
+            border: `1px solid ${idx === 0 ? 'rgba(255,237,78,0.45)' : 'rgba(0, 255, 136,0.12)'}`,
             borderRadius: 16, overflow: 'hidden', position: 'relative',
             boxShadow: idx === 0 ? '0 0 24px rgba(255,237,78,0.12)' : '0 2px 12px rgba(0,0,0,0.3)',
             animation: `fadeInUp 0.4s ease ${Math.min(idx, 12) * 0.04}s both`,
@@ -372,7 +415,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
             {idx === 0 && (
               <div style={{
                 position: 'absolute', top: 8, right: 8, zIndex: 2,
-                background: '#ffed4e', color: '#0a0a1a',
+                background: '#ffed4e', color: '#050a0c',
                 fontSize: 8, fontFamily: 'Orbitron, monospace', fontWeight: 700,
                 padding: '2px 7px', borderRadius: 4, letterSpacing: 1,
               }}>🏆 TOP</div>
@@ -402,9 +445,9 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
               }}>{item.name}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{
-                  background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.35)',
+                  background: 'rgba(0, 255, 136,0.1)', border: '1px solid rgba(0, 255, 136,0.35)',
                   borderRadius: 20, padding: '3px 10px',
-                  fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#00f5ff',
+                  fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#00ff88',
                 }}>×{item.quantity}</div>
                 <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#ffed4e' }}>
                   ₹{item.revenue.toFixed(0)}
@@ -457,11 +500,16 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
 
 const COLUMNS: Array<{ status: OrderStatus; label: string; color: string; glow: string }> = [
   { status: 'pending',   label: 'Pending',   color: '#ffed4e', glow: 'rgba(255,237,78,0.12)' },
-  { status: 'preparing', label: 'Preparing', color: '#00f5ff', glow: 'rgba(0,245,255,0.12)' },
+  { status: 'preparing', label: 'Preparing', color: '#00ff88', glow: 'rgba(0, 255, 136,0.12)' },
   { status: 'ready',     label: 'Ready',     color: '#00ff88', glow: 'rgba(0,255,136,0.12)' },
 ];
 
-const OrdersTab: React.FC<{ orders: Order[]; onStatusUpdate: (id: number, s: OrderStatus) => void }> = ({ orders, onStatusUpdate }) => (
+const OrdersTab: React.FC<{
+  orders: Order[];
+  onStatusUpdate: (id: number, s: OrderStatus) => void;
+  onSpeak: (order: Order) => void;
+  speakingOrderId: number | null;
+}> = ({ orders, onStatusUpdate, onSpeak, speakingOrderId }) => (
   <>
     <style>{`
       .queue-col::-webkit-scrollbar { width: 4px; }
@@ -496,7 +544,13 @@ const OrdersTab: React.FC<{ orders: Order[]; onStatusUpdate: (id: number, s: Ord
             </div>
             <div className="queue-col" style={{ flex: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 380px)', paddingRight: '4px' }}>
               {colOrders.length > 0 ? colOrders.map(order => (
-                <ChefOrderCard key={order.id} order={order} onStatusUpdate={onStatusUpdate} />
+                <ChefOrderCard
+                  key={order.id}
+                  order={order}
+                  onStatusUpdate={onStatusUpdate}
+                  onSpeak={onSpeak}
+                  isSpeaking={speakingOrderId === order.id}
+                />
               )) : (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -582,6 +636,7 @@ const EditMenuTab: React.FC<{
 }> = ({ items, onRefresh }) => {
   const [editItems, setEditItems] = useState<EditableItem[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<EditableItem | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     setEditItems(items.map(item => ({
@@ -621,6 +676,7 @@ const EditMenuTab: React.FC<{
       await menuService.toggleAvailability(item.id);
     } catch (err) {
       setEditItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: item.is_available } : i));
+      showToast(`Could not update availability for ${item.name} — try again`, 'error');
     }
   };
 
@@ -639,7 +695,7 @@ const EditMenuTab: React.FC<{
       <style>{`
         @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         .menu-edit-input { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.12) !important; }
-        .menu-edit-input:focus { outline: none; border-color: #00f5ff !important; box-shadow: 0 0 0 2px rgba(0,245,255,0.15) !important; }
+        .menu-edit-input:focus { outline: none; border-color: #00ff88 !important; box-shadow: 0 0 0 2px rgba(0, 255, 136,0.15) !important; }
         /* Toggle switch styles */
         .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; cursor:pointer; }
         .toggle-switch input { opacity:0; width:0; height:0; }
@@ -694,7 +750,7 @@ const EditMenuTab: React.FC<{
                 onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
               >
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '13px', color: '#00f5ff', fontWeight: '700', letterSpacing: '1px', background: 'rgba(0,245,255,0.15)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(0,245,255,0.4)' }}>
+                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '13px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px', background: 'rgba(0, 255, 136,0.15)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(0, 255, 136,0.4)' }}>
                   📷 Change Image
                 </span>
               </div>
@@ -763,7 +819,7 @@ const EditMenuTab: React.FC<{
                   title="-1 means unlimited stock"
                   style={{
                     flex: 1, padding: '8px 12px', borderRadius: '8px',
-                    color: item.editStock === '-1' ? 'rgba(255,255,255,0.4)' : '#00f5ff',
+                    color: item.editStock === '-1' ? 'rgba(255,255,255,0.4)' : '#00ff88',
                     fontFamily: 'Orbitron, monospace', fontSize: '13px',
                     fontWeight: '700', boxSizing: 'border-box',
                   }}
@@ -791,8 +847,8 @@ const EditMenuTab: React.FC<{
                   disabled={item.saving}
                   style={{
                     flex: 1, padding: '9px',
-                    background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.4)',
-                    borderRadius: '9px', color: '#00f5ff',
+                    background: 'rgba(0, 255, 136,0.1)', border: '1px solid rgba(0, 255, 136,0.4)',
+                    borderRadius: '9px', color: '#00ff88',
                     fontFamily: 'Rajdhani, sans-serif', fontWeight: '700', fontSize: '13px',
                     cursor: item.saving ? 'not-allowed' : 'pointer', letterSpacing: '1px',
                     opacity: item.saving ? 0.6 : 1, transition: 'all 0.2s',
@@ -833,6 +889,112 @@ const ChefDisplay: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'orders' | 'today' | 'menu'>('orders');
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // ── TTS State ───────────────────────────────────────────────────────────────
+  const [ttsEnabled, setTtsEnabled]     = useState(true);
+  const [ttsLang, setTtsLang]           = useState('en-IN');
+  const [ttsLangOpen, setTtsLangOpen]   = useState(false);
+  const [speakingOrderId, setSpeakingOrderId] = useState<number | null>(null);
+  const ttsQueueRef = useRef<SpeechSynthesisUtterance[]>([]);
+  const ttsDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const TTS_LANGUAGES = [
+    { code: 'en-IN', label: 'English',   flag: '🇬🇧' },
+    { code: 'hi-IN', label: 'Hindi',     flag: '🇮🇳' },
+    { code: 'ta-IN', label: 'Tamil',     flag: '🌺' },
+    { code: 'te-IN', label: 'Telugu',    flag: '🌸' },
+    { code: 'ml-IN', label: 'Malayalam', flag: '🌴' },
+    { code: 'kn-IN', label: 'Kannada',   flag: '🏔️' },
+    { code: 'bn-IN', label: 'Bengali',   flag: '🌿' },
+    { code: 'mr-IN', label: 'Marathi',   flag: '🦁' },
+  ] as const;
+
+  const currentLangLabel = TTS_LANGUAGES.find(l => l.code === ttsLang);
+
+  // Close language dropdown on outside click
+  useEffect(() => {
+    if (!ttsLangOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (ttsDropdownRef.current && !ttsDropdownRef.current.contains(e.target as Node)) {
+        setTtsLangOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [ttsLangOpen]);
+
+  // Build a natural-language order summary in English (Claude will translate it)
+  const buildOrderSummary = useCallback((order: Order): string => {
+    const items = (order.items ?? [])
+      .map(i => `${i.quantity} ${i.item_name}`)
+      .join(', ');
+    const total = Number(order.total_amount).toFixed(0);
+    const student = order.student_name ? ` for ${order.student_name}` : '';
+    return `New order number ${order.order_number}${student}. Items: ${items}. Total: ${total} rupees.`;
+  }, []);
+
+  // Core speak function: translate if needed → SpeechSynthesis
+  const speakOrder = useCallback(async (order: Order) => {
+    if (!ttsEnabled) return;
+    if (!('speechSynthesis' in window)) {
+      console.warn('[TTS] SpeechSynthesis not supported in this browser.');
+      return;
+    }
+
+    setSpeakingOrderId(order.id);
+    window.speechSynthesis.cancel(); // stop any ongoing speech
+
+    const englishText = buildOrderSummary(order);
+    let textToSpeak = englishText;
+
+    // Translate if not English
+    if (ttsLang !== 'en-IN') {
+      try {
+        const resp = await api.post('/ai/translate', { text: englishText, targetLangCode: ttsLang });
+        if (resp.data?.success && resp.data?.data?.translatedText) {
+          textToSpeak = resp.data.data.translatedText;
+        }
+      } catch (err) {
+        console.warn('[TTS] Translation failed, falling back to English:', err);
+      }
+    }
+
+    const utter = new SpeechSynthesisUtterance(textToSpeak);
+    utter.lang = ttsLang;
+    utter.rate = 0.75;   // slower → more intelligible for kitchen staff
+    utter.pitch = 1.0;
+    utter.volume = 1.0;
+
+    // Async voice loading — getVoices() may return [] on first call in Chrome
+    // until the 'voiceschanged' event fires.
+    const loadVoices = (): Promise<SpeechSynthesisVoice[]> =>
+      new Promise(resolve => {
+        const v = window.speechSynthesis.getVoices();
+        if (v.length > 0) { resolve(v); return; }
+        const handler = () => resolve(window.speechSynthesis.getVoices());
+        window.speechSynthesis.addEventListener('voiceschanged', handler, { once: true });
+        // Safety timeout — resolve with whatever is available after 1 s
+        setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
+      });
+
+    const voices = await loadVoices();
+    // Pick the best matching voice for the target language.
+    // Deliberately NO English fallback — if we fall back to an English voice while
+    // the text is in Tamil/Hindi script, the TTS engine produces silence or
+    // unreadable output.  Leaving utter.voice unset lets the browser choose the
+    // best available voice for utter.lang automatically.
+    const matchedVoice =
+      voices.find(v => v.lang === ttsLang) ||
+      voices.find(v => v.lang.startsWith(ttsLang.split('-')[0]));
+    if (matchedVoice) utter.voice = matchedVoice;
+    // utter.lang is always set (above) so the browser still picks the right
+    // synthesiser even when matchedVoice is undefined.
+
+    utter.onend = () => setSpeakingOrderId(null);
+    utter.onerror = () => setSpeakingOrderId(null);
+
+    window.speechSynthesis.speak(utter);
+  }, [ttsEnabled, ttsLang, buildOrderSummary]);
 
   // Web Audio API beep
   const playNotificationBeep = useCallback(() => {
@@ -931,13 +1093,19 @@ const ChefDisplay: React.FC = () => {
           return [newOrder, ...prev];
         });
         playNotificationBeep();
+        // Auto-announce new order in chef's preferred language
+        speakOrder(newOrder);
       });
-      socketService.on('order:status-updated', (updatedOrder: Order) => {
+      // Backend emits `order:updated` to the kitchen room with a partial
+      // payload (orderId / status / orderNumber). Look up by id locally and
+      // patch the status — don't replace the entire order with the partial.
+      socketService.on('order:updated', (data: { orderId: number; status: OrderStatus }) => {
+        if (!data || data.orderId === undefined) return;
         setOrders(prev => {
-          if (['completed', 'cancelled'].includes(updatedOrder.status)) {
-            return prev.filter(o => o.id !== updatedOrder.id);
+          if (['completed', 'cancelled'].includes(data.status)) {
+            return prev.filter(o => o.id !== data.orderId);
           }
-          return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
+          return prev.map(o => o.id === data.orderId ? { ...o, status: data.status } : o);
         });
         // Keep today's grid in sync whenever an order status changes
         fetchTodayOrders();
@@ -972,6 +1140,8 @@ const ChefDisplay: React.FC = () => {
     const ordersChannel = subscribeToTable('orders', ({ eventType, new: row }) => {
       if (eventType === 'INSERT') {
         // Re-fetch so we get the full joined data (items, student name, etc.)
+        // TTS is triggered by the socket:order:created event (which has full data);
+        // Supabase Realtime INSERT is a backup signal — only beep here to avoid double-speech.
         fetchOrders();
         fetchTodayOrders();
         playNotificationBeep();
@@ -1007,7 +1177,7 @@ const ChefDisplay: React.FC = () => {
       socketService.off('connect');
       socketService.off('disconnect');
       socketService.off('order:created');
-      socketService.off('order:status-updated');
+      socketService.off('order:updated');
       socketService.off('order:cancelled');
       socketService.off('menu:availability-changed');
       socketService.off('menu:stock-updated');
@@ -1015,7 +1185,7 @@ const ChefDisplay: React.FC = () => {
       unsubscribe(ordersChannel);
       unsubscribe(menuChannel);
     };
-  }, [fetchOrders, fetchMenuItems, fetchTodayOrders, playNotificationBeep]);
+  }, [fetchOrders, fetchMenuItems, fetchTodayOrders, playNotificationBeep, speakOrder]);
 
   const handleStatusUpdate = useCallback(async (orderId: number, status: OrderStatus) => {
     setOrders(prev => {
@@ -1040,21 +1210,22 @@ const ChefDisplay: React.FC = () => {
     <>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: linear-gradient(135deg, #0a0a1a, #1a0a2e, #0f0a1f); min-height: 100vh; font-family: 'Rajdhani', sans-serif; }
+        body { background: linear-gradient(135deg, #050a0c, #0a1614, #07100e); min-height: 100vh; font-family: 'Rajdhani', sans-serif; }
         @keyframes scanline { 0%{background-position:0 0} 100%{background-position:0 100vh} }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
         @keyframes slideInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes speakPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
 
         /* class names — layout overridden by index.css media queries */
       `}</style>
 
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a1a, #1a0a2e, #0f0a1f)', position: 'relative' }}>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #050a0c, #0a1614, #07100e)', position: 'relative' }}>
         {/* Grid overlay */}
         <div style={{
           position: 'fixed', inset: 0,
-          backgroundImage: 'linear-gradient(rgba(0,245,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.02) 1px, transparent 1px)',
+          backgroundImage: 'linear-gradient(rgba(0, 255, 136,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136,0.02) 1px, transparent 1px)',
           backgroundSize: '40px 40px', pointerEvents: 'none', zIndex: 0,
         }} />
 
@@ -1063,8 +1234,8 @@ const ChefDisplay: React.FC = () => {
           position: 'sticky', top: 0, zIndex: 50, height: '80px',
           background: 'rgba(10,10,26,0.88)', backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(0,245,255,0.2)',
-          boxShadow: '0 4px 30px rgba(0,245,255,0.08)',
+          borderBottom: '1px solid rgba(0, 255, 136,0.2)',
+          boxShadow: '0 4px 30px rgba(0, 255, 136,0.08)',
           display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
           padding: '0 40px', animation: 'slideInDown 0.5s ease',
         }}>
@@ -1073,7 +1244,7 @@ const ChefDisplay: React.FC = () => {
             <div>
               <h1 style={{
                 fontFamily: 'Orbitron, monospace', fontSize: '20px', fontWeight: '900',
-                background: 'linear-gradient(90deg, #00f5ff, #ff00ff)',
+                background: 'linear-gradient(90deg, #00ff88, #00d166)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text', letterSpacing: '3px', lineHeight: 1,
               }}>KITCHEN DISPLAY</h1>
@@ -1098,15 +1269,93 @@ const ChefDisplay: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'flex-end' }}>
-            <button onClick={() => setSoundEnabled(s => !s)} title={soundEnabled ? 'Disable sound' : 'Enable sound'} style={{
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', justifyContent: 'flex-end' }}>
+
+            {/* ── TTS Language selector ─────────────────────────────────────── */}
+            <div ref={ttsDropdownRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setTtsLangOpen(o => !o)}
+                title="Choose announcement language"
+                style={{
+                  background: ttsEnabled ? 'rgba(255,237,78,0.08)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${ttsEnabled ? 'rgba(255,237,78,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: '10px', padding: '6px 12px',
+                  color: ttsEnabled ? '#ffed4e' : 'rgba(255,255,255,0.3)',
+                  cursor: 'pointer', fontSize: '13px',
+                  fontFamily: 'Rajdhani, sans-serif', fontWeight: '700',
+                  letterSpacing: '0.5px',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>{currentLangLabel?.flag ?? '🌐'}</span>
+                {currentLangLabel?.label ?? 'English'}
+                <span style={{ fontSize: '10px', opacity: 0.6 }}>▼</span>
+              </button>
+
+              {ttsLangOpen && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                  background: 'rgba(10,6,24,0.97)',
+                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,237,78,0.25)',
+                  borderRadius: '14px', padding: '8px',
+                  zIndex: 200, minWidth: '170px',
+                  boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+                  animation: 'fadeInUp 0.15s ease',
+                }}>
+                  {TTS_LANGUAGES.map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => { setTtsLang(lang.code); setTtsLangOpen(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        width: '100%', padding: '9px 12px',
+                        background: ttsLang === lang.code ? 'rgba(255,237,78,0.12)' : 'transparent',
+                        border: 'none', borderRadius: '9px',
+                        color: ttsLang === lang.code ? '#ffed4e' : 'rgba(255,255,255,0.7)',
+                        fontFamily: 'Rajdhani, sans-serif', fontSize: '14px', fontWeight: '600',
+                        cursor: 'pointer', textAlign: 'left', letterSpacing: '0.5px',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => { if (ttsLang !== lang.code) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; }}
+                      onMouseLeave={e => { if (ttsLang !== lang.code) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+                    >
+                      <span style={{ fontSize: '18px' }}>{lang.flag}</span>
+                      <span>{lang.label}</span>
+                      {ttsLang === lang.code && <span style={{ marginLeft: 'auto', color: '#ffed4e' }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── TTS on/off toggle ─────────────────────────────────────────── */}
+            <button
+              onClick={() => { setTtsEnabled(s => !s); if (speakingOrderId) { window.speechSynthesis?.cancel(); setSpeakingOrderId(null); } }}
+              title={ttsEnabled ? 'Voice ON — click to mute' : 'Voice OFF — click to enable'}
+              style={{
+                background: ttsEnabled ? 'rgba(255,237,78,0.08)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${ttsEnabled ? 'rgba(255,237,78,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: '8px', padding: '6px 12px',
+                color: ttsEnabled ? '#ffed4e' : 'rgba(255,255,255,0.3)',
+                cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s',
+              }}
+            >
+              {ttsEnabled ? (speakingOrderId ? '🔊' : '📢') : '🔇'}
+            </button>
+
+            {/* ── Beep sound toggle ─────────────────────────────────────────── */}
+            <button onClick={() => setSoundEnabled(s => !s)} title={soundEnabled ? 'Disable beep' : 'Enable beep'} style={{
               background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '8px', padding: '6px 12px',
-              color: soundEnabled ? '#00f5ff' : 'rgba(255,255,255,0.3)',
+              color: soundEnabled ? '#00ff88' : 'rgba(255,255,255,0.3)',
               cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s',
             }}>
               {soundEnabled ? '🔔' : '🔕'}
             </button>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{
                 width: '10px', height: '10px', borderRadius: '50%',
@@ -1128,8 +1377,8 @@ const ChefDisplay: React.FC = () => {
         <main className="chef-main" style={{ position: 'relative', zIndex: 1, padding: '28px 40px 60px' }}>
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '20px' }}>
-              <div style={{ width: '60px', height: '60px', border: '3px solid rgba(0,245,255,0.1)', borderTop: '3px solid #00f5ff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-              <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '14px', color: 'rgba(0,245,255,0.6)', letterSpacing: '3px' }}>LOADING KITCHEN...</span>
+              <div style={{ width: '60px', height: '60px', border: '3px solid rgba(0, 255, 136,0.1)', borderTop: '3px solid #00ff88', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '14px', color: 'rgba(0, 255, 136,0.6)', letterSpacing: '3px' }}>LOADING KITCHEN...</span>
             </div>
           ) : (
             <>
@@ -1148,10 +1397,10 @@ const ChefDisplay: React.FC = () => {
                     onClick={() => setActiveTab(tab.id)}
                     style={{
                       padding: '10px 24px',
-                      background: activeTab === tab.id ? 'rgba(0,245,255,0.12)' : 'transparent',
-                      border: activeTab === tab.id ? '1px solid rgba(0,245,255,0.4)' : '1px solid transparent',
+                      background: activeTab === tab.id ? 'rgba(0, 255, 136,0.12)' : 'transparent',
+                      border: activeTab === tab.id ? '1px solid rgba(0, 255, 136,0.4)' : '1px solid transparent',
                       borderRadius: '8px',
-                      color: activeTab === tab.id ? '#00f5ff' : 'rgba(255,255,255,0.4)',
+                      color: activeTab === tab.id ? '#00ff88' : 'rgba(255,255,255,0.4)',
                       fontFamily: 'Orbitron, monospace',
                       fontSize: '12px',
                       fontWeight: '700',
@@ -1159,7 +1408,7 @@ const ChefDisplay: React.FC = () => {
                       letterSpacing: '2px',
                       textTransform: 'uppercase',
                       transition: 'all 0.2s',
-                      boxShadow: activeTab === tab.id ? '0 0 15px rgba(0,245,255,0.2)' : 'none',
+                      boxShadow: activeTab === tab.id ? '0 0 15px rgba(0, 255, 136,0.2)' : 'none',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -1169,7 +1418,12 @@ const ChefDisplay: React.FC = () => {
               </div>
 
               {activeTab === 'orders' && (
-                <OrdersTab orders={orders} onStatusUpdate={handleStatusUpdate} />
+                <OrdersTab
+                  orders={orders}
+                  onStatusUpdate={handleStatusUpdate}
+                  onSpeak={speakOrder}
+                  speakingOrderId={speakingOrderId}
+                />
               )}
               {activeTab === 'today' && (
                 <TodayFoodGrid todayOrders={todayOrders} menuItems={menuItems} />

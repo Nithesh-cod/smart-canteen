@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import * as orderService from '../services/order.service';
+import * as authService from '../services/auth.service';
 import socketService from '../services/socket.service';
 import type { Order } from '../types';
 
@@ -74,10 +75,10 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
           left: 'calc(20px + 17px)',
           width: `calc((100% - 40px - 34px) * ${fillPct / 100})`,
           height: 3,
-          background: 'linear-gradient(90deg, #00f5ff, #ff00ff)',
+          background: 'linear-gradient(90deg, #00ff88, #00d166)',
           borderRadius: 3,
           transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
-          boxShadow: '0 0 10px rgba(0,245,255,0.6)',
+          boxShadow: '0 0 10px rgba(0, 255, 136,0.6)',
         }} />
 
         {/* Step dots */}
@@ -93,25 +94,25 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
                   {isCurrent && (
                     <div style={{
                       position: 'absolute', inset: -6, borderRadius: '50%',
-                      background: 'rgba(0,245,255,0.2)',
+                      background: 'rgba(0, 255, 136,0.2)',
                       animation: 'pulse 1.5s ease-in-out infinite',
                     }} />
                   )}
                   <div style={{
                     width: 34, height: 34, borderRadius: '50%',
                     background: isDone
-                      ? 'linear-gradient(135deg, #00ff88, #00f5ff)'
+                      ? 'linear-gradient(135deg, #00ff88, #00ff88)'
                       : isCurrent
-                      ? 'rgba(0,245,255,0.2)'
+                      ? 'rgba(0, 255, 136,0.2)'
                       : 'rgba(255,255,255,0.05)',
-                    border: `2px solid ${isDone ? '#00ff88' : isCurrent ? '#00f5ff' : 'rgba(255,255,255,0.15)'}`,
+                    border: `2px solid ${isDone ? '#00ff88' : isCurrent ? '#00ff88' : 'rgba(255,255,255,0.15)'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: isDone ? '14px' : '0.85rem',
                     color: '#fff', fontWeight: 700,
                     boxShadow: isDone
                       ? '0 0 16px rgba(0,255,136,0.6)'
                       : isCurrent
-                      ? '0 0 16px rgba(0,245,255,0.5)'
+                      ? '0 0 16px rgba(0, 255, 136,0.5)'
                       : 'none',
                     transition: 'all 0.5s',
                     position: 'relative', zIndex: 2,
@@ -123,11 +124,11 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
                 {/* Label */}
                 <div className="track-progress-label" style={{
                   fontSize: '0.68rem', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
-                  color: isDone ? '#00ff88' : isCurrent ? '#00f5ff' : 'rgba(255,255,255,0.25)',
+                  color: isDone ? '#00ff88' : isCurrent ? '#00ff88' : 'rgba(255,255,255,0.25)',
                   textTransform: 'uppercase', letterSpacing: 0.5,
                   textAlign: 'center', whiteSpace: 'nowrap',
                   transition: 'color 0.5s',
-                  textShadow: isDone ? '0 0 8px rgba(0,255,136,0.4)' : isCurrent ? '0 0 8px rgba(0,245,255,0.4)' : 'none',
+                  textShadow: isDone ? '0 0 8px rgba(0,255,136,0.4)' : isCurrent ? '0 0 8px rgba(0, 255, 136,0.4)' : 'none',
                 }}>
                   {stepLabels[idx]}
                 </div>
@@ -144,7 +145,7 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
 
 const STATUS_COLORS: Record<string, string> = {
   pending:   '#ffed4e',
-  preparing: '#00f5ff',
+  preparing: '#00ff88',
   ready:     '#00ff88',
   completed: '#aaaaaa',
   cancelled: '#ff3366',
@@ -270,6 +271,11 @@ const OrderTracking: React.FC = () => {
 
   // Load recent orders on mount
   useEffect(() => {
+    // Public page: skip the authenticated /api/orders call entirely when no
+    // token is stored — otherwise the 401 fires window 'auth:unauthorized'
+    // for every drive-by visitor (FIX L3).
+    if (!authService.getStoredToken()) return;
+
     const loadRecent = async () => {
       setLoadingRecent(true);
       try {
@@ -351,18 +357,54 @@ const OrderTracking: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramOrderNumber]);
 
-  // Socket: real-time status update
+  // Socket: real-time status update via the per-order room (FIX M4 + M3).
+  // Backend emits 'order:status-change' to both `student:<id>` (logged-in)
+  // and `order:<id>` (everyone subscribed via order:join), so this page —
+  // which is public — joins the per-order room and listens for it.
   useEffect(() => {
     if (!order) return;
     socketService.connect();
-    const handler = (data: any) => {
-      if (data.order_number === order.order_number) {
-        setOrder(prev => prev ? { ...prev, status: data.status } : prev);
+    socketService.joinOrderRoom(order.id);
+
+    // Status / paid / refunded transitions are all driven through a full
+    // re-fetch of the order (FIX T7). Patching only `status` would drop
+    // payment_status changes that arrived via the webhook path, leaving
+    // the user stuck on "Payment Pending" until the 30s poll.
+    const statusHandler = (data: any) => {
+      const matches = data.orderId === order.id || data.order_number === order.order_number;
+      if (matches) handleRefresh();
+    };
+    const cancelledHandler = (data: any) => {
+      const matches = data.orderId === order.id || data.order_number === order.order_number;
+      if (matches) {
+        setOrder(prev => prev ? { ...prev, status: 'cancelled' } : prev);
       }
     };
-    socketService.on('order:status-updated', handler);
-    return () => { socketService.off('order:status-updated', handler); };
-  }, [order?.order_number]);
+    const refundedHandler = (data: any) => {
+      const matches = data.orderId === order.id || data.order_number === order.order_number;
+      if (matches) {
+        setOrder(prev => prev ? { ...prev, payment_status: 'refunded' } : prev);
+      }
+    };
+    // Webhook-only completion: the verify callback never ran (browser closed
+    // mid-redirect on mobile), but payment.captured still landed and the
+    // backend ran the full finalisePayment pipeline. A re-fetch picks up
+    // the new payment_status + status without waiting for the 30s poll.
+    const paidHandler = (data: any) => {
+      const matches = data.orderId === order.id || data.order_number === order.order_number;
+      if (matches) handleRefresh();
+    };
+    socketService.on('order:status-change', statusHandler);
+    socketService.on('order:cancelled', cancelledHandler);
+    socketService.on('payment:refunded', refundedHandler);
+    socketService.on('payment:confirmed', paidHandler);
+    return () => {
+      socketService.off('order:status-change', statusHandler);
+      socketService.off('order:cancelled', cancelledHandler);
+      socketService.off('payment:refunded', refundedHandler);
+      socketService.off('payment:confirmed', paidHandler);
+    };
+  }, [order?.id, order?.order_number, handleRefresh]);
 
   // Auto-refresh every 30s for active orders
   useEffect(() => {
@@ -381,23 +423,23 @@ const OrderTracking: React.FC = () => {
         @keyframes pulse { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.4);opacity:.2} }
         @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes glowPulse {
-          0%,100% { box-shadow: 0 0 20px rgba(0,245,255,0.3); }
-          50%      { box-shadow: 0 0 40px rgba(0,245,255,0.6), 0 0 60px rgba(255,0,255,0.2); }
+          0%,100% { box-shadow: 0 0 20px rgba(0, 255, 136,0.3); }
+          50%      { box-shadow: 0 0 40px rgba(0, 255, 136,0.6), 0 0 60px rgba(0, 209, 102,0.2); }
         }
         .cyber-grid {
-          background-image: linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+          background-image: linear-gradient(rgba(0, 255, 136,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136,0.03) 1px, transparent 1px);
           background-size: 50px 50px;
         }
         .track-input::placeholder { color: rgba(255,255,255,0.3); }
-        .track-input:focus { outline: none; border-color: #00f5ff !important; box-shadow: 0 0 0 3px rgba(0,245,255,0.15) !important; }
+        .track-input:focus { outline: none; border-color: #00ff88 !important; box-shadow: 0 0 0 3px rgba(0, 255, 136,0.15) !important; }
       `}</style>
 
       {/* NOTE: do NOT use className="cyber-grid" here — that CSS class sets
            pointer-events:none which blocks all input interaction on this page */}
       <div className="track-outer" style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)',
-        backgroundImage: 'linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px)',
+        background: 'linear-gradient(135deg, #050a0c 0%, #0a1614 50%, #07100e 100%)',
+        backgroundImage: 'linear-gradient(rgba(0, 255, 136,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136,0.03) 1px, transparent 1px)',
         backgroundSize: '50px 50px',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '40px 20px 80px',
@@ -414,7 +456,7 @@ const OrderTracking: React.FC = () => {
             <div style={{ textAlign: 'center', marginBottom: 6 }}>
               <div className="track-logo" style={{
                 fontFamily: 'Orbitron, sans-serif', fontSize: '2.5rem', fontWeight: 900,
-                background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+                background: 'linear-gradient(135deg, #00ff88, #00d166)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1.1,
               }}>
                 🍕 SMART CANTEEN
@@ -449,20 +491,20 @@ const OrderTracking: React.FC = () => {
                 onClick={() => handleTrack()}
                 disabled={loading}
                 style={{
-                  background: loading ? 'rgba(0,245,255,0.1)' : 'linear-gradient(135deg, #00f5ff33, #ff00ff33)',
-                  border: '1px solid rgba(0,245,255,0.5)', borderRadius: 14, padding: '15px 0',
-                  color: '#00f5ff', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
+                  background: loading ? 'rgba(0, 255, 136,0.1)' : 'linear-gradient(135deg, #00ff8833, #00d16633)',
+                  border: '1px solid rgba(0, 255, 136,0.5)', borderRadius: 14, padding: '15px 0',
+                  color: '#00ff88', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
                   fontSize: '0.95rem', cursor: loading ? 'not-allowed' : 'pointer',
                   letterSpacing: 1, transition: 'all 0.25s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                   opacity: loading ? 0.7 : 1,
                 }}
-                onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(0,245,255,0.25), rgba(255,0,255,0.25))'; }}
-                onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, #00f5ff33, #ff00ff33)'; }}
+                onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(0, 255, 136,0.25), rgba(0, 209, 102,0.25))'; }}
+                onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, #00ff8833, #00d16633)'; }}
               >
                 {loading ? (
                   <>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: '3px solid rgba(0,245,255,0.3)', borderTop: '3px solid #00f5ff', animation: 'spin 0.8s linear infinite' }} />
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: '3px solid rgba(0, 255, 136,0.3)', borderTop: '3px solid #00ff88', animation: 'spin 0.8s linear infinite' }} />
                     Tracking...
                   </>
                 ) : '🔍 Track Order'}
@@ -489,7 +531,7 @@ const OrderTracking: React.FC = () => {
             <div className="track-detail-card" style={{
               marginTop: 24,
               background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
-              border: `1px solid ${isCancelled ? 'rgba(255,51,102,0.3)' : 'rgba(0,245,255,0.2)'}`,
+              border: `1px solid ${isCancelled ? 'rgba(255,51,102,0.3)' : 'rgba(0, 255, 136,0.2)'}`,
               borderRadius: 28, padding: 36, animation: 'fadeInUp 0.5s ease-out',
             }}>
               {/* Back + Header row */}
@@ -509,7 +551,7 @@ const OrderTracking: React.FC = () => {
                     ← Back
                   </button>
                   <div>
-                    <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 900, color: '#00f5ff', letterSpacing: 1 }}>
+                    <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 900, color: '#00ff88', letterSpacing: 1 }}>
                       {order.order_number}
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.38)', fontFamily: 'Rajdhani, sans-serif', marginTop: 3 }}>
@@ -520,13 +562,13 @@ const OrderTracking: React.FC = () => {
                 <button
                   onClick={handleRefresh}
                   style={{
-                    background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.25)',
-                    color: '#00f5ff', borderRadius: 10, padding: '7px 14px',
+                    background: 'rgba(0, 255, 136,0.08)', border: '1px solid rgba(0, 255, 136,0.25)',
+                    color: '#00ff88', borderRadius: 10, padding: '7px 14px',
                     fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.8rem',
                     cursor: 'pointer', transition: 'all 0.2s',
                   }}
-                  onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,245,255,0.16)')}
-                  onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,245,255,0.08)')}
+                  onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0, 255, 136,0.16)')}
+                  onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0, 255, 136,0.08)')}
                 >
                   🔄 Refresh
                 </button>
@@ -554,8 +596,8 @@ const OrderTracking: React.FC = () => {
                   <div style={{ textAlign: 'center', marginBottom: 28 }}>
                     <div className="track-status-label" style={{
                       fontFamily: 'Orbitron, sans-serif', fontSize: '1.4rem', fontWeight: 900,
-                      color: isCompleted ? '#00ff88' : '#00f5ff', letterSpacing: 2, marginBottom: 8,
-                      textShadow: isCompleted ? '0 0 20px rgba(0,255,136,0.5)' : '0 0 20px rgba(0,245,255,0.5)',
+                      color: isCompleted ? '#00ff88' : '#00ff88', letterSpacing: 2, marginBottom: 8,
+                      textShadow: isCompleted ? '0 0 20px rgba(0,255,136,0.5)' : '0 0 20px rgba(0, 255, 136,0.5)',
                     }}>
                       {statusLabel[order.status] || order.status.toUpperCase()}
                     </div>

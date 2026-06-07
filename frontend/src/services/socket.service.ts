@@ -62,9 +62,21 @@ class SocketService {
 
   /**
    * Join the student-specific room to receive order updates.
+   *
+   * The server handler takes the raw id string and joins `student:${id}`.
+   * Emitting an object here ({ studentId }) used to produce a room name of
+   * `student:[object Object]`, dropping every targeted event.
    */
   joinAsStudent(studentId: string): void {
-    this.emit('student:join', { studentId });
+    this.emit('student:join', studentId);
+  }
+
+  /**
+   * Subscribe to events for a specific order (used by the public OrderTracking
+   * page and by guest checkouts which have no student room to join).
+   */
+  joinOrderRoom(orderId: number | string): void {
+    this.emit('order:join', orderId);
   }
 
   /**

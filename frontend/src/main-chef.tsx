@@ -16,7 +16,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <AdminAuthGate
             requiredRoles={['chef', 'admin']}
             dashboardName="Chef Display"
-            autoLoginRoll={import.meta.env.VITE_CHEF_ROLL}
           >
             <ChefDisplay />
           </AdminAuthGate>

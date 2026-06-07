@@ -12,6 +12,7 @@ import type { RootState, AppDispatch } from '../store/store';
 import { logout as logoutAction } from '../store/slices/authSlice';
 import { setItems, updateItem } from '../store/slices/menuSlice';
 import { addItem, removeItem, updateQuantity, clearCart, selectCartCount } from '../store/slices/cartSlice';
+// removeItem is used by handleDecrement below
 import * as menuService from '../services/menu.service';
 import * as authService from '../services/auth.service';
 import { subscribeToTable, unsubscribe } from '../services/supabase';
@@ -60,8 +61,8 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
     <div
       className="offer-banner"
       style={{
-        background: 'linear-gradient(90deg, rgba(255,0,255,0.12), rgba(0,245,255,0.12), rgba(255,0,255,0.12))',
-        border: '1px solid rgba(255,0,255,0.4)',
+        background: 'linear-gradient(90deg, rgba(0, 209, 102,0.12), rgba(0, 255, 136,0.12), rgba(0, 209, 102,0.12))',
+        border: '1px solid rgba(0, 209, 102,0.4)',
         borderRadius: 12,
         padding: '10px 18px',
         marginBottom: 18,
@@ -75,8 +76,8 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
     >
       <style>{`
         @keyframes offerPulse {
-          0%, 100% { box-shadow: 0 0 10px rgba(255,0,255,0.2); }
-          50% { box-shadow: 0 0 20px rgba(255,0,255,0.4); }
+          0%, 100% { box-shadow: 0 0 10px rgba(0, 209, 102,0.2); }
+          50% { box-shadow: 0 0 20px rgba(0, 209, 102,0.4); }
         }
       `}</style>
       <span style={{ fontSize: 'clamp(1rem, 3vw, 1.3rem)' }}>🎁</span>
@@ -85,7 +86,7 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
           fontFamily: 'Orbitron, sans-serif',
           fontWeight: 700,
           fontSize: 'clamp(0.65rem, 2vw, 0.75rem)',
-          color: '#ff00ff',
+          color: '#00d166',
           letterSpacing: '0.08em',
         }}>
           {discount && `${discount}${minOrder} · `}{offer.title}
@@ -114,7 +115,7 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: i === idx ? '#ff00ff' : 'rgba(255,255,255,0.25)',
+                background: i === idx ? '#00d166' : 'rgba(255,255,255,0.25)',
                 cursor: 'pointer',
                 transition: 'background 0.3s',
               }}
@@ -131,7 +132,7 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
 
 const bgStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)',
+  background: 'linear-gradient(135deg, #050a0c 0%, #0a1614 50%, #07100e 100%)',
   position: 'relative',
 };
 
@@ -158,6 +159,8 @@ const StudentKiosk: React.FC = () => {
   // ── Kiosk is ALWAYS anonymous ─────────────────────────────────────────────
   // Clear any stored token/student on mount so an admin who previously used
   // this browser never leaks into the kiosk UI or gets attached to guest orders.
+  // Guest orders use skipAuth:true in order.service.ts so even if a token is
+  // somehow present it will never be sent with the order request.
   useEffect(() => {
     authService.clearAuthData();
     dispatch(logoutAction());
@@ -345,7 +348,7 @@ const StudentKiosk: React.FC = () => {
 
   const handleOrderSuccess = useCallback(
     (_order: Order) => {
-      // Reset kiosk for the next student — cart only (no auth to clear; kiosk is always anonymous)
+      // Reset kiosk for the next student
       dispatch(clearCart());
       setCheckoutOpen(false);
       setCartOpen(false);
@@ -354,22 +357,25 @@ const StudentKiosk: React.FC = () => {
       setFavorites([]);
       showToast('✅ Order placed! Thank you. Kiosk is ready for the next student.', 'success');
     },
-    [dispatch, showToast]
+    [cartItems, dispatch, showToast]
   );
 
   return (
     <div style={bgStyle}>
       {/* ── Orb full-screen background ───────────────────────────────────────── */}
-      {/* Dark gradient is the CSS fallback when WebGL is unavailable */}
+      {/* Dark teal gradient is the CSS fallback when WebGL is unavailable.
+          hue={-40} shifts the Orb shader's base purple-blue into the green
+          spectrum so the background reads as part of the unified cyber-green
+          palette instead of fighting it. */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
-                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0f0a1f 100%)' }}>
+                    background: 'linear-gradient(135deg, #050a0c 0%, #0a1614 50%, #07100e 100%)' }}>
         <BallpitBoundary>
           <Orb
-            hue={200}
+            hue={-40}
             hoverIntensity={5}
             rotateOnHover={true}
             forceHoverState={false}
-            backgroundColor="#0a0a1a"
+            backgroundColor="#050a0c"
           />
         </BallpitBoundary>
       </div>
@@ -396,7 +402,7 @@ const StudentKiosk: React.FC = () => {
                 fontFamily: 'Orbitron, sans-serif',
                 fontSize: '1.75rem',
                 fontWeight: 900,
-                background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+                background: 'linear-gradient(135deg, #00ff88, #00d166)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 margin: 0,
@@ -420,7 +426,7 @@ const StudentKiosk: React.FC = () => {
             </p>
           </div>
 
-          {/* Cart count hint */}
+          {/* Voice order + Cart count */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {cartCount > 0 && (
               <div
@@ -428,10 +434,10 @@ const StudentKiosk: React.FC = () => {
                 style={{
                   fontFamily: 'Rajdhani, sans-serif',
                   fontSize: '0.88rem',
-                  color: 'rgba(0,245,255,0.75)',
+                  color: 'rgba(0, 255, 136,0.75)',
                   letterSpacing: '0.5px',
-                  background: 'rgba(0,245,255,0.08)',
-                  border: '1px solid rgba(0,245,255,0.2)',
+                  background: 'rgba(0, 255, 136,0.08)',
+                  border: '1px solid rgba(0, 255, 136,0.2)',
                   borderRadius: 20,
                   padding: '4px 12px',
                 }}
@@ -505,11 +511,11 @@ const StudentKiosk: React.FC = () => {
           width: 64,
           height: 64,
           borderRadius: '50%',
-          background: 'rgba(0,245,255,0.12)',
+          background: 'rgba(0, 255, 136,0.12)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          border: '2px solid #00f5ff',
-          boxShadow: '0 0 28px rgba(0,245,255,0.45)',
+          border: '2px solid #00ff88',
+          boxShadow: '0 0 28px rgba(0, 255, 136,0.45)',
           cursor: 'pointer',
           fontSize: '1.7rem',
           display: 'flex',
@@ -519,10 +525,10 @@ const StudentKiosk: React.FC = () => {
           transition: 'box-shadow 0.3s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = '0 0 45px rgba(0,245,255,0.6)';
+          e.currentTarget.style.boxShadow = '0 0 45px rgba(0, 255, 136,0.6)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.boxShadow = '0 0 30px rgba(0,245,255,0.4)';
+          e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 255, 136,0.4)';
         }}
       >
         🛒
@@ -542,7 +548,7 @@ const StudentKiosk: React.FC = () => {
               justifyContent: 'center',
               fontSize: '0.8rem',
               fontWeight: 700,
-              border: '2px solid #0a0a1a',
+              border: '2px solid #050a0c',
               fontFamily: 'Orbitron, sans-serif',
               animation: cartBouncing ? 'badgePop 0.4s ease' : 'none',
             }}

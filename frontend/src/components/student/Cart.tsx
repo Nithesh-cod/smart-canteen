@@ -55,12 +55,13 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
   // ── Points handlers ────────────────────────────────────────────────────────
 
   const handleRedeemPoints = () => {
-    // Mirror backend rule: max 50% of cart total, 1 pt = ₹0.10
-    const maxDiscountRs  = cartTotal * 0.5;
-    const studentValueRs = studentPoints * 0.10;
-    const actualDiscountRs = Math.min(studentValueRs, maxDiscountRs);
-    // Convert back to whole points (round up so value stays ≤ cap)
-    const pointsToUse = Math.min(Math.ceil(actualDiscountRs / 0.10), studentPoints);
+    // Mirror backend rule: max 50% of cart total, 1 pt = ₹0.10.
+    // Work in paise to avoid IEEE-754 drift on 0.10.
+    const cartPaise         = Math.round(cartTotal * 100);
+    const maxDiscountPaise  = Math.floor(cartPaise / 2);
+    const studentValuePaise = studentPoints * 10;
+    const actualDiscPaise   = Math.min(studentValuePaise, maxDiscountPaise);
+    const pointsToUse       = Math.min(Math.floor(actualDiscPaise / 10), studentPoints);
     dispatch(setPointsToRedeem(pointsToUse));
   };
 
@@ -69,10 +70,13 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
   };
 
   // ── Pre-compute capped savings for display ─────────────────────────────────
-  const maxPossibleSavingsRs = cartTotal * 0.5;
-  const studentValueRs = studentPoints * 0.10;
-  const displaySavings = Math.min(studentValueRs, maxPossibleSavingsRs);
-  const displayPoints  = Math.min(Math.ceil(displaySavings / 0.10), studentPoints);
+  // Same paise-based math as handleRedeemPoints to keep display + action aligned.
+  const cartPaiseDisplay        = Math.round(cartTotal * 100);
+  const maxSavingsPaiseDisplay  = Math.floor(cartPaiseDisplay / 2);
+  const studentValuePaiseDisplay = studentPoints * 10;
+  const displaySavingsPaise = Math.min(studentValuePaiseDisplay, maxSavingsPaiseDisplay);
+  const displaySavings = displaySavingsPaise / 100;
+  const displayPoints  = Math.min(Math.floor(displaySavingsPaise / 10), studentPoints);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="🛒 Your Cart" maxWidth="620px">
@@ -129,7 +133,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                     </div>
                     <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
                       ₹{item.price.toFixed(2)} × {item.quantity} ={' '}
-                      <span style={{ color: '#00f5ff', fontWeight: 600 }}>
+                      <span style={{ color: '#00ff88', fontWeight: 600 }}>
                         ₹{(item.price * item.quantity).toFixed(2)}
                       </span>
                     </span>
@@ -189,8 +193,8 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                       }}
                       onMouseEnter={(e) => {
                         if (!atStockLimit) {
-                          e.currentTarget.style.background = 'rgba(0,245,255,0.2)';
-                          e.currentTarget.style.borderColor = '#00f5ff';
+                          e.currentTarget.style.background = 'rgba(0, 255, 136,0.2)';
+                          e.currentTarget.style.borderColor = '#00ff88';
                         }
                       }}
                       onMouseLeave={(e) => {
@@ -331,7 +335,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                 </span>
               </div>
 
-              <div style={{ textAlign: 'center', color: '#00f5ff', fontSize: '0.85rem', marginTop: 4 }}>
+              <div style={{ textAlign: 'center', color: '#00ff88', fontSize: '0.85rem', marginTop: 4 }}>
                 You'll earn {pointsEarned} points! 💎
               </div>
             </div>
@@ -345,7 +349,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
           style={{
             width: '100%', padding: '15px', borderRadius: 12, border: 'none',
             background: cartItems.length === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #00ff88, #00c870)',
-            color: cartItems.length === 0 ? 'rgba(255,255,255,0.3)' : '#0a0a1a',
+            color: cartItems.length === 0 ? 'rgba(255,255,255,0.3)' : '#050a0c',
             fontSize: '1.05rem', fontFamily: 'Rajdhani, sans-serif', fontWeight: 800,
             cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s', letterSpacing: '1px',

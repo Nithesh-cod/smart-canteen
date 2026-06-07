@@ -27,7 +27,7 @@ function isNewOrder(dateStr: string): boolean {
 
 const STATUS_BORDER: Record<string, string> = {
   pending: '#ffed4e',
-  preparing: '#00f5ff',
+  preparing: '#00ff88',
   ready: '#00ff88',
   completed: 'rgba(255,255,255,0.2)',
   cancelled: '#ff3366',
@@ -35,7 +35,7 @@ const STATUS_BORDER: Record<string, string> = {
 
 const STATUS_GLOW: Record<string, string> = {
   pending: 'rgba(255,237,78,0.18)',
-  preparing: 'rgba(0,245,255,0.18)',
+  preparing: 'rgba(0, 255, 136,0.18)',
   ready: 'rgba(0,255,136,0.18)',
   completed: 'rgba(255,255,255,0.05)',
   cancelled: 'rgba(255,51,102,0.18)',
@@ -72,7 +72,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
   };
 
   const getActionConfig = (): { label: string; nextStatus: OrderStatus; color: string } | null => {
-    if (order.status === 'pending') return { label: '▶ Start Preparing', nextStatus: 'preparing', color: '#00f5ff' };
+    if (order.status === 'pending') return { label: '▶ Start Preparing', nextStatus: 'preparing', color: '#00ff88' };
     if (order.status === 'preparing') return { label: '✅ Mark Ready', nextStatus: 'ready', color: '#00ff88' };
     if (order.status === 'ready') return { label: '✓ Complete', nextStatus: 'completed', color: '#ffffff' };
     return null;
@@ -105,7 +105,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
             top: '10px',
             right: '10px',
             background: '#ffed4e',
-            color: '#0a0a1a',
+            color: '#050a0c',
             fontSize: '9px',
             fontFamily: 'Orbitron, monospace',
             fontWeight: '700',
@@ -233,9 +233,11 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
             style={{
               width: '100%',
               padding: '10px',
+              // Round-7 palette swap collapsed the original cyan vs green
+              // ternaries; both now resolve to the unified green channel.
               background: hoverBtn
-                ? `rgba(${actionConfig.color === '#00f5ff' ? '0,245,255' : actionConfig.color === '#00ff88' ? '0,255,136' : '255,255,255'},0.2)`
-                : `rgba(${actionConfig.color === '#00f5ff' ? '0,245,255' : actionConfig.color === '#00ff88' ? '0,255,136' : '255,255,255'},0.06)`,
+                ? `rgba(${actionConfig.color === '#00ff88' ? '0,255,136' : '255,255,255'},0.2)`
+                : `rgba(${actionConfig.color === '#00ff88' ? '0,255,136' : '255,255,255'},0.06)`,
               border: `1px solid ${actionConfig.color}`,
               borderRadius: '10px',
               color: actionConfig.color,

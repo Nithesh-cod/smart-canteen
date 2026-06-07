@@ -28,7 +28,7 @@ const navItems: Array<{ id: PageId; label: string; icon: string }> = [
 const statusColor = (status: string): { bg: string; text: string; border: string } => {
   switch (status) {
     case 'pending':   return { bg: 'rgba(255,237,78,0.2)',   text: '#ffed4e',               border: '#ffed4e' };
-    case 'preparing': return { bg: 'rgba(0,245,255,0.2)',    text: '#00f5ff',               border: '#00f5ff' };
+    case 'preparing': return { bg: 'rgba(0, 255, 136,0.2)',    text: '#00ff88',               border: '#00ff88' };
     case 'ready':     return { bg: 'rgba(0,255,136,0.2)',    text: '#00ff88',               border: '#00ff88' };
     case 'completed': return { bg: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.5)', border: 'rgba(255,255,255,0.3)' };
     case 'cancelled': return { bg: 'rgba(255,51,102,0.2)',   text: '#ff3366',               border: '#ff3366' };
@@ -69,8 +69,8 @@ const glassInput: React.CSSProperties = {
 };
 
 const inputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-  e.currentTarget.style.borderColor = '#00f5ff';
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,245,255,0.12)';
+  e.currentTarget.style.borderColor = '#00ff88';
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 255, 136,0.12)';
 };
 const inputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
@@ -130,9 +130,9 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
                 style={{
                   padding: '6px 16px',
                   borderRadius: 25,
-                  border: `1px solid ${isActive && sc ? sc.border : isActive ? '#00f5ff' : 'rgba(255,255,255,0.15)'}`,
-                  background: isActive && sc ? sc.bg : isActive ? 'rgba(0,245,255,0.15)' : 'rgba(255,255,255,0.03)',
-                  color: isActive && sc ? sc.text : isActive ? '#00f5ff' : 'rgba(255,255,255,0.5)',
+                  border: `1px solid ${isActive && sc ? sc.border : isActive ? '#00ff88' : 'rgba(255,255,255,0.15)'}`,
+                  background: isActive && sc ? sc.bg : isActive ? 'rgba(0, 255, 136,0.15)' : 'rgba(255,255,255,0.03)',
+                  color: isActive && sc ? sc.text : isActive ? '#00ff88' : 'rgba(255,255,255,0.5)',
                   fontFamily: 'Rajdhani, sans-serif',
                   fontWeight: 700,
                   fontSize: '0.82rem',
@@ -150,9 +150,9 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
         <button
           onClick={onRefresh}
           style={{
-            background: 'rgba(0,245,255,0.1)',
-            border: '1px solid rgba(0,245,255,0.3)',
-            color: '#00f5ff',
+            background: 'rgba(0, 255, 136,0.1)',
+            border: '1px solid rgba(0, 255, 136,0.3)',
+            color: '#00ff88',
             borderRadius: 10,
             padding: '7px 18px',
             fontFamily: 'Rajdhani, sans-serif',
@@ -162,10 +162,10 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
             transition: 'all 0.2s',
           }}
           onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,245,255,0.2)')
+            ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0, 255, 136,0.2)')
           }
           onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,245,255,0.1)')
+            ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0, 255, 136,0.1)')
           }
         >
           🔄 Refresh
@@ -185,7 +185,7 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
             <thead>
               <tr
                 style={{
-                  background: 'rgba(0,245,255,0.04)',
+                  background: 'rgba(0, 255, 136,0.04)',
                   borderBottom: '1px solid rgba(255,255,255,0.1)',
                 }}
               >
@@ -227,7 +227,7 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
                     <td
                       style={{
                         padding: '13px 16px',
-                        color: '#00f5ff',
+                        color: '#00ff88',
                         fontWeight: 700,
                         borderBottom: '1px solid rgba(255,255,255,0.05)',
                       }}
@@ -485,9 +485,9 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
         <button
           onClick={openAdd}
           style={{
-            background: 'linear-gradient(135deg, rgba(0,245,255,0.2), rgba(255,0,255,0.2))',
-            border: '1px solid rgba(0,245,255,0.5)',
-            color: '#00f5ff',
+            background: 'linear-gradient(135deg, rgba(0, 255, 136,0.2), rgba(0, 209, 102,0.2))',
+            border: '1px solid rgba(0, 255, 136,0.5)',
+            color: '#00ff88',
             borderRadius: 12,
             padding: '11px 22px',
             fontFamily: 'Rajdhani, sans-serif',
@@ -499,11 +499,11 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
           }}
           onMouseEnter={(e) =>
             ((e.currentTarget as HTMLButtonElement).style.background =
-              'linear-gradient(135deg, rgba(0,245,255,0.3), rgba(255,0,255,0.3))')
+              'linear-gradient(135deg, rgba(0, 255, 136,0.3), rgba(0, 209, 102,0.3))')
           }
           onMouseLeave={(e) =>
             ((e.currentTarget as HTMLButtonElement).style.background =
-              'linear-gradient(135deg, rgba(0,245,255,0.2), rgba(255,0,255,0.2))')
+              'linear-gradient(135deg, rgba(0, 255, 136,0.2), rgba(0, 209, 102,0.2))')
           }
         >
           + Add Item
@@ -523,7 +523,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
             <thead>
               <tr
                 style={{
-                  background: 'rgba(0,245,255,0.04)',
+                  background: 'rgba(0, 255, 136,0.04)',
                   borderBottom: '1px solid rgba(255,255,255,0.1)',
                 }}
               >
@@ -654,9 +654,9 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                       <button
                         onClick={() => openEdit(item)}
                         style={{
-                          background: 'rgba(0,245,255,0.1)',
-                          border: '1px solid rgba(0,245,255,0.3)',
-                          color: '#00f5ff',
+                          background: 'rgba(0, 255, 136,0.1)',
+                          border: '1px solid rgba(0, 255, 136,0.3)',
+                          color: '#00ff88',
                           borderRadius: 8,
                           padding: '5px 12px',
                           fontSize: '0.78rem',
@@ -667,11 +667,11 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                         }}
                         onMouseEnter={(e) =>
                           ((e.currentTarget as HTMLButtonElement).style.background =
-                            'rgba(0,245,255,0.2)')
+                            'rgba(0, 255, 136,0.2)')
                         }
                         onMouseLeave={(e) =>
                           ((e.currentTarget as HTMLButtonElement).style.background =
-                            'rgba(0,245,255,0.1)')
+                            'rgba(0, 255, 136,0.1)')
                         }
                       >
                         ✏️ Edit
@@ -764,7 +764,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                     <option
                       key={cat}
                       value={cat}
-                      style={{ background: '#1a0a2e', color: '#fff' }}
+                      style={{ background: '#0a1614', color: '#fff' }}
                     >
                       {cat}
                     </option>
@@ -885,9 +885,9 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                 disabled={saving}
                 style={{
                   flex: 1,
-                  background: 'linear-gradient(135deg, rgba(0,245,255,0.25), rgba(255,0,255,0.25))',
-                  border: '1px solid rgba(0,245,255,0.5)',
-                  color: '#00f5ff',
+                  background: 'linear-gradient(135deg, rgba(0, 255, 136,0.25), rgba(0, 209, 102,0.25))',
+                  border: '1px solid rgba(0, 255, 136,0.5)',
+                  color: '#00ff88',
                   borderRadius: 12,
                   padding: '12px 0',
                   fontFamily: 'Rajdhani, sans-serif',
@@ -965,9 +965,9 @@ const StudentsTable: React.FC<{ students: Student[]; onRefresh: () => void }> = 
         <button
           onClick={onRefresh}
           style={{
-            background: 'rgba(0,245,255,0.1)',
-            border: '1px solid rgba(0,245,255,0.3)',
-            color: '#00f5ff',
+            background: 'rgba(0, 255, 136,0.1)',
+            border: '1px solid rgba(0, 255, 136,0.3)',
+            color: '#00ff88',
             borderRadius: 10,
             padding: '10px 18px',
             fontFamily: 'Rajdhani, sans-serif',
@@ -1004,7 +1004,7 @@ const StudentsTable: React.FC<{ students: Student[]; onRefresh: () => void }> = 
             <thead>
               <tr
                 style={{
-                  background: 'rgba(0,245,255,0.04)',
+                  background: 'rgba(0, 255, 136,0.04)',
                   borderBottom: '1px solid rgba(255,255,255,0.1)',
                 }}
               >
@@ -1057,7 +1057,7 @@ const StudentsTable: React.FC<{ students: Student[]; onRefresh: () => void }> = 
                     <td
                       style={{
                         padding: '13px 16px',
-                        color: '#00f5ff',
+                        color: '#00ff88',
                         fontWeight: 700,
                         fontSize: '0.88rem',
                         borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -1095,7 +1095,7 @@ const StudentsTable: React.FC<{ students: Student[]; onRefresh: () => void }> = 
                     <td
                       style={{
                         padding: '13px 16px',
-                        color: '#ff00ff',
+                        color: '#00d166',
                         fontWeight: 700,
                         borderBottom: '1px solid rgba(255,255,255,0.05)',
                       }}
@@ -1350,7 +1350,7 @@ const OwnerDashboard: React.FC = () => {
         style={{
           display: 'flex',
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0a0a1a, #1a0a2e, #0f0a1f)',
+          background: 'linear-gradient(135deg, #050a0c, #0a1614, #07100e)',
         }}
       >
         {/* Sidebar */}
@@ -1385,7 +1385,7 @@ const OwnerDashboard: React.FC = () => {
                 fontFamily: 'Orbitron, sans-serif',
                 fontSize: '1.2rem',
                 fontWeight: 900,
-                background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+                background: 'linear-gradient(135deg, #00ff88, #00d166)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -1429,21 +1429,21 @@ const OwnerDashboard: React.FC = () => {
                   transition: 'all 0.3s',
                   background:
                     activePage === item.id
-                      ? 'rgba(0,245,255,0.12)'
+                      ? 'rgba(0, 255, 136,0.12)'
                       : 'transparent',
                   color:
                     activePage === item.id
-                      ? '#00f5ff'
+                      ? '#00ff88'
                       : 'rgba(255,255,255,0.65)',
                   borderLeft:
                     activePage === item.id
-                      ? '4px solid #00f5ff'
+                      ? '4px solid #00ff88'
                       : '4px solid transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (activePage !== item.id) {
                     (e.currentTarget as HTMLButtonElement).style.background =
-                      'rgba(0,245,255,0.06)';
+                      'rgba(0, 255, 136,0.06)';
                     (e.currentTarget as HTMLButtonElement).style.color =
                       'rgba(255,255,255,0.85)';
                   }
@@ -1509,7 +1509,7 @@ const OwnerDashboard: React.FC = () => {
                 fontFamily: 'Orbitron, sans-serif',
                 fontSize: '2rem',
                 fontWeight: 900,
-                background: 'linear-gradient(135deg, #00f5ff, #ff00ff)',
+                background: 'linear-gradient(135deg, #00ff88, #00d166)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 margin: 0,
@@ -1550,8 +1550,8 @@ const OwnerDashboard: React.FC = () => {
                   width: 50,
                   height: 50,
                   borderRadius: '50%',
-                  border: '4px solid rgba(0,245,255,0.2)',
-                  borderTop: '4px solid #00f5ff',
+                  border: '4px solid rgba(0, 255, 136,0.2)',
+                  borderTop: '4px solid #00ff88',
                   animation: 'spin 1s linear infinite',
                 }}
               />

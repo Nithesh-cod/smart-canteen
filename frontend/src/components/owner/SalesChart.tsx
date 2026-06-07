@@ -45,21 +45,21 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
       {
         label: 'Revenue (₹)',
         data: data.map((d) => d.revenue),
-        borderColor: '#00f5ff',
+        borderColor: '#00ff88',
         backgroundColor: (context: any) => {
           const canvas = context.chart.ctx;
           const gradient = canvas.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, 'rgba(0,245,255,0.3)');
-          gradient.addColorStop(1, 'rgba(0,245,255,0)');
+          gradient.addColorStop(0, 'rgba(0, 255, 136,0.3)');
+          gradient.addColorStop(1, 'rgba(0, 255, 136,0)');
           return gradient;
         },
         fill: true,
         tension: 0.4,
         borderWidth: 2,
-        pointBackgroundColor: '#00f5ff',
+        pointBackgroundColor: '#00ff88',
         pointRadius: 4,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: '#ff00ff',
+        pointHoverBackgroundColor: '#00d166',
         pointHoverBorderColor: '#fff',
         pointHoverBorderWidth: 2,
       },
@@ -73,9 +73,9 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
       legend: { display: false },
       tooltip: {
         backgroundColor: 'rgba(26,10,46,0.95)',
-        borderColor: 'rgba(0,245,255,0.3)',
+        borderColor: 'rgba(0, 255, 136,0.3)',
         borderWidth: 1,
-        titleColor: '#00f5ff',
+        titleColor: '#00ff88',
         bodyColor: '#fff',
         padding: 12,
         cornerRadius: 10,
@@ -142,7 +142,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
             fontFamily: 'Orbitron, sans-serif',
             fontSize: '1.1rem',
             fontWeight: 700,
-            color: '#00f5ff',
+            color: '#00ff88',
             margin: 0,
           }}
         >
@@ -160,11 +160,11 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
                 style={{
                   padding: '7px 18px',
                   borderRadius: 25,
-                  border: `1px solid ${isActive ? '#00f5ff' : 'rgba(255,255,255,0.15)'}`,
+                  border: `1px solid ${isActive ? '#00ff88' : 'rgba(255,255,255,0.15)'}`,
                   background: isActive
-                    ? 'rgba(0,245,255,0.2)'
+                    ? 'rgba(0, 255, 136,0.2)'
                     : 'rgba(255,255,255,0.03)',
-                  color: isActive ? '#00f5ff' : 'rgba(255,255,255,0.55)',
+                  color: isActive ? '#00ff88' : 'rgba(255,255,255,0.55)',
                   fontFamily: 'Rajdhani, sans-serif',
                   fontWeight: 700,
                   fontSize: '0.88rem',
@@ -176,9 +176,9 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
                 onMouseEnter={(e) => {
                   if (!isActive) {
                     (e.currentTarget as HTMLButtonElement).style.background =
-                      'rgba(0,245,255,0.08)';
+                      'rgba(0, 255, 136,0.08)';
                     (e.currentTarget as HTMLButtonElement).style.color =
-                      'rgba(0,245,255,0.8)';
+                      'rgba(0, 255, 136,0.8)';
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -208,8 +208,8 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
       >
         <div
           style={{
-            background: 'rgba(0,245,255,0.06)',
-            border: '1px solid rgba(0,245,255,0.2)',
+            background: 'rgba(0, 255, 136,0.06)',
+            border: '1px solid rgba(0, 255, 136,0.2)',
             borderRadius: 12,
             padding: '12px 20px',
           }}
@@ -272,8 +272,8 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
         </div>
         <div
           style={{
-            background: 'rgba(255,0,255,0.06)',
-            border: '1px solid rgba(255,0,255,0.2)',
+            background: 'rgba(0, 209, 102,0.06)',
+            border: '1px solid rgba(0, 209, 102,0.2)',
             borderRadius: 12,
             padding: '12px 20px',
           }}
@@ -295,7 +295,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
             style={{
               fontSize: '1.35rem',
               fontWeight: 900,
-              color: '#ff00ff',
+              color: '#00d166',
               fontFamily: 'Orbitron, sans-serif',
             }}
           >
