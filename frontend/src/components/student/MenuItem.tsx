@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import type { MenuItem as MenuItemType } from '../../types';
+import { useTilt } from '../../hooks/useTilt';
+import { CyberFrame } from '../fx/CyberFrame';
 
 interface MenuItemProps {
   item: MenuItemType;
@@ -47,6 +49,10 @@ export const MenuItem: React.FC<MenuItemProps> = ({
   const [imgLoaded, setImgLoaded] = useState(false);
   const [favAnim, setFavAnim] = useState(false);
 
+  // 3D parallax tilt — cards lean toward the cursor for depth. The hook is
+  // a no-op for prefers-reduced-motion users so it never causes nausea.
+  const tiltRef = useTilt<HTMLDivElement>(8, 1.015);
+
   // ── Stock helpers ────────────────────────────────────────────────────────
   const stockQty = item.stock_quantity;
   const outOfStock =
@@ -68,7 +74,9 @@ export const MenuItem: React.FC<MenuItemProps> = ({
   return (
     <>
       <style>{itemCss}</style>
+      <CyberFrame active={hovered} size={18}>
       <div
+        ref={tiltRef}
         className="menu-item-card"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -79,11 +87,12 @@ export const MenuItem: React.FC<MenuItemProps> = ({
           borderRadius: '16px',
           overflow: 'hidden',
           position: 'relative',
-          transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+          // Tilt is driven by useTilt; the box-shadow lift is the only
+          // remaining hover-state CSS transition.
           boxShadow: hovered
-            ? '0 8px 32px rgba(0, 255, 136,0.15), 0 4px 16px rgba(0,0,0,0.4)'
+            ? '0 16px 48px rgba(0, 255, 136,0.18), 0 4px 16px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,255,136,0.08)'
             : '0 2px 12px rgba(0,0,0,0.3)',
-          transition: 'all 0.28s cubic-bezier(0.34,1.56,0.64,1)',
+          transition: 'box-shadow 0.28s ease, border-color 0.2s',
           animation: 'card-float-in 0.4s ease both',
           display: 'flex',
           flexDirection: 'column',
@@ -397,6 +406,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
           </div>
         </div>
       </div>
+      </CyberFrame>
     </>
   );
 };
