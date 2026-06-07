@@ -129,10 +129,36 @@ const create = asyncHandler(async (req, res) => {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
 
-    if (student.points < points_to_redeem) {
+    // The student.points balance is the FULL balance — including points
+    // already promised to other in-flight (unpaid + not-cancelled) orders.
+    // Without subtracting those, a student can create N concurrent pending
+    // orders that each pass the `points >= points_to_redeem` check and then
+    // pay for all of them, double-redeeming the same points. finalisePayment
+    // deducts via GREATEST(0, points - $1) so no DB error fires; the student
+    // just walks away with multiple discounts for one balance.
+    //
+    // Compute available = points - sum(points_used on in-flight pending
+    // orders) and gate on that instead. Race-free at scale would need a
+    // FOR UPDATE row lock at create time; under canteen concurrency this
+    // catches the common kiosk-double-tap and rapid mobile retries.
+    const reservedResult = await query(
+      `SELECT COALESCE(SUM(points_used), 0) AS reserved
+         FROM orders
+        WHERE student_id = $1
+          AND status        = 'pending'
+          AND payment_status IN ('pending', 'refunding')`,
+      [studentId]
+    );
+    const reserved  = parseInt(reservedResult.rows[0].reserved, 10) || 0;
+    const available = student.points - reserved;
+
+    if (available < points_to_redeem) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient points. You have ${student.points} points but requested ${points_to_redeem}`
+        message:
+          `Insufficient points. You have ${available} points available ` +
+          `(${student.points} balance minus ${reserved} reserved by ` +
+          `pending orders) but requested ${points_to_redeem}.`
       });
     }
 
