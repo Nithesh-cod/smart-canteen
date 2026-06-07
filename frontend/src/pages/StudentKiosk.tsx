@@ -25,6 +25,9 @@ import type { MenuItem, Order } from '../types';
 import api from '../services/api';
 // @ts-ignore — JSX component without types
 import Orb from '../components/student/Orb';
+import { ParticleField } from '../components/fx/ParticleField';
+import { ScanLine } from '../components/fx/ScanLine';
+import { useMagnetic } from '../hooks/useTilt';
 
 // ─── Offer Banner ─────────────────────────────────────────────────────────────
 
@@ -170,6 +173,10 @@ const StudentKiosk: React.FC = () => {
   // Cart bounce animation state
   const [cartBouncing, setCartBouncing] = useState(false);
   const prevCartCount = useRef(cartCount);
+
+  // Magnetic pull on the floating cart button — leans toward the cursor
+  // when it gets close so the kiosk feels reactive instead of static.
+  const cartBtnRef = useMagnetic<HTMLButtonElement>(0.2);
 
   // Trigger bounce when cart count increases
   useEffect(() => {
@@ -380,6 +387,12 @@ const StudentKiosk: React.FC = () => {
         </BallpitBoundary>
       </div>
 
+      {/* Floating particles (above Orb, below content) */}
+      <ParticleField color="#00ff88" intensity={0.6} />
+
+      {/* CRT scan-line overlay (above everything, click-through) */}
+      <ScanLine color="#00ff88" period={10} intensity={0.025} />
+
       {/* Sticky header */}
       <header
         className="kiosk-header"
@@ -396,22 +409,66 @@ const StudentKiosk: React.FC = () => {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1
-              className="kiosk-title"
-              style={{
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: '1.75rem',
-                fontWeight: 900,
-                background: 'linear-gradient(135deg, #00ff88, #00d166)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                margin: 0,
-                lineHeight: 1.2,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              🍕 SMART CANTEEN
-            </h1>
+            {/* HUD-style title block: animated brackets either side of the
+                wordmark, plus a subtle scanline-glitch keyframe. */}
+            <style>{`
+              @keyframes titleGlitch {
+                0%, 92%, 100% { transform: translate(0, 0); }
+                93%           { transform: translate(-2px, 0); filter: hue-rotate(-20deg); }
+                94%           { transform: translate( 2px, 0); filter: hue-rotate( 20deg); }
+                95%           { transform: translate(-1px, 1px); }
+                96%           { transform: translate( 0, 0); filter: none; }
+              }
+              @keyframes bracketPulse {
+                0%, 100% { opacity: 0.5; transform: scaleX(1); }
+                50%      { opacity: 1;   transform: scaleX(1.15); }
+              }
+              .kiosk-title-row {
+                display: flex; align-items: center; gap: 14px;
+              }
+              .kiosk-title-bracket {
+                width: 28px; height: 2px;
+                background: linear-gradient(90deg, transparent, #00ff88);
+                position: relative;
+                animation: bracketPulse 2.4s ease-in-out infinite;
+              }
+              .kiosk-title-bracket.right {
+                background: linear-gradient(90deg, #00ff88, transparent);
+              }
+              .kiosk-title-bracket::before {
+                content: '';
+                position: absolute;
+                top: -3px; right: 0;
+                width: 2px; height: 8px;
+                background: #00ff88;
+                box-shadow: 0 0 8px #00ff88;
+              }
+              .kiosk-title-bracket.right::before {
+                left: 0; right: auto;
+              }
+            `}</style>
+            <div className="kiosk-title-row">
+              <span className="kiosk-title-bracket" />
+              <h1
+                className="kiosk-title"
+                style={{
+                  fontFamily: 'Orbitron, sans-serif',
+                  fontSize: '1.75rem',
+                  fontWeight: 900,
+                  background: 'linear-gradient(135deg, #00ff88, #00d166)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  margin: 0,
+                  lineHeight: 1.2,
+                  whiteSpace: 'nowrap',
+                  animation: 'titleGlitch 6s steps(1, end) infinite',
+                  textShadow: '0 0 22px rgba(0,255,136,0.35)',
+                }}
+              >
+                🍕 SMART CANTEEN
+              </h1>
+              <span className="kiosk-title-bracket right" />
+            </div>
             <p
               className="kiosk-subtitle"
               style={{
@@ -500,6 +557,7 @@ const StudentKiosk: React.FC = () => {
         }
       `}</style>
       <button
+        ref={cartBtnRef}
         className="kiosk-cart-btn"
         onClick={() => setCartOpen(true)}
         aria-label={`Open cart, ${cartCount} items`}
