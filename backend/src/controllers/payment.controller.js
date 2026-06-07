@@ -173,6 +173,25 @@ const verifyPayment = asyncHandler(async (req, res) => {
   // still walks away with a receipt or a downloadable PDF — not a lie.
   if (order.payment_status === 'paid') {
     const completeOrder = await Order.getById(order.id);
+
+    // FIX Z3 — bill-print dedup. A kiosk refresh, network-blip retry, or
+    // double-tapped CTA used to spool a fresh receipt on every verify
+    // hit. Short-circuit when bill_issued_at is already set; only the
+    // FIRST call actually prints/PDFs and stamps the column.
+    if (completeOrder.bill_issued_at) {
+      return res.json({
+        success: true,
+        data: {
+          order:               completeOrder,
+          points_earned:       completeOrder.points_earned,
+          points_used:         completeOrder.points_used,
+          bill_printed:        true,
+          already_paid:        true,
+          bill_already_issued: true,
+        },
+      });
+    }
+
     const printerType   = (process.env.PRINTER_TYPE || 'none').toLowerCase();
     let   billPrinted   = false;
     let   billPdfBase64 = null;
@@ -196,6 +215,13 @@ const verifyPayment = asyncHandler(async (req, res) => {
           logger.warn('idempotent verify: PDF fallback failed', e.message);
         }
       }
+    }
+
+    // Mark issued only when we actually produced something for the user
+    // to walk away with. A double failure (print + PDF both threw) leaves
+    // bill_issued_at null so the next verify retry can try again.
+    if (billPrinted || billPdfBase64) {
+      try { await Order.markBillIssued(order.id); } catch { /* logged via Order */ }
     }
 
     return res.json({
@@ -306,6 +332,12 @@ async function finalisePayment(order, { io, skipBill = false } = {}) {
       });
     } catch (pointsErr) {
       logger.error('finalisePayment: points reconciliation failed', pointsErr);
+      // FIX Z4 — best-effort read so the response still ships student_tier /
+      // student_points (their last-known values) instead of undefined.
+      // Frontend Checkout reads these to refresh the cached Redux state.
+      try {
+        updatedStudent = await Student.findById(order.student_id);
+      } catch { /* swallow — already logged above */ }
     }
   }
 
@@ -386,6 +418,16 @@ async function finalisePayment(order, { io, skipBill = false } = {}) {
           logger.warn('PDF generation also failed:', pdfErr.message);
         }
       }
+    }
+
+    // FIX Z3 — stamp bill_issued_at when we actually produced a receipt
+    // (sync print, PDF, or optimistic Windows GDI background print) so a
+    // follow-up idempotent verify call short-circuits instead of spooling
+    // a duplicate. The webhook path explicitly passes skipBill: true and
+    // doesn't reach a non-windows print here, so it intentionally leaves
+    // the column NULL — its verify follow-up is free to produce the bill.
+    if (billPrinted || billPdfBase64) {
+      try { await Order.markBillIssued(order.id); } catch { /* logged via Order */ }
     }
   }
 
