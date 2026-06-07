@@ -27,6 +27,8 @@ import api from '../services/api';
 import Orb from '../components/student/Orb';
 import { ParticleField } from '../components/fx/ParticleField';
 import { ScanLine } from '../components/fx/ScanLine';
+import { CinematicHero } from '../components/fx/CinematicHero';
+import { HoloCursor } from '../components/fx/HoloCursor';
 import { useMagnetic } from '../hooks/useTilt';
 
 // ─── Offer Banner ─────────────────────────────────────────────────────────────
@@ -393,10 +395,21 @@ const StudentKiosk: React.FC = () => {
       {/* CRT scan-line overlay (above everything, click-through) */}
       <ScanLine color="#00ff88" period={10} intensity={0.025} />
 
-      {/* Sticky header */}
+      {/* Custom HUD cursor — replaces system cursor on fine-pointer devices */}
+      <HoloCursor />
+
+      {/* Cinematic hero — replaces the old sticky navbar with a massive
+          kinetic-type intro + status ring + rotating tagline. */}
+      <div style={{ position: 'relative', zIndex: 50 }}>
+        <CinematicHero itemsInOrbit={cartCount} />
+      </div>
+
+      {/* (Legacy sticky header retained below in case mobile needs the compact
+          version — currently hidden via CSS in main flow.) */}
       <header
         className="kiosk-header"
         style={{
+          display: 'none', /* superseded by CinematicHero — kept for backwards compat */
           position: 'sticky',
           top: 0,
           zIndex: 100,

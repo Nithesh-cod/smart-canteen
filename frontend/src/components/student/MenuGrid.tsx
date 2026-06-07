@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { MenuItem as MenuItemType, CartItem } from '../../types';
-import MenuItem from './MenuItem';
+import DataCrystal from '../fx/DataCrystal';
+import CategoryChannels from '../fx/CategoryChannels';
 
 interface MenuGridProps {
   items: MenuItemType[];
@@ -16,23 +17,23 @@ interface MenuGridProps {
   onSearchChange: (q: string) => void;
 }
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  all:          '🍽️',
-  favorites:    '❤️',
-  starters:     '🍢',
-  mains:        '🍛',
-  'main course':'🍛',
-  desserts:     '🍮',
-  beverages:    '☕',
-  snacks:       '🍟',
-  breakfast:    '🥞',
-  combo:        '🎁',
-  specials:     '⭐',
-  other:        '🍴',
+const CATEGORY_GLYPH: Record<string, string> = {
+  all:          '◯',
+  favorites:    '✦',
+  starters:     '◭',
+  mains:        '◈',
+  'main course':'◈',
+  desserts:     '✸',
+  beverages:    '☖',
+  snacks:       '✱',
+  breakfast:    '✿',
+  combo:        '⬡',
+  specials:     '★',
+  other:        '◇',
 };
 
-function catEmoji(cat: string): string {
-  return CATEGORY_EMOJI[cat.toLowerCase()] ?? '🍴';
+function catGlyph(cat: string): string {
+  return CATEGORY_GLYPH[cat.toLowerCase()] ?? '◇';
 }
 
 const MenuGrid: React.FC<MenuGridProps> = ({
@@ -48,22 +49,27 @@ const MenuGrid: React.FC<MenuGridProps> = ({
   onCategoryChange,
   onSearchChange,
 }) => {
-  const categories = useMemo(() => {
+  const channels = useMemo(() => {
     const seen = new Set<string>();
-    const mid: Array<{ id: string; label: string; emoji: string }> = [];
+    const mid: Array<{ id: string; label: string; glyph: string; count: number }> = [];
     for (const item of items) {
       const key = item.category.toLowerCase();
       if (!seen.has(key)) {
         seen.add(key);
-        mid.push({ id: item.category, label: item.category, emoji: catEmoji(item.category) });
+        mid.push({
+          id: item.category,
+          label: item.category,
+          glyph: catGlyph(item.category),
+          count: items.filter(i => i.category.toLowerCase() === key).length,
+        });
       }
     }
     return [
-      { id: 'all',       label: 'All',       emoji: '🍽️' },
+      { id: 'all', label: 'All Channels', glyph: '◯', count: items.length },
       ...mid,
-      { id: 'favorites', label: 'Favorites', emoji: '❤️' },
+      { id: 'favorites', label: 'Saved', glyph: '✦', count: favorites.length },
     ];
-  }, [items]);
+  }, [items, favorites]);
 
   const filteredItems = useMemo((): MenuItemType[] => {
     let filtered = [...items];
@@ -88,168 +94,89 @@ const MenuGrid: React.FC<MenuGridProps> = ({
 
   return (
     <div style={{ width: '100%' }}>
+      <CategoryChannels
+        channels={channels}
+        active={selectedCategory}
+        onChange={onCategoryChange}
+        search={searchQuery}
+        onSearchChange={onSearchChange}
+      />
 
-      {/* ── Search bar ────────────────────────────────────────────────────── */}
-      <div style={{ position: 'relative', marginBottom: 18 }}>
-        <span style={{
-          position: 'absolute', left: 14, top: '50%',
-          transform: 'translateY(-50%)', fontSize: '1rem',
-          pointerEvents: 'none', zIndex: 1,
-        }}>
-          🔍
-        </span>
-        <input
-          type="text"
-          className="menu-search-input"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search menu..."
-          style={{
-            width: '100%',
-            padding: '13px 16px 13px 42px',
-            background: 'rgba(255,255,255,0.04)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 12,
-            color: '#ffffff',
-            fontSize: '0.95rem',
-            fontFamily: 'Rajdhani, sans-serif',
-            outline: 'none',
-            boxSizing: 'border-box',
-            transition: 'border-color 0.25s, box-shadow 0.25s',
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.5)';
-            e.currentTarget.style.boxShadow = '0 0 16px rgba(0, 255, 136,0.1)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        />
-      </div>
-
-      {/* ── Category pills ────────────────────────────────────────────────── */}
-      <div
-        className="menu-cat-pills"
-        style={{
-          display: 'flex',
-          gap: 8,
-          overflowX: 'auto',
-          marginBottom: 22,
-          paddingBottom: 4,
-          scrollbarWidth: 'none',
-        }}
-      >
-        {categories.map((cat) => {
-          const isActive = selectedCategory.toLowerCase() === cat.id.toLowerCase();
-          return (
-            <button
-              key={cat.id}
-              className="menu-cat-pill"
-              onClick={() => onCategoryChange(cat.id)}
-              style={{
-                flexShrink: 0,
-                padding: '7px 16px',
-                borderRadius: 50,
-                border: isActive ? '1px solid #00ff88' : '1px solid rgba(255,255,255,0.12)',
-                background: isActive ? 'rgba(0, 255, 136,0.14)' : 'rgba(255,255,255,0.03)',
-                color: isActive ? '#00ff88' : 'rgba(255,255,255,0.65)',
-                fontSize: '0.85rem',
-                fontFamily: 'Rajdhani, sans-serif',
-                fontWeight: isActive ? 700 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                backdropFilter: 'blur(10px)',
-                letterSpacing: '0.3px',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.35)';
-                  e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
-                  e.currentTarget.style.color = 'rgba(255,255,255,0.65)';
-                }
-              }}
-            >
-              {cat.emoji} {cat.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Loading skeletons ─────────────────────────────────────────────── */}
+      {/* Loading skeletons — DataCrystal-shaped */}
       {loading && (
         <div className="menu-grid">
           {Array.from({ length: 8 }).map((_, idx) => (
             <div
               key={idx}
               style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 14,
+                background: 'rgba(7,16,14,0.6)',
+                border: '1px solid rgba(0,255,136,0.12)',
+                borderRadius: 18,
                 overflow: 'hidden',
-                height: 300,
+                height: 320,
                 position: 'relative',
+                clipPath: 'polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%)',
               }}
             >
               <div style={{
                 position: 'absolute', inset: 0,
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(0,255,136,0.06) 50%, transparent 100%)',
                 backgroundSize: '200% 100%',
-                animation: 'shimmer 1.5s infinite',
+                animation: 'crystal-shimmer 1.8s infinite',
               }} />
-              <div style={{ height: 140, background: 'rgba(255,255,255,0.04)' }} />
-              <div style={{ padding: 14 }}>
-                <div style={{ height: 16, background: 'rgba(255,255,255,0.06)', borderRadius: 5, marginBottom: 8, width: '70%' }} />
-                <div style={{ height: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 5, marginBottom: 6, width: '90%' }} />
-                <div style={{ height: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 5, marginBottom: 18, width: '55%' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ height: 20, background: 'rgba(0, 255, 136,0.08)', borderRadius: 5, width: '28%' }} />
-                  <div style={{ height: 32, background: 'rgba(255,255,255,0.06)', borderRadius: 7, width: '35%' }} />
-                </div>
-              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Empty state ───────────────────────────────────────────────────── */}
+      {/* Empty state */}
       {!loading && filteredItems.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 16px', color: 'rgba(255,255,255,0.45)' }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: 14 }}>🍽️</div>
-          <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '1.1rem', letterSpacing: '1px' }}>
-            No items found
+        <div style={{
+          textAlign: 'center',
+          padding: '80px 16px',
+          color: 'rgba(255,255,255,0.4)',
+        }}>
+          <div style={{
+            fontFamily: 'Orbitron, monospace',
+            fontSize: '3.5rem',
+            color: '#00ff88',
+            opacity: 0.4,
+            marginBottom: 18,
+            textShadow: '0 0 24px rgba(0,255,136,0.4)',
+          }}>◯</div>
+          <p style={{
+            fontFamily: 'Orbitron, sans-serif',
+            fontSize: '0.85rem',
+            letterSpacing: '0.4em',
+            textTransform: 'uppercase',
+            color: 'rgba(0,255,136,0.7)',
+          }}>
+            NO MATCHES IN CHANNEL
           </p>
           {searchQuery && (
             <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', marginTop: 8, color: 'rgba(255,255,255,0.3)' }}>
-              Try a different search term
+              Refine your query
             </p>
           )}
           {selectedCategory === 'favorites' && favorites.length === 0 && !searchQuery && (
             <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', marginTop: 8, color: 'rgba(255,255,255,0.3)' }}>
-              No favorites yet — tap ❤️ on any item!
+              Mark items with ✦ to save them here
             </p>
           )}
         </div>
       )}
 
-      {/* ── Items grid ────────────────────────────────────────────────────── */}
+      {/* DataCrystal grid */}
       {!loading && filteredItems.length > 0 && (
         <div className="menu-grid">
           {filteredItems.map((item, idx) => {
             const cartItem = cartItems.find((ci) => ci.id === item.id);
             const cartQuantity = cartItem ? cartItem.quantity : 0;
             const isFavorite = favorites.includes(item.id);
-            const delay = `${Math.min(idx, 11) * 0.05}s`;
+            const delay = `${Math.min(idx, 11) * 0.06}s`;
             return (
-              <div key={item.id} style={{ animation: `cardEntry 0.4s ease ${delay} both` }}>
-                <MenuItem
+              <div key={item.id} style={{ animation: `crystal-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay} both` }}>
+                <DataCrystal
                   item={item}
                   isFavorite={isFavorite}
                   onAddToCart={onAddToCart}
@@ -264,12 +191,14 @@ const MenuGrid: React.FC<MenuGridProps> = ({
       )}
 
       <style>{`
-        @keyframes cardEntry {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0); }
+        @keyframes crystal-rise {
+          from { opacity: 0; transform: translateY(30px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)    scale(1); }
         }
-        /* hide pill scrollbar */
-        .menu-cat-pills::-webkit-scrollbar { display: none; }
+        @keyframes crystal-shimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position: 200%  0; }
+        }
       `}</style>
     </div>
   );
