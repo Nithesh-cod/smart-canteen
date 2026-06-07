@@ -519,16 +519,42 @@ const processRefund = asyncHandler(async (req, res) => {
     stockRestored = result.restored;
   } catch (dbErr) {
     logger.error(
-      `Refund DB updates failed AFTER successful Razorpay refund for ` +
-      `order #${order.order_number}. Manual reconciliation required ` +
-      `(refund id: ${refund.refundId})`,
+      `Refund DB transaction failed AFTER successful Razorpay refund ` +
+      `for order #${order.order_number}. Forcing payment_status=refunded ` +
+      `to match gateway state. Stock and order status NOT reconciled — ` +
+      `manual cleanup required (refund id: ${refund.refundId})`,
       dbErr
     );
+
+    // FIX Z2 — best-effort unstuck. The Round-5 Y6 atomic transition
+    // committed payment_status='refunding' OUTSIDE the transaction, so
+    // the rollback above doesn't revert it. Without this fallback the
+    // row sits at 'refunding' forever and the next refund attempt's Y6
+    // guard (WHERE payment_status='paid') rejects every retry — the
+    // order becomes a brick. Force it to 'refunded' so the books at
+    // least mirror the gateway; stock + status are documented above for
+    // human follow-up.
+    try {
+      await query(
+        `UPDATE orders SET payment_status = 'refunded' ` +
+        `WHERE id = $1 AND payment_status = 'refunding'`,
+        [order_id]
+      );
+    } catch (rollbackErr) {
+      logger.error(
+        `Even the fallback payment_status update failed. ` +
+        `Order #${order.order_number} is stuck in 'refunding'. ` +
+        `Razorpay refund id: ${refund.refundId}`,
+        rollbackErr
+      );
+    }
+
     return res.status(500).json({
       success: false,
-      message: 'Refund partially failed. Razorpay refund landed but ' +
-               'DB updates rolled back. Please contact support — ' +
-               'refund id logged.',
+      message:
+        'Refund partially failed. Razorpay refund landed, payment_status ' +
+        'corrected to refunded, but stock restore and order cancel did NOT ' +
+        'commit. Please contact support — refund id logged.',
     });
   }
 
@@ -669,7 +695,16 @@ const handleWebhook = asyncHandler(async (req, res) => {
     if (razorpayOrderId) {
       const order = await Order.findByRazorpayOrderId(razorpayOrderId);
 
-      if (order && order.payment_status !== 'paid') {
+      // FIX Z1 — act ONLY when the order is still in its initial 'pending'
+      // state. 'pending' is the only payment_status createPaymentOrder
+      // leaves the row in, so the webhook should never advance anything
+      // else. The previous `!== 'paid'` guard let a late or duplicate
+      // payment.captured during a refund flow see 'refunding' (Round-5 Y6
+      // transient) and re-mark the row 'paid', then re-run the full
+      // finalisePayment pipeline (double points, double stats, second
+      // bill, re-emitted sockets). Razorpay redelivers for ~72h, so the
+      // same hazard applies to 'refunded' after a real refund.
+      if (order && order.payment_status === 'pending') {
         await Order.updatePayment(order.id, {
           payment_status:      'paid',
           payment_method:      razorpayPayment.method || 'Razorpay',
@@ -691,6 +726,11 @@ const handleWebhook = asyncHandler(async (req, res) => {
         } catch (finErr) {
           logger.error('finalisePayment from webhook failed', finErr);
         }
+      } else if (order) {
+        logger.info(
+          `Webhook skipped for order #${order.order_number}: ` +
+          `payment_status=${order.payment_status} (not 'pending').`
+        );
       }
     }
   }
