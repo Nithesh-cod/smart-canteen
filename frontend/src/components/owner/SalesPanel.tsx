@@ -47,7 +47,10 @@ const periodLabels: Record<string, string> = {
 };
 
 export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodChange }) => {
-  const isEmpty = !data || data.length === 0;
+  // Defensive: the upstream fetcher should always pass an array now, but a
+  // stale legacy response shape could still arrive as the wrapper object.
+  const safeData = Array.isArray(data) ? data : [];
+  const isEmpty = safeData.length === 0;
 
   const chartPoints = useMemo(() => {
     if (isEmpty) {
@@ -57,11 +60,11 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
         revenue: 0,
       }));
     }
-    return data.map((d) => ({
+    return safeData.map((d) => ({
       label: shortLabel(d.date),
       revenue: Number(d.revenue) || 0,
     }));
-  }, [data, isEmpty]);
+  }, [safeData, isEmpty]);
 
   const totalRevenue = useMemo(
     () => chartPoints.reduce((s, d) => s + (d.revenue || 0), 0),

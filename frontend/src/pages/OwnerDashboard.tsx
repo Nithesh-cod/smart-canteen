@@ -1207,17 +1207,26 @@ const OwnerDashboard: React.FC = () => {
   const fetchRevenue = useCallback(async (p: string) => {
     try {
       const res = await api.get(`/admin/revenue?period=${p}`);
-      // Backend returns { data: { period, days, revenue: [...] } }
-      setRevenueData(res.data?.data?.revenue ?? res.data?.data ?? []);
+      // Backend can return either { data: { revenue: [...] } } OR
+      // { data: { period, days, revenue: [...] } } OR (legacy) the array
+      // directly. Coerce every shape into an array so the consumer never
+      // hits `.slice is not a function` (FIX runtime crash from prior pass).
+      const raw = res.data?.data?.revenue ?? res.data?.data ?? [];
+      setRevenueData(Array.isArray(raw) ? raw : []);
     } catch {
       setRevenueData([]);
     }
   }, []);
 
+  // All array fetchers harden the response with Array.isArray() so a legacy
+  // wrapper-object shape (e.g. { period, days, revenue: [...] } or paginated
+  // { orders: [...], pagination: {} }) never gets stored as state and never
+  // crashes the consumer with `.slice / .filter / .map is not a function`.
   const fetchOrders = useCallback(async () => {
     try {
       const res = await api.get('/orders?limit=50');
-      setOrders(res.data?.data?.orders ?? res.data?.data ?? []);
+      const raw = res.data?.data?.orders ?? res.data?.data ?? [];
+      setOrders(Array.isArray(raw) ? raw : []);
     } catch (e) {
       setOrders([]);
     }
@@ -1226,7 +1235,8 @@ const OwnerDashboard: React.FC = () => {
   const fetchMenu = useCallback(async () => {
     try {
       const res = await api.get('/menu');
-      setMenuItems(Array.isArray(res.data.data) ? res.data.data : []);
+      const raw = res.data?.data?.items ?? res.data?.data ?? [];
+      setMenuItems(Array.isArray(raw) ? raw : []);
     } catch (e) {
       setMenuItems([]);
     }
@@ -1235,7 +1245,8 @@ const OwnerDashboard: React.FC = () => {
   const fetchStudents = useCallback(async () => {
     try {
       const res = await api.get('/admin/students');
-      setStudents(res.data?.data?.students ?? res.data?.data ?? []);
+      const raw = res.data?.data?.students ?? res.data?.data ?? [];
+      setStudents(Array.isArray(raw) ? raw : []);
     } catch (e) {
       setStudents([]);
     }
@@ -1244,7 +1255,8 @@ const OwnerDashboard: React.FC = () => {
   const fetchOffers = useCallback(async () => {
     try {
       const res = await api.get('/admin/offers');
-      setOffers(res.data.data || []);
+      const raw = res.data?.data ?? [];
+      setOffers(Array.isArray(raw) ? raw : []);
     } catch (e) {
       setOffers([]);
     }
@@ -1346,7 +1358,10 @@ const OwnerDashboard: React.FC = () => {
     const todayCount = stats?.todayOrders    ?? 0;
     const weekRev    = stats?.weekRevenue    ?? 0;
     const monthRev   = stats?.monthRevenue   ?? 0;
-    const sparkSrc   = revenueData.slice(-7).map(r => Number((r as any).revenue) || 0);
+    // Defensive: revenueData *should* be an array but a stale fetch could
+    // leave it as the wrapper object. Belt-and-braces with the fetcher fix.
+    const safeRevenue = Array.isArray(revenueData) ? revenueData : [];
+    const sparkSrc   = safeRevenue.slice(-7).map(r => Number((r as any).revenue) || 0);
     const trend      = sparkSrc.length >= 2 ? sparkSrc : [0, 0, 0, 0, 0, 0, 0];
     return [
       { label: "Today's Revenue", glyph: '◊', value: Math.round(Number(todayRev)),   prefix: '₹', trend, tone: 'green' as const },
