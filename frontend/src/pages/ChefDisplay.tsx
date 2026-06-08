@@ -1229,43 +1229,71 @@ const ChefDisplay: React.FC = () => {
           backgroundSize: '40px 40px', pointerEvents: 'none', zIndex: 0,
         }} />
 
-        {/* Header */}
+        {/* Header — crystal-language version of the chef station bar */}
         <header className="chef-header" style={{
-          position: 'sticky', top: 0, zIndex: 50, height: '80px',
-          background: 'rgba(10,10,26,0.88)', backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(0, 255, 136,0.2)',
-          boxShadow: '0 4px 30px rgba(0, 255, 136,0.08)',
+          position: 'sticky', top: 0, zIndex: 50, height: '84px',
+          background:
+            'linear-gradient(180deg, rgba(0,255,136,0.025) 0%, transparent 100%), rgba(7,16,14,0.92)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderBottom: '1px solid rgba(0, 255, 136,0.18)',
+          boxShadow: '0 4px 30px rgba(0, 255, 136,0.06)',
           display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
           padding: '0 40px', animation: 'slideInDown 0.5s ease',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ fontSize: '28px' }}>👨‍🍳</span>
+          {/* LEFT — Kitchen Command HUD title block */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span style={{
+              fontFamily: 'Orbitron, monospace', fontSize: '22px', color: '#00ff88',
+              textShadow: '0 0 12px #00ff88', lineHeight: 1,
+            }}>◈</span>
             <div>
-              <h1 style={{
-                fontFamily: 'Orbitron, monospace', fontSize: '20px', fontWeight: '900',
-                background: 'linear-gradient(90deg, #00ff88, #00d166)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text', letterSpacing: '3px', lineHeight: 1,
-              }}>KITCHEN DISPLAY</h1>
-              <div style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', marginTop: '2px' }}>
-                SMART CANTEEN · CHEF STATION
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ width: 22, height: 1, background: 'linear-gradient(90deg, transparent, #00ff88)' }} />
+                <h1 style={{
+                  fontFamily: 'Orbitron, monospace', fontSize: '20px', fontWeight: 900,
+                  background: 'linear-gradient(90deg, #ffffff 0%, #00ff88 80%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text', letterSpacing: '0.32em', lineHeight: 1, margin: 0,
+                  textShadow: '0 0 18px rgba(0,255,136,0.25)',
+                }}>KITCHEN COMMAND</h1>
+              </div>
+              <div style={{
+                fontFamily: 'Orbitron, monospace', fontSize: '10px',
+                color: 'rgba(0,255,136,0.55)', letterSpacing: '0.35em',
+                marginTop: 4, marginLeft: 32, textTransform: 'uppercase',
+              }}>
+                Chef Station · Live Manifest
               </div>
             </div>
           </div>
 
+          {/* CENTRE — Active orders crystal pill */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <div style={{
-              background: 'rgba(255,237,78,0.08)', border: '1px solid rgba(255,237,78,0.3)',
-              borderRadius: '12px', padding: '8px 20px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              position: 'relative',
+              background:
+                'linear-gradient(180deg, rgba(255,237,78,0.06) 0%, transparent 80%), rgba(7,16,14,0.65)',
+              border: '1px solid rgba(255,237,78,0.4)',
+              borderRadius: '12px', padding: '10px 26px',
+              display: 'flex', alignItems: 'center', gap: '12px',
+              clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%)',
+              boxShadow: '0 0 22px rgba(255,237,78,0.18), inset 0 0 0 1px rgba(255,237,78,0.05)',
             }}>
-              <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '22px', fontWeight: '700', color: '#ffed4e', lineHeight: 1, textShadow: '0 0 15px rgba(255,237,78,0.6)' }}>
-                {totalActive}
-              </span>
-              <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '10px', color: 'rgba(255,237,78,0.6)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                Active Orders
-              </span>
+              <span style={{
+                fontFamily: 'Orbitron, monospace', fontSize: '26px', fontWeight: 900, color: '#ffed4e',
+                lineHeight: 1, textShadow: '0 0 18px rgba(255,237,78,0.7)',
+              }}>{String(totalActive).padStart(2, '0')}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{
+                  fontFamily: 'Orbitron, monospace', fontSize: '9px',
+                  color: 'rgba(255,237,78,0.75)', letterSpacing: '0.28em', textTransform: 'uppercase',
+                }}>Active Orders</span>
+                <span style={{
+                  fontFamily: 'Orbitron, monospace', fontSize: '8px',
+                  color: 'rgba(255,255,255,0.4)', letterSpacing: '0.18em',
+                }}>in the queue</span>
+              </div>
             </div>
           </div>
 

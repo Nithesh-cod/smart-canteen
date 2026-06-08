@@ -4,6 +4,8 @@ import OfferManager from '../components/owner/OfferManager';
 import OwnerStatGrid from '../components/owner/OwnerStatGrid';
 import SalesPanel from '../components/owner/SalesPanel';
 import OrdersPanel from '../components/owner/OrdersPanel';
+import CatalogPanel from '../components/owner/CatalogPanel';
+import RosterPanel from '../components/owner/RosterPanel';
 import Modal from '../components/common/Modal';
 import { useToast } from '../components/common/Toast';
 import api from '../services/api';
@@ -1641,13 +1643,13 @@ const OwnerDashboard: React.FC = () => {
                 <OrdersPanel orders={orders} onRefresh={fetchOrders} />
               )}
               {activePage === 'menu' && (
-                <MenuManagement items={menuItems} onRefresh={fetchMenu} />
+                <CatalogPanel items={menuItems} onRefresh={fetchMenu} />
               )}
               {activePage === 'offers' && (
                 <OfferManager offers={offers} onRefresh={fetchOffers} />
               )}
               {activePage === 'students' && (
-                <StudentsTable students={students} onRefresh={fetchStudents} />
+                <RosterPanel students={students} onRefresh={fetchStudents} />
               )}
             </>
           )}
