@@ -10,10 +10,10 @@ import { useToast } from '../components/common/Toast';
 
 // ─── Stats Row ────────────────────────────────────────────────────────────────
 
-const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: MenuItem[] }> = ({ orders, todayOrders, menuItems }) => {
-  const pending = orders.filter(o => o.status === 'pending').length;
+const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: MenuItem[] }> = ({ orders, todayOrders }) => {
+  const pending   = orders.filter(o => o.status === 'pending').length;
   const preparing = orders.filter(o => o.status === 'preparing').length;
-  const ready = orders.filter(o => o.status === 'ready').length;
+  const ready     = orders.filter(o => o.status === 'ready').length;
 
   // Revenue: only COMPLETED orders from today (completing an order locks in the sale)
   const today = new Date().toDateString();
@@ -21,59 +21,104 @@ const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: Men
     .filter(o => o.status === 'completed' && new Date(o.created_at).toDateString() === today)
     .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
-  const stats = [
-    { label: 'Pending', value: pending, color: '#ffed4e', icon: '🕐' },
-    { label: 'Preparing', value: preparing, color: '#00ff88', icon: '👨‍🍳' },
-    { label: 'Ready', value: ready, color: '#00ff88', icon: '🍽️' },
-    { label: "Today's Revenue", value: `₹${revenue.toLocaleString('en-IN')}`, color: '#00d166', icon: '💰' },
+  // Crystal-language stat tiles — same notched-polygon shape as OwnerStatGrid.
+  // Numerical glyphs render as Orbitron monospace with the value padded to
+  // 2 digits so single-digit counts don't make the layout dance, and the
+  // big number gets a colour-matched glow that matches the tile tone.
+  const stats: Array<{
+    label: string; value: string; glyph: string; sub: string; tone: string; glow: string;
+  }> = [
+    { label: 'Pending Queue',  value: String(pending).padStart(2, '0'),   glyph: '◷', sub: 'awaiting accept', tone: '#ffed4e', glow: 'rgba(255,237,78,0.45)' },
+    { label: 'On the Line',    value: String(preparing).padStart(2, '0'), glyph: '◈', sub: 'in preparation',  tone: '#00ff88', glow: 'rgba(0,255,136,0.45)' },
+    { label: 'Ready for Pickup', value: String(ready).padStart(2, '0'),   glyph: '✦', sub: 'awaiting collect',tone: '#00ff88', glow: 'rgba(0,255,136,0.45)' },
+    { label: "Today's Revenue", value: `₹${Math.round(revenue).toLocaleString('en-IN')}`, glyph: '◊', sub: 'sealed today',    tone: '#ffed4e', glow: 'rgba(255,237,78,0.45)' },
   ];
 
   return (
-    <div className="chef-stats-grid" style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
-      gap: '16px',
-      marginBottom: '28px',
-    }}>
-      {stats.map(stat => (
-        <div key={stat.label} style={{
-          background: 'rgba(255,255,255,0.03)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: `1px solid ${stat.color}33`,
-          borderRadius: '16px',
-          padding: '18px 22px',
-          boxShadow: `0 0 20px ${stat.color}11`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '14px',
-        }}>
-          <span style={{ fontSize: '28px' }}>{stat.icon}</span>
-          <div>
-            <div style={{
-              fontFamily: 'Orbitron, monospace',
-              fontSize: '22px',
-              fontWeight: '900',
-              color: stat.color,
-              lineHeight: 1,
-              textShadow: `0 0 15px ${stat.color}66`,
-            }}>
+    <>
+      <style>{`
+        .chef-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 28px;
+        }
+        @media (max-width: 880px) {
+          .chef-stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .chef-stat-tile {
+          position: relative;
+          padding: 18px 22px 20px;
+          background:
+            linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 40%),
+            linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 16px;
+          clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
+          overflow: hidden;
+          transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        .chef-stat-tile::before {
+          content: ''; position: absolute; top: 0; left: 6%; right: 24%; height: 1px;
+          background: linear-gradient(90deg, transparent, var(--chef-stat-glow, rgba(0,255,136,0.5)), transparent);
+        }
+        .chef-stat-tile:hover {
+          transform: translateY(-2px);
+          border-color: rgba(255,255,255,0.12);
+          box-shadow: 0 12px 30px rgba(0,255,136,0.1);
+        }
+        .chef-stat-head {
+          display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+        }
+        .chef-stat-glyph {
+          font-family: 'Orbitron', monospace;
+          font-size: 0.95rem; line-height: 1;
+        }
+        .chef-stat-label {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 0.6rem;
+          letter-spacing: 0.22em;
+          color: rgba(255,255,255,0.5);
+          text-transform: uppercase;
+        }
+        .chef-stat-value {
+          font-family: 'Orbitron', monospace;
+          font-size: 1.9rem;
+          font-weight: 900;
+          line-height: 1;
+          letter-spacing: 0.02em;
+        }
+        .chef-stat-sub {
+          font-family: 'Orbitron', monospace;
+          font-size: 0.6rem;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.35);
+          margin-top: 6px;
+        }
+      `}</style>
+
+      <div className="chef-stats-grid">
+        {stats.map(stat => (
+          <div
+            key={stat.label}
+            className="chef-stat-tile"
+            style={{ ['--chef-stat-glow' as any]: stat.glow }}
+          >
+            <div className="chef-stat-head">
+              <span className="chef-stat-glyph" style={{ color: stat.tone, textShadow: `0 0 8px ${stat.tone}` }}>
+                {stat.glyph}
+              </span>
+              <span className="chef-stat-label">{stat.label}</span>
+            </div>
+            <div className="chef-stat-value" style={{ color: stat.tone, textShadow: `0 0 22px ${stat.glow}` }}>
               {stat.value}
             </div>
-            <div style={{
-              fontFamily: 'Rajdhani, sans-serif',
-              fontSize: '11px',
-              color: 'rgba(255,255,255,0.4)',
-              letterSpacing: '1.5px',
-              textTransform: 'uppercase',
-              marginTop: '3px',
-            }}>
-              {stat.label}
-            </div>
+            <div className="chef-stat-sub">{stat.sub}</div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 };
 
@@ -87,12 +132,12 @@ function timeAgo(dateStr: string): { text: string; isOld: boolean } {
   return { text: `${Math.floor(diffMins / 60)}h ago`, isOld: true };
 }
 
-const STATUS_CONFIG: Record<string, { border: string; glow: string; label: string }> = {
-  pending:   { border: '#ffed4e', glow: 'rgba(255,237,78,0.18)',   label: 'PENDING' },
-  preparing: { border: '#00ff88', glow: 'rgba(0, 255, 136,0.18)',    label: 'PREPARING' },
-  ready:     { border: '#00ff88', glow: 'rgba(0,255,136,0.22)',    label: 'READY' },
-  completed: { border: 'rgba(255,255,255,0.2)', glow: 'transparent', label: 'DONE' },
-  cancelled: { border: '#ff3366', glow: 'rgba(255,51,102,0.18)',   label: 'CANCELLED' },
+const STATUS_CONFIG: Record<string, { border: string; glow: string; label: string; glyph: string }> = {
+  pending:   { border: '#ffed4e', glow: 'rgba(255,237,78,0.45)',    label: 'PENDING',   glyph: '◷' },
+  preparing: { border: '#00ff88', glow: 'rgba(0, 255, 136,0.45)',   label: 'PREPARING', glyph: '◈' },
+  ready:     { border: '#00ff88', glow: 'rgba(0,255,136,0.55)',     label: 'READY',     glyph: '✦' },
+  completed: { border: 'rgba(255,255,255,0.2)', glow: 'transparent', label: 'DONE',     glyph: '✓' },
+  cancelled: { border: '#ff3366', glow: 'rgba(255,51,102,0.45)',    label: 'CANCELLED', glyph: '✕' },
 };
 
 const ChefOrderCard: React.FC<{
@@ -115,49 +160,73 @@ const ChefOrderCard: React.FC<{
   return (
     <>
       <style>{`
-        @keyframes newPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
-        @keyframes readyGlow {
-          0%,100% { box-shadow: 0 0 20px rgba(0,255,136,0.22), 0 0 0 1px rgba(0,255,136,0.3); }
-          50%      { box-shadow: 0 0 50px rgba(0,255,136,0.45), 0 0 0 1px rgba(0,255,136,0.6); }
+        @keyframes chef-card-rise {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes chef-card-newpulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%      { opacity: 0.55; transform: scale(0.92); }
+        }
+        @keyframes chef-card-readyglow {
+          0%, 100% { box-shadow: 0 0 22px rgba(0,255,136,0.22), inset 0 0 0 1px rgba(0,255,136,0.18); }
+          50%      { box-shadow: 0 0 52px rgba(0,255,136,0.45), inset 0 0 0 1px rgba(0,255,136,0.45); }
         }
       `}</style>
       <div style={{
-        background: 'rgba(255,255,255,0.03)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: `1px solid ${cfg.border}55`,
-        borderLeft: `4px solid ${cfg.border}`,
-        borderRadius: '16px',
-        padding: '18px',
-        marginBottom: '12px',
-        animation: isReady ? 'readyGlow 2s ease-in-out infinite' : 'none',
-        boxShadow: isNew ? `0 0 30px ${cfg.border}44` : `0 0 15px ${cfg.glow}`,
         position: 'relative',
+        padding: '16px 18px 18px',
+        marginBottom: 14,
+        background:
+          `linear-gradient(180deg, ${cfg.border}10 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #07100e 100%)`,
+        border: `1px solid ${cfg.border}55`,
+        borderRadius: 16,
+        clipPath: 'polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%)',
+        animation: isReady
+          ? 'chef-card-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both, chef-card-readyglow 2.4s ease-in-out infinite'
+          : 'chef-card-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both',
+        boxShadow: isNew
+          ? `0 12px 36px ${cfg.border}33, inset 0 0 0 1px ${cfg.border}40`
+          : isReady ? undefined : `0 6px 18px rgba(0,0,0,0.5)`,
         overflow: 'hidden',
-        transition: 'all 0.3s ease',
+        transition: 'box-shadow 0.3s ease',
       }}>
+        {/* Top-edge HUD highlight — same crystal language as the kiosk cards */}
+        <div style={{
+          position: 'absolute', top: 0, left: '6%', right: '24%', height: 1,
+          background: `linear-gradient(90deg, transparent, ${cfg.border}, transparent)`,
+        }} />
+
         {isNew && (
           <div style={{
-            position: 'absolute', top: 10, right: 10,
+            position: 'absolute', top: 12, right: 16,
             background: '#ffed4e', color: '#050a0c',
-            fontSize: '9px', fontFamily: 'Orbitron, monospace', fontWeight: '700',
-            padding: '2px 6px', borderRadius: '4px', letterSpacing: '1px',
-            animation: 'newPulse 1s ease-in-out infinite',
+            fontSize: '0.55rem', fontFamily: 'Orbitron, monospace', fontWeight: 800,
+            padding: '3px 7px', borderRadius: 3, letterSpacing: '0.2em',
+            animation: 'chef-card-newpulse 1.2s ease-in-out infinite',
+            textShadow: 'none',
           }}>NEW</div>
         )}
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        {/* Header — status glyph + order number + relative time */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 12,
+        }}>
           <span style={{
-            fontFamily: 'Orbitron, monospace', fontSize: '13px', fontWeight: '700',
-            color: cfg.border, letterSpacing: '1.5px', textShadow: `0 0 10px ${cfg.border}88`,
+            display: 'flex', alignItems: 'center', gap: 8,
+            fontFamily: 'Orbitron, monospace', fontSize: '0.78rem', fontWeight: 700,
+            color: cfg.border, letterSpacing: '0.15em',
+            textShadow: `0 0 10px ${cfg.border}88`,
           }}>
+            <span style={{ fontSize: '0.95rem' }}>{cfg.glyph}</span>
             #{order.order_number}
           </span>
           <span style={{
-            fontSize: '12px', fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Orbitron, monospace', fontSize: '0.65rem',
             color: isOld ? '#ff3366' : 'rgba(255,255,255,0.45)',
-            fontWeight: isOld ? '700' : '400',
+            fontWeight: isOld ? 700 : 500,
+            letterSpacing: '0.12em',
           }}>
             {isOld ? '⚠ ' : ''}{timeText}
           </span>
@@ -166,61 +235,92 @@ const ChefOrderCard: React.FC<{
         {/* Student info */}
         {(order.student_name || order.student_roll) && (
           <div style={{
-            fontSize: '14px', fontFamily: 'Rajdhani, sans-serif',
-            color: 'rgba(255,255,255,0.8)', marginBottom: '12px',
-            display: 'flex', alignItems: 'center', gap: '6px',
+            fontFamily: 'Rajdhani, sans-serif',
+            color: 'rgba(255,255,255,0.78)',
+            marginBottom: 12,
+            display: 'flex', alignItems: 'center', gap: 8,
+            fontSize: '0.92rem',
           }}>
-            <span>👤</span>
-            <span style={{ fontWeight: '600' }}>{order.student_name}</span>
+            <span style={{ color: cfg.border, fontFamily: 'Orbitron, monospace', fontSize: '0.85rem' }}>◯</span>
+            <span style={{ fontWeight: 600 }}>{order.student_name}</span>
             {order.student_roll && (
-              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px' }}>· {order.student_roll}</span>
+              <span style={{
+                fontFamily: 'Orbitron, monospace',
+                color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem',
+                letterSpacing: '0.06em',
+              }}>· {order.student_roll}</span>
             )}
           </div>
         )}
 
-        {/* Items */}
+        {/* Items list */}
         <div style={{
-          background: 'rgba(0,0,0,0.25)', borderRadius: '10px',
-          padding: '10px 12px', marginBottom: '14px',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(0,0,0,0.32)',
+          borderRadius: 10,
+          padding: '10px 12px',
+          marginBottom: 14,
+          border: '1px solid rgba(255,255,255,0.04)',
         }}>
           {order.items && order.items.length > 0 ? order.items.map((item, idx) => (
             <div key={idx} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '4px 0',
-              borderBottom: idx < (order.items?.length ?? 0) - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+              padding: '5px 0',
+              borderBottom: idx < (order.items?.length ?? 0) - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
             }}>
-              <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '14px', color: 'rgba(255,255,255,0.85)' }}>
-                <span style={{ color: cfg.border, fontWeight: '700', marginRight: '5px' }}>{item.quantity}x</span>
+              <span style={{
+                fontFamily: 'Rajdhani, sans-serif', fontSize: '0.92rem',
+                color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: 7,
+              }}>
+                <span style={{
+                  color: cfg.border, fontWeight: 800, fontFamily: 'Orbitron, monospace',
+                  fontSize: '0.78rem', textShadow: `0 0 8px ${cfg.border}66`,
+                  background: `${cfg.border}14`,
+                  padding: '2px 6px', borderRadius: 4, minWidth: 26, textAlign: 'center',
+                }}>×{item.quantity}</span>
                 {item.item_name}
               </span>
-              <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
+              <span style={{
+                fontFamily: 'Orbitron, monospace', fontSize: '0.72rem',
+                color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em',
+              }}>
                 ₹{(item.price * item.quantity).toFixed(0)}
               </span>
             </div>
           )) : (
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', fontFamily: 'Rajdhani, sans-serif' }}>No item details</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'Rajdhani, sans-serif' }}>No item details</span>
           )}
         </div>
 
-        {/* Total */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>Total</span>
-          <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '15px', color: '#ffed4e', fontWeight: '700', textShadow: '0 0 10px rgba(255,237,78,0.5)' }}>
+        {/* Total row */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 14, paddingTop: 4,
+        }}>
+          <span style={{
+            fontFamily: 'Orbitron, monospace', fontSize: '0.6rem',
+            color: 'rgba(255,255,255,0.4)', letterSpacing: '0.22em', textTransform: 'uppercase',
+          }}>Total Due</span>
+          <span style={{
+            fontFamily: 'Orbitron, monospace', fontSize: '1rem',
+            color: '#ffed4e', fontWeight: 800,
+            textShadow: '0 0 14px rgba(255,237,78,0.5)',
+            letterSpacing: '0.02em',
+          }}>
             ₹{Number(order.total_amount).toFixed(0)}
           </span>
         </div>
 
-        {/* Action buttons per status */}
+        {/* Action buttons per status — Orbitron caps + glyphs to match the
+            crystal language used everywhere else. */}
         {order.status === 'pending' && (
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <ActionBtn
-              label="✔ Accept"
+              label="⊕ Accept"
               color="#00ff88"
               onClick={() => onStatusUpdate(order.id, 'preparing')}
             />
             <ActionBtn
-              label="✕ Reject"
+              label="⊖ Reject"
               color="#ff3366"
               onClick={() => onStatusUpdate(order.id, 'cancelled')}
             />
@@ -228,7 +328,7 @@ const ChefOrderCard: React.FC<{
         )}
         {order.status === 'preparing' && (
           <ActionBtn
-            label="✅ Mark Ready"
+            label="✦ Mark Ready"
             color="#00ff88"
             onClick={() => onStatusUpdate(order.id, 'ready')}
             fullWidth
@@ -520,29 +620,54 @@ const OrdersTab: React.FC<{
       {COLUMNS.map(col => {
         const colOrders = orders.filter(o => o.status === col.status);
         return (
-          <div key={col.status} style={{ display: 'flex', flexDirection: 'column', minHeight: '200px' }}>
+          <div key={col.status} style={{ display: 'flex', flexDirection: 'column', minHeight: 200 }}>
+            {/* Column header — crystal pill with glyph + live count */}
             <div style={{
+              position: 'relative',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              marginBottom: '16px', padding: '12px 18px',
-              background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
-              border: `1px solid ${col.color}33`, borderRadius: '12px',
-              boxShadow: `0 0 20px ${col.glow}`,
+              marginBottom: 16,
+              padding: '12px 18px',
+              background:
+                `linear-gradient(180deg, ${col.color}10 0%, transparent 60%), rgba(7,16,14,0.65)`,
+              border: `1px solid ${col.color}44`,
+              borderRadius: 12,
+              clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%)',
+              boxShadow: `0 0 18px ${col.glow}, inset 0 0 0 1px ${col.color}10`,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: col.color, boxShadow: `0 0 10px ${col.color}` }} />
-                <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '13px', fontWeight: '700', color: col.color, letterSpacing: '2px', textTransform: 'uppercase' }}>
+              <div style={{
+                position: 'absolute', top: 0, left: '6%', right: '20%', height: 1,
+                background: `linear-gradient(90deg, transparent, ${col.color}, transparent)`,
+              }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{
+                  fontFamily: 'Orbitron, monospace', fontSize: '0.95rem',
+                  color: col.color, textShadow: `0 0 8px ${col.color}`,
+                }}>
+                  {col.status === 'pending' ? '◷' : col.status === 'preparing' ? '◈' : '✦'}
+                </span>
+                <span style={{
+                  fontFamily: 'Orbitron, sans-serif', fontSize: '0.72rem', fontWeight: 700,
+                  color: col.color, letterSpacing: '0.28em', textTransform: 'uppercase',
+                }}>
                   {col.label}
                 </span>
               </div>
               <div style={{
-                background: `${col.color}22`, border: `1px solid ${col.color}55`, borderRadius: '20px',
-                padding: '2px 12px', fontFamily: 'Orbitron, monospace', fontSize: '13px',
-                fontWeight: '700', color: col.color, textAlign: 'center',
+                fontFamily: 'Orbitron, monospace', fontSize: '0.85rem', fontWeight: 800,
+                color: col.color, padding: '4px 14px',
+                background: `${col.color}1a`, border: `1px solid ${col.color}55`,
+                borderRadius: 100, textShadow: `0 0 8px ${col.color}55`,
+                minWidth: 40, textAlign: 'center',
               }}>
-                {colOrders.length}
+                {String(colOrders.length).padStart(2, '0')}
               </div>
             </div>
-            <div className="queue-col" style={{ flex: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 380px)', paddingRight: '4px' }}>
+
+            {/* Column body — crystal-styled card list */}
+            <div className="queue-col" style={{
+              flex: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 380px)',
+              paddingRight: 4, paddingTop: 2,
+            }}>
               {colOrders.length > 0 ? colOrders.map(order => (
                 <ChefOrderCard
                   key={order.id}
@@ -554,14 +679,24 @@ const OrdersTab: React.FC<{
               )) : (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  padding: '40px 20px', background: 'rgba(255,255,255,0.015)',
-                  borderRadius: '14px', border: `1px dashed ${col.color}33`,
+                  padding: '46px 20px',
+                  background: 'rgba(7,16,14,0.4)',
+                  border: `1px dashed ${col.color}33`,
+                  borderRadius: 14,
+                  clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)',
                 }}>
-                  <div style={{ fontSize: '36px', marginBottom: '10px', filter: 'grayscale(0.5)' }}>
-                    {col.status === 'pending' ? '🕐' : col.status === 'preparing' ? '👨‍🍳' : '🍽️'}
+                  <div style={{
+                    fontFamily: 'Orbitron, monospace', fontSize: '2.2rem',
+                    color: `${col.color}55`, marginBottom: 10,
+                    textShadow: `0 0 16px ${col.color}33`,
+                  }}>
+                    ◯
                   </div>
-                  <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '14px', color: `${col.color}66`, letterSpacing: '1px', fontWeight: '500' }}>
-                    No orders
+                  <span style={{
+                    fontFamily: 'Orbitron, sans-serif', fontSize: '0.68rem',
+                    color: `${col.color}99`, letterSpacing: '0.28em', textTransform: 'uppercase',
+                  }}>
+                    Queue Clear
                   </span>
                 </div>
               )}
@@ -1404,45 +1539,103 @@ const ChefDisplay: React.FC = () => {
         {/* Main content */}
         <main className="chef-main" style={{ position: 'relative', zIndex: 1, padding: '28px 40px 60px' }}>
           {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '20px' }}>
-              <div style={{ width: '60px', height: '60px', border: '3px solid rgba(0, 255, 136,0.1)', borderTop: '3px solid #00ff88', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-              <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '14px', color: 'rgba(0, 255, 136,0.6)', letterSpacing: '3px' }}>LOADING KITCHEN...</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 22 }}>
+              <div style={{
+                position: 'relative', width: 72, height: 72,
+              }}>
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  border: '2px solid rgba(0,255,136,0.12)',
+                  borderTop: '2px solid #00ff88',
+                  borderRadius: '50%',
+                  animation: 'spin 1.2s linear infinite',
+                  filter: 'drop-shadow(0 0 10px rgba(0,255,136,0.45))',
+                }} />
+                <div style={{
+                  position: 'absolute', inset: 12,
+                  border: '2px solid rgba(0,255,136,0.18)',
+                  borderBottom: '2px solid #00ff88',
+                  borderRadius: '50%',
+                  animation: 'spin 1.8s linear infinite reverse',
+                }} />
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'Orbitron, monospace', fontSize: '1.1rem',
+                  color: '#00ff88', textShadow: '0 0 10px #00ff88',
+                }}>◈</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontFamily: 'Orbitron, sans-serif', fontSize: '0.85rem',
+                  color: '#00ff88', letterSpacing: '0.42em',
+                  textShadow: '0 0 12px rgba(0,255,136,0.45)',
+                }}>SYNCING KITCHEN</div>
+                <div style={{
+                  fontFamily: 'Orbitron, monospace', fontSize: '0.62rem',
+                  color: 'rgba(255,255,255,0.35)', letterSpacing: '0.28em',
+                  marginTop: 6, textTransform: 'uppercase',
+                }}>Loading orders + manifest</div>
+              </div>
             </div>
           ) : (
             <>
               {/* Stats Row */}
               <StatsRow orders={orders} todayOrders={todayOrders} menuItems={menuItems} />
 
-              {/* Tabs */}
-              <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '4px', border: '1px solid rgba(255,255,255,0.08)', width: 'fit-content', flexWrap: 'wrap' }}>
+              {/* Tab bar — segmented HUD pill matching the Revenue period chips */}
+              <div style={{
+                display: 'flex',
+                gap: 4,
+                marginBottom: 26,
+                background: 'rgba(0,0,0,0.28)',
+                borderRadius: 100,
+                padding: 5,
+                border: '1px solid rgba(255,255,255,0.06)',
+                width: 'fit-content',
+                flexWrap: 'wrap',
+              }}>
                 {([
-                  { id: 'orders', label: '📋 Orders' },
-                  { id: 'today',  label: '🍽️ Today\'s Orders' },
-                  { id: 'menu',   label: '✏️ Edit Menu' },
-                ] as const).map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    style={{
-                      padding: '10px 24px',
-                      background: activeTab === tab.id ? 'rgba(0, 255, 136,0.12)' : 'transparent',
-                      border: activeTab === tab.id ? '1px solid rgba(0, 255, 136,0.4)' : '1px solid transparent',
-                      borderRadius: '8px',
-                      color: activeTab === tab.id ? '#00ff88' : 'rgba(255,255,255,0.4)',
-                      fontFamily: 'Orbitron, monospace',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      letterSpacing: '2px',
-                      textTransform: 'uppercase',
-                      transition: 'all 0.2s',
-                      boxShadow: activeTab === tab.id ? '0 0 15px rgba(0, 255, 136,0.2)' : 'none',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                  { id: 'orders', glyph: '▤', label: 'Manifest' },
+                  { id: 'today',  glyph: '◐', label: "Today's Log" },
+                  { id: 'menu',   glyph: '⬡', label: 'Catalog' },
+                ] as const).map(tab => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      data-clickable
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                        padding: '9px 20px',
+                        background: active ? 'rgba(0,255,136,0.15)' : 'transparent',
+                        border: 'none',
+                        borderRadius: 100,
+                        color: active ? '#00ff88' : 'rgba(255,255,255,0.5)',
+                        fontFamily: 'Orbitron, sans-serif',
+                        fontSize: '0.7rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        letterSpacing: '0.22em',
+                        textTransform: 'uppercase',
+                        transition: 'background 0.2s, color 0.2s, box-shadow 0.2s',
+                        boxShadow: active ? '0 0 16px rgba(0,255,136,0.28)' : 'none',
+                        whiteSpace: 'nowrap',
+                        textShadow: active ? '0 0 8px rgba(0,255,136,0.6)' : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#fff';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.5)';
+                      }}
+                    >
+                      <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '0.9rem' }}>{tab.glyph}</span>
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
 
               {activeTab === 'orders' && (
