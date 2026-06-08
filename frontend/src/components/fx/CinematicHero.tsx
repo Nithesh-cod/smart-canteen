@@ -62,39 +62,50 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ itemsInOrbit }) =>
           0%, 100% { transform: scaleX(0); }
           50%      { transform: scaleX(1); }
         }
-        .hero-line-1 {
+        /* Single-line wordmark: "SMART CANTEEN" rendered on one row. The
+           two halves are still styled differently — "SMART" white→green,
+           "CANTEEN" lighter green→deep-green — so the wordmark reads as
+           two layers in the same beat instead of two stacked lines.
+           Font scales down on narrow viewports so it always fits on one
+           row without wrapping; we also drop letter-spacing under 600px
+           to win the extra real estate. */
+        .hero-wordmark {
+          display: flex;
+          align-items: baseline;
+          gap: 0.4em;
           font-family: 'Orbitron', sans-serif;
           font-weight: 900;
-          font-size: clamp(2.4rem, 7vw, 5.4rem);
-          line-height: 0.9;
-          letter-spacing: 0.12em;
+          font-size: clamp(1.6rem, 6vw, 4.4rem);
+          line-height: 1;
+          letter-spacing: 0.1em;
+          white-space: nowrap;
+          animation: hero-line-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+          text-shadow: 0 0 30px rgba(0,255,136,0.12);
+        }
+        .hero-word-smart {
           background: linear-gradient(180deg, #ffffff 0%, #00ff88 60%, #00d166 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          animation: hero-line-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
-          text-shadow: 0 0 30px rgba(0,255,136,0.08);
         }
-        .hero-line-2 {
-          font-family: 'Orbitron', sans-serif;
+        .hero-word-canteen {
           font-weight: 700;
-          font-size: clamp(2.4rem, 7vw, 5.4rem);
-          line-height: 0.9;
-          letter-spacing: 0.18em;
           background: linear-gradient(180deg, #00ff88 0%, #00d166 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           opacity: 0.85;
-          animation: hero-line-rise-2 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
+          letter-spacing: 0.14em;
         }
-        .hero-line-2::before {
-          content: '';
-          display: block;
+        .hero-scan {
           width: 110px;
           height: 1px;
           background: linear-gradient(90deg, #00ff88, transparent);
-          margin-bottom: 14px;
+          margin: 10px 0 14px;
           animation: scan-bar 3.5s ease-in-out infinite;
           transform-origin: left center;
+        }
+        @media (max-width: 600px) {
+          .hero-wordmark { letter-spacing: 0.04em; gap: 0.3em; }
+          .hero-word-canteen { letter-spacing: 0.06em; }
         }
         .hero-tag {
           font-family: 'Rajdhani', sans-serif;
@@ -143,10 +154,13 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ itemsInOrbit }) =>
           zIndex: 5,
         }}
       >
-        {/* LEFT — stacked wordmark */}
+        {/* LEFT — single-line wordmark */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="hero-line-1">SMART</div>
-          <div className="hero-line-2">CANTEEN</div>
+          <div className="hero-wordmark">
+            <span className="hero-word-smart">SMART</span>
+            <span className="hero-word-canteen">CANTEEN</span>
+          </div>
+          <div className="hero-scan" />
           <div
             className="hero-meta"
             style={{

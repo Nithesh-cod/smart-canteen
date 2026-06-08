@@ -167,20 +167,34 @@ const RecentOrdersList: React.FC<{
 
   return (
     <div className="track-recent-card" style={{
-      marginTop: 24,
-      background: 'rgba(255,255,255,0.02)',
-      backdropFilter: 'blur(20px)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: 24,
-      padding: 28,
+      position: 'relative',
+      marginTop: 22,
+      background:
+        'linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #07100e 100%)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 18,
+      clipPath: 'polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%)',
+      padding: 24,
       animation: 'fadeInUp 0.5s ease-out',
+      overflow: 'hidden',
     }}>
       <div style={{
-        fontFamily: 'Orbitron, sans-serif', fontSize: '0.72rem', fontWeight: 700,
-        color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: 2,
-        marginBottom: 16,
+        position: 'absolute', top: 0, left: '6%', right: '24%', height: 1,
+        background: 'linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent)',
+      }} />
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
       }}>
-        Recent Orders
+        <span style={{
+          fontFamily: 'Orbitron, monospace', fontSize: '0.9rem',
+          color: '#00ff88', textShadow: '0 0 8px #00ff88',
+        }}>◐</span>
+        <span style={{
+          fontFamily: 'Orbitron, sans-serif', fontSize: '0.7rem', fontWeight: 700,
+          color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.32em',
+        }}>
+          Recent Transmissions
+        </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {recentOrders.map(ord => {
@@ -446,94 +460,170 @@ const OrderTracking: React.FC = () => {
       }}>
         <div style={{ width: '100%', maxWidth: 650 }}>
 
-          {/* Main Search Card */}
+          {/* Main Search Card — crystal language matching kiosk/owner/chef */}
           <div className="track-card" style={{
-            background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 30,
-            padding: 40, animation: 'glowPulse 4s ease-in-out infinite',
+            position: 'relative',
+            background:
+              'linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #07100e 100%)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 18,
+            clipPath: 'polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%)',
+            padding: '34px 36px 28px',
+            animation: 'glowPulse 5s ease-in-out infinite',
+            overflow: 'hidden',
           }}>
-            {/* Logo */}
-            <div style={{ textAlign: 'center', marginBottom: 6 }}>
+            {/* Top-edge HUD highlight — same crystal language as every other card */}
+            <div style={{
+              position: 'absolute', top: 0, left: '6%', right: '24%', height: 1,
+              background: 'linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent)',
+            }} />
+
+            {/* Brand brackets row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 6 }}>
+              <span style={{
+                fontFamily: 'Orbitron, monospace', fontSize: '1rem',
+                color: '#00ff88', textShadow: '0 0 10px #00ff88',
+              }}>◈</span>
               <div className="track-logo" style={{
-                fontFamily: 'Orbitron, sans-serif', fontSize: '2.5rem', fontWeight: 900,
-                background: 'linear-gradient(135deg, #00ff88, #00d166)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1.1,
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: 'clamp(1.3rem, 4.5vw, 2.1rem)',
+                fontWeight: 900,
+                background: 'linear-gradient(180deg, #ffffff 0%, #00ff88 70%, #00d166 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                letterSpacing: '0.16em', whiteSpace: 'nowrap', lineHeight: 1,
+                textShadow: '0 0 28px rgba(0,255,136,0.18)',
               }}>
-                🍕 SMART CANTEEN
+                SMART CANTEEN
               </div>
+              <span style={{
+                fontFamily: 'Orbitron, monospace', fontSize: '1rem',
+                color: '#00ff88', textShadow: '0 0 10px #00ff88',
+              }}>◈</span>
             </div>
             <div style={{
-              textAlign: 'center', color: 'rgba(255,255,255,0.4)',
-              fontFamily: 'Rajdhani, sans-serif', fontSize: '0.9rem', letterSpacing: 3,
-              textTransform: 'uppercase', marginBottom: 36,
+              textAlign: 'center', color: 'rgba(0,255,136,0.65)',
+              fontFamily: 'Orbitron, sans-serif', fontSize: '0.7rem',
+              letterSpacing: '0.42em', textTransform: 'uppercase', marginBottom: 28,
             }}>
-              Order Tracking
+              · Order Tracking ·
             </div>
 
-            {/* Search Form */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <input
-                type="text"
-                className="track-input"
-                placeholder="Enter Order Number (e.g. OZ12345)"
-                value={orderNumber}
-                onChange={e => { setOrderNumber(e.target.value); setError(null); setNotFound(false); }}
-                onKeyDown={e => { if (e.key === 'Enter') handleTrack(); }}
-                style={{
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: 14, padding: '16px 20px', color: '#fff',
-                  fontFamily: 'monospace', fontSize: '1.05rem', letterSpacing: 1.5,
-                  width: '100%', boxSizing: 'border-box',
-                  transition: 'border-color 0.2s, box-shadow 0.2s', textAlign: 'center',
-                }}
-              />
+            {/* Query field + Track CTA — HUD glyph search like CategoryChannels */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ position: 'relative' }}>
+                <span style={{
+                  position: 'absolute', top: '50%', left: 18, transform: 'translateY(-50%)',
+                  fontFamily: 'Orbitron, monospace', fontSize: '1rem',
+                  color: '#00ff88', textShadow: '0 0 8px #00ff88', pointerEvents: 'none',
+                }}>⌕</span>
+                <input
+                  type="text"
+                  className="track-input"
+                  placeholder="ENTER ORDER NUMBER  ·  e.g. OZ12345"
+                  value={orderNumber}
+                  onChange={e => { setOrderNumber(e.target.value); setError(null); setNotFound(false); }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleTrack(); }}
+                  style={{
+                    background: 'rgba(0,0,0,0.32)',
+                    border: '1px solid rgba(0,255,136,0.18)',
+                    borderRadius: 12,
+                    padding: '15px 18px 15px 46px',
+                    color: '#fff',
+                    fontFamily: 'Orbitron, monospace',
+                    fontSize: '0.95rem',
+                    letterSpacing: '0.14em',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    textAlign: 'left',
+                    outline: 'none',
+                  }}
+                />
+              </div>
               <button
                 onClick={() => handleTrack()}
                 disabled={loading}
+                data-clickable
                 style={{
-                  background: loading ? 'rgba(0, 255, 136,0.1)' : 'linear-gradient(135deg, #00ff8833, #00d16633)',
-                  border: '1px solid rgba(0, 255, 136,0.5)', borderRadius: 14, padding: '15px 0',
-                  color: '#00ff88', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
-                  fontSize: '0.95rem', cursor: loading ? 'not-allowed' : 'pointer',
-                  letterSpacing: 1, transition: 'all 0.25s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  background: loading
+                    ? 'rgba(0,255,136,0.08)'
+                    : 'linear-gradient(90deg, rgba(0,255,136,0.1), rgba(0,255,136,0.25), rgba(0,255,136,0.1))',
+                  backgroundSize: '200% 100%',
+                  border: '1px solid rgba(0,255,136,0.5)',
+                  borderRadius: 10,
+                  padding: '15px 0',
+                  color: '#00ff88',
+                  fontFamily: 'Orbitron, sans-serif',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  letterSpacing: '0.32em',
+                  textTransform: 'uppercase',
+                  transition: 'background-position 0.6s, box-shadow 0.25s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
                   opacity: loading ? 0.7 : 1,
+                  textShadow: '0 0 10px rgba(0,255,136,0.55)',
                 }}
-                onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(0, 255, 136,0.25), rgba(0, 209, 102,0.25))'; }}
-                onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, #00ff8833, #00d16633)'; }}
+                onMouseEnter={e => {
+                  if (!loading) {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundPosition = '100% 0';
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 22px rgba(0,255,136,0.35)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundPosition = '0 0';
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
+                }}
               >
                 {loading ? (
                   <>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: '3px solid rgba(0, 255, 136,0.3)', borderTop: '3px solid #00ff88', animation: 'spin 0.8s linear infinite' }} />
-                    Tracking...
+                    <div style={{
+                      width: 16, height: 16, borderRadius: '50%',
+                      border: '2px solid rgba(0,255,136,0.25)', borderTop: '2px solid #00ff88',
+                      animation: 'spin 0.8s linear infinite',
+                    }} />
+                    Scanning…
                   </>
-                ) : '🔍 Track Order'}
+                ) : (
+                  <>◎ Trace Order</>
+                )}
               </button>
             </div>
 
             {/* Error / Not Found */}
             {(error || notFound) && (
               <div style={{
-                marginTop: 18, padding: '14px 18px',
-                background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.3)',
-                borderRadius: 12, color: '#ff3366',
-                fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: '0.92rem', textAlign: 'center',
+                marginTop: 18, padding: '12px 16px',
+                background: 'rgba(255,51,102,0.08)',
+                border: '1px solid rgba(255,51,102,0.4)',
+                borderRadius: 10, color: '#ff3366',
+                fontFamily: 'Orbitron, monospace', fontSize: '0.78rem',
+                letterSpacing: '0.12em', textAlign: 'center',
               }}>
                 {notFound
-                  ? `❌ No order found with number "${orderNumber}". Please check and try again.`
-                  : `⚠️ ${error}`}
+                  ? `⚠ No order matches "${orderNumber}". Recheck the digits.`
+                  : `⚠ ${error}`}
               </div>
             )}
           </div>
 
-          {/* Order Details Card */}
+          {/* Order Details Card — crystal language */}
           {order && (
             <div className="track-detail-card" style={{
-              marginTop: 24,
-              background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
-              border: `1px solid ${isCancelled ? 'rgba(255,51,102,0.3)' : 'rgba(0, 255, 136,0.2)'}`,
-              borderRadius: 28, padding: 36, animation: 'fadeInUp 0.5s ease-out',
+              position: 'relative',
+              marginTop: 22,
+              background:
+                'linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #07100e 100%)',
+              border: `1px solid ${isCancelled ? 'rgba(255,51,102,0.35)' : 'rgba(0,255,136,0.22)'}`,
+              borderRadius: 18,
+              clipPath: 'polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%)',
+              padding: '28px 32px 30px', animation: 'fadeInUp 0.5s ease-out',
+              overflow: 'hidden',
             }}>
+              <div style={{
+                position: 'absolute', top: 0, left: '5%', right: '24%', height: 1,
+                background: `linear-gradient(90deg, transparent, ${isCancelled ? 'rgba(255,51,102,0.55)' : 'rgba(0,255,136,0.55)'}, transparent)`,
+              }} />
               {/* Back + Header row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

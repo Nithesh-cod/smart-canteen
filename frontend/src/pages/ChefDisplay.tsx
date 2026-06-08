@@ -829,22 +829,63 @@ const EditMenuTab: React.FC<{
     <>
       <style>{`
         @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-        .menu-edit-input { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.12) !important; }
-        .menu-edit-input:focus { outline: none; border-color: #00ff88 !important; box-shadow: 0 0 0 2px rgba(0, 255, 136,0.15) !important; }
+        .chef-cat-card {
+          position: relative;
+          background:
+            linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%),
+            linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 16px;
+          clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
+          overflow: hidden;
+          transition: border-color 0.22s, transform 0.22s, box-shadow 0.22s;
+        }
+        .chef-cat-card::before {
+          content: ''; position: absolute; top: 0; left: 6%; right: 24%; height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent);
+          z-index: 4;
+        }
+        .chef-cat-card:hover {
+          border-color: rgba(0,255,136,0.4);
+          transform: translateY(-2px);
+          box-shadow: 0 16px 36px rgba(0,255,136,0.12);
+        }
+        .menu-edit-input {
+          background: rgba(0,0,0,0.32) !important;
+          border: 1px solid rgba(255,255,255,0.08) !important;
+          color: #fff;
+          outline: none;
+          transition: border-color 0.18s, box-shadow 0.18s;
+        }
+        .menu-edit-input:focus {
+          border-color: rgba(0,255,136,0.5) !important;
+          box-shadow: 0 0 0 2px rgba(0,255,136,0.15) !important;
+        }
+        .chef-cat-field-label {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 0.58rem;
+          letter-spacing: 0.22em;
+          color: rgba(255,255,255,0.42);
+          text-transform: uppercase;
+        }
         /* Toggle switch styles */
         .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; cursor:pointer; }
         .toggle-switch input { opacity:0; width:0; height:0; }
         .toggle-slider {
           position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
-          background: rgba(255,51,102,0.3); border-radius:24px; transition:.3s;
-          border: 1px solid rgba(255,51,102,0.5);
+          background: rgba(255,159,67,0.25); border-radius:24px; transition:.3s;
+          border: 1px solid rgba(255,159,67,0.5);
         }
         .toggle-slider:before {
           position:absolute; content:''; height:18px; width:18px; left:2px; bottom:2px;
-          background:#ff3366; border-radius:50%; transition:.3s;
+          background:#ff9f43; border-radius:50%; transition:.3s;
+          box-shadow: 0 0 6px rgba(255,159,67,0.65);
         }
-        input:checked + .toggle-slider { background: rgba(0,255,136,0.3); border-color: rgba(0,255,136,0.5); }
-        input:checked + .toggle-slider:before { transform:translateX(20px); background:#00ff88; }
+        input:checked + .toggle-slider { background: rgba(0,255,136,0.25); border-color: rgba(0,255,136,0.6); }
+        input:checked + .toggle-slider:before {
+          transform:translateX(20px); background:#00ff88;
+          box-shadow: 0 0 10px #00ff88;
+        }
       `}</style>
 
       {deleteTarget && (
@@ -857,118 +898,214 @@ const EditMenuTab: React.FC<{
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-        gap: '20px',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+        gap: 18,
       }}>
         {editItems.map((item, idx) => (
-          <div key={item.id} style={{
-            background: 'rgba(255,255,255,0.03)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '18px',
-            overflow: 'hidden',
-            animation: `fadeInUp 0.4s ease ${idx * 0.04}s both`,
-            transition: 'all 0.3s',
-          }}>
-            {/* Image */}
-            <div style={{ height: '140px', background: 'rgba(0,0,0,0.3)', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
-              title="Edit image URL below">
+          <div
+            key={item.id}
+            className="chef-cat-card"
+            style={{
+              display: 'flex', flexDirection: 'column',
+              animation: `fadeInUp 0.4s ease ${Math.min(idx, 11) * 0.04}s both`,
+            }}
+            data-clickable
+          >
+            {/* Image — same notched language as the kiosk DataCrystal */}
+            <div style={{
+              height: 150, position: 'relative', overflow: 'hidden',
+              background: 'linear-gradient(135deg, #0a1614, #050a0c)',
+              cursor: 'pointer',
+            }} title="Update the image URL below to swap this picture">
               {item.image_url ? (
-                <img src={item.editImageUrl || item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: item.is_available ? 1 : 0.4 }} />
+                <img
+                  src={item.editImageUrl || item.image_url}
+                  alt={item.name}
+                  style={{
+                    width: '100%', height: '100%', objectFit: 'cover',
+                    opacity: item.is_available ? 0.95 : 0.35,
+                    transition: 'opacity 0.25s, transform 0.4s',
+                  }}
+                />
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '48px', opacity: item.is_available ? 1 : 0.4 }}>🍽️</div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  height: '100%', fontFamily: 'Orbitron, monospace', fontSize: '3rem',
+                  color: 'rgba(0,255,136,0.4)',
+                  opacity: item.is_available ? 1 : 0.4,
+                }}>⬡</div>
               )}
+              {/* Bottom shade so the dish name + ₹ chip always read */}
               <div style={{
-                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(0,0,0,0.45)', opacity: 0, transition: 'opacity 0.2s',
-              }}
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(180deg, transparent 55%, rgba(7,16,14,0.85) 100%)',
+                pointerEvents: 'none',
+              }} />
+              {/* ID corner pill */}
+              <div style={{
+                position: 'absolute', top: 10, left: 10, zIndex: 2,
+                fontFamily: 'Orbitron, monospace', fontSize: '0.58rem',
+                letterSpacing: '0.18em', color: '#00ff88',
+                background: 'rgba(7,16,14,0.85)',
+                border: '1px solid rgba(0,255,136,0.5)',
+                borderRadius: 3, padding: '4px 9px', textTransform: 'uppercase',
+                textShadow: '0 0 6px rgba(0,255,136,0.6)',
+                backdropFilter: 'blur(6px)',
+              }}>
+                #{item.id}
+              </div>
+              {/* Hover "Edit image" overlay */}
+              <div
+                style={{
+                  position: 'absolute', inset: 0, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(7,16,14,0.7)', opacity: 0, transition: 'opacity 0.2s',
+                  zIndex: 3,
+                }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
               >
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '13px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px', background: 'rgba(0, 255, 136,0.15)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(0, 255, 136,0.4)' }}>
-                  📷 Change Image
+                <span style={{
+                  fontFamily: 'Orbitron, sans-serif', fontSize: '0.62rem',
+                  color: '#00ff88', fontWeight: 700, letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  background: 'rgba(0,255,136,0.12)', padding: '6px 14px',
+                  borderRadius: 6, border: '1px solid rgba(0,255,136,0.5)',
+                  textShadow: '0 0 6px rgba(0,255,136,0.6)',
+                }}>
+                  ⌧ Swap Image
                 </span>
               </div>
+              {/* OFFLINE band */}
               {!item.is_available && (
                 <div style={{
-                  position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(0,0,0,0.5)', pointerEvents: 'none',
+                  position: 'absolute', inset: 0, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(7,16,14,0.55)', pointerEvents: 'none', zIndex: 4,
                 }}>
-                  <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '12px', color: '#ff3366', letterSpacing: '2px', fontWeight: '700' }}>UNAVAILABLE</span>
+                  <span style={{
+                    fontFamily: 'Orbitron, monospace', fontSize: '0.7rem',
+                    color: '#ff9f43', letterSpacing: '0.32em', fontWeight: 800,
+                    textShadow: '0 0 8px rgba(255,159,67,0.7)',
+                    background: 'rgba(7,16,14,0.85)',
+                    border: '1px solid rgba(255,159,67,0.55)',
+                    borderRadius: 6, padding: '4px 14px', textTransform: 'uppercase',
+                  }}>
+                    Offline
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Fields */}
-            <div style={{ padding: '16px' }}>
-              <input
-                type="text"
-                className="menu-edit-input"
-                value={item.editName}
-                onChange={e => updateField(item.id, 'editName', e.target.value)}
-                style={{
-                  width: '100%', padding: '8px 12px', borderRadius: '8px',
-                  color: '#fff', fontFamily: 'Rajdhani, sans-serif', fontSize: '15px',
-                  fontWeight: '600', marginBottom: '10px', boxSizing: 'border-box',
-                }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '15px', color: 'rgba(255,255,255,0.5)' }}>₹</span>
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <span className="chef-cat-field-label">Name</span>
                 <input
-                  type="number"
+                  type="text"
                   className="menu-edit-input"
-                  value={item.editPrice}
-                  onChange={e => updateField(item.id, 'editPrice', e.target.value)}
+                  value={item.editName}
+                  onChange={e => updateField(item.id, 'editName', e.target.value)}
                   style={{
-                    flex: 1, padding: '8px 12px', borderRadius: '8px',
-                    color: '#ffed4e', fontFamily: 'Orbitron, monospace', fontSize: '14px',
-                    fontWeight: '700', boxSizing: 'border-box',
+                    padding: '9px 12px', borderRadius: 8,
+                    fontFamily: 'Rajdhani, sans-serif', fontSize: '0.95rem',
+                    fontWeight: 600, boxSizing: 'border-box',
                   }}
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <span className="chef-cat-field-label">Price (₹)</span>
+                  <input
+                    type="number"
+                    className="menu-edit-input"
+                    value={item.editPrice}
+                    onChange={e => updateField(item.id, 'editPrice', e.target.value)}
+                    style={{
+                      padding: '9px 12px', borderRadius: 8,
+                      color: '#ffed4e', fontFamily: 'Orbitron, monospace',
+                      fontSize: '0.95rem', fontWeight: 800,
+                      letterSpacing: '0.02em', boxSizing: 'border-box',
+                      textShadow: '0 0 8px rgba(255,237,78,0.3)',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <span className="chef-cat-field-label">Stock</span>
+                  <input
+                    type="number"
+                    className="menu-edit-input"
+                    value={item.editStock}
+                    onChange={e => updateField(item.id, 'editStock', e.target.value)}
+                    min="-1"
+                    placeholder="-1 = ∞"
+                    title="-1 means unlimited stock"
+                    style={{
+                      padding: '9px 12px', borderRadius: 8,
+                      color: item.editStock === '-1' ? 'rgba(255,255,255,0.4)' : '#00ff88',
+                      fontFamily: 'Orbitron, monospace', fontSize: '0.92rem',
+                      fontWeight: 700, boxSizing: 'border-box',
+                      textShadow: item.editStock === '-1' ? 'none' : '0 0 8px rgba(0,255,136,0.35)',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Stock readout */}
+              <div style={{
+                fontFamily: 'Orbitron, monospace', fontSize: '0.62rem',
+                color: 'rgba(255,255,255,0.4)', letterSpacing: '0.18em',
+                textTransform: 'uppercase', marginTop: -4,
+              }}>
+                {item.editStock === '-1' ? '∞ Unlimited stock' :
+                 item.editStock === '0'  ? '◯ Out of stock' :
+                 `${item.editStock} units remaining`}
               </div>
 
               {/* Image URL */}
-              <input
-                type="url"
-                className="menu-edit-input"
-                value={item.editImageUrl}
-                onChange={e => updateField(item.id, 'editImageUrl', e.target.value)}
-                placeholder="Image URL (https://...)"
-                style={{
-                  width: '100%', padding: '8px 12px', borderRadius: '8px',
-                  color: '#fff', fontFamily: 'Rajdhani, sans-serif', fontSize: '13px',
-                  marginBottom: '10px', boxSizing: 'border-box',
-                }}
-              />
-
-              {/* Stock */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>Stock:</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <span className="chef-cat-field-label">Image URL</span>
                 <input
-                  type="number"
+                  type="url"
                   className="menu-edit-input"
-                  value={item.editStock}
-                  onChange={e => updateField(item.id, 'editStock', e.target.value)}
-                  min="-1"
-                  placeholder="-1 = unlimited"
-                  title="-1 means unlimited stock"
+                  value={item.editImageUrl}
+                  onChange={e => updateField(item.id, 'editImageUrl', e.target.value)}
+                  placeholder="https://…"
                   style={{
-                    flex: 1, padding: '8px 12px', borderRadius: '8px',
-                    color: item.editStock === '-1' ? 'rgba(255,255,255,0.4)' : '#00ff88',
-                    fontFamily: 'Orbitron, monospace', fontSize: '13px',
-                    fontWeight: '700', boxSizing: 'border-box',
+                    padding: '9px 12px', borderRadius: 8,
+                    fontFamily: 'Rajdhani, sans-serif', fontSize: '0.82rem',
+                    boxSizing: 'border-box',
                   }}
                 />
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>
-                  {item.editStock === '-1' ? '∞ unlimited' : `${item.editStock} left`}
-                </span>
               </div>
 
               {/* Availability toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '13px', color: item.is_available ? '#00ff88' : '#ff3366', fontWeight: '600', letterSpacing: '1px' }}>
-                  {item.is_available ? '● Available' : '● Unavailable'}
-                </span>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px',
+                background: 'rgba(0,0,0,0.25)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: 10,
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{
+                    fontFamily: 'Orbitron, monospace', fontSize: '0.62rem',
+                    color: item.is_available ? '#00ff88' : '#ff9f43',
+                    fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase',
+                    textShadow: item.is_available
+                      ? '0 0 6px rgba(0,255,136,0.45)'
+                      : '0 0 6px rgba(255,159,67,0.45)',
+                  }}>
+                    {item.is_available ? '● Online' : '○ Offline'}
+                  </span>
+                  <span style={{
+                    fontFamily: 'Rajdhani, sans-serif', fontSize: '0.7rem',
+                    color: 'rgba(255,255,255,0.4)',
+                  }}>
+                    {item.is_available ? 'visible on the kiosk' : 'hidden from customers'}
+                  </span>
+                </div>
                 <label className="toggle-switch">
                   <input type="checkbox" checked={item.is_available} onChange={() => handleToggle(item)} />
                   <span className="toggle-slider" />
@@ -976,32 +1113,49 @@ const EditMenuTab: React.FC<{
               </div>
 
               {/* Save + Delete */}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => handleSave(item)}
                   disabled={item.saving}
+                  data-clickable
                   style={{
-                    flex: 1, padding: '9px',
-                    background: 'rgba(0, 255, 136,0.1)', border: '1px solid rgba(0, 255, 136,0.4)',
-                    borderRadius: '9px', color: '#00ff88',
-                    fontFamily: 'Rajdhani, sans-serif', fontWeight: '700', fontSize: '13px',
-                    cursor: item.saving ? 'not-allowed' : 'pointer', letterSpacing: '1px',
-                    opacity: item.saving ? 0.6 : 1, transition: 'all 0.2s',
+                    flex: 1, padding: '10px 12px',
+                    background: 'linear-gradient(90deg, rgba(0,255,136,0.06), rgba(0,255,136,0.18), rgba(0,255,136,0.06))',
+                    backgroundSize: '200% 100%',
+                    border: '1px solid rgba(0,255,136,0.45)',
+                    borderRadius: 9, color: '#00ff88',
+                    fontFamily: 'Orbitron, sans-serif', fontWeight: 800, fontSize: '0.7rem',
+                    cursor: item.saving ? 'not-allowed' : 'pointer',
+                    letterSpacing: '0.22em', textTransform: 'uppercase',
+                    opacity: item.saving ? 0.6 : 1,
+                    transition: 'background-position 0.5s, box-shadow 0.2s',
+                    textShadow: '0 0 8px rgba(0,255,136,0.55)',
+                  }}
+                  onMouseEnter={e => {
+                    if (!item.saving) {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundPosition = '100% 0';
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 18px rgba(0,255,136,0.32)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundPosition = '0 0';
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
                   }}
                 >
-                  {item.saving ? '...' : '💾 Save'}
+                  {item.saving ? '◌ Saving' : '✓ Save'}
                 </button>
                 <button
                   onClick={() => setDeleteTarget(item)}
+                  data-clickable
                   style={{
-                    padding: '9px 14px',
-                    background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.4)',
-                    borderRadius: '9px', color: '#ff3366',
-                    fontFamily: 'Rajdhani, sans-serif', fontWeight: '700', fontSize: '13px',
-                    cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.2s',
+                    padding: '10px 14px',
+                    background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.4)',
+                    borderRadius: 9, color: '#ff3366',
+                    fontFamily: 'Orbitron, sans-serif', fontWeight: 800, fontSize: '0.78rem',
+                    cursor: 'pointer', letterSpacing: '0.22em', transition: 'background 0.2s',
                   }}
                 >
-                  🗑️
+                  ⊖
                 </button>
               </div>
             </div>

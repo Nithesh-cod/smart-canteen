@@ -143,72 +143,233 @@ export const printThermalBill = (bill: BillData): void => {
       </tr>`;
   }).join('');
 
+  // ── Receipt redesign (B/W only, same 58mm @page + 52mm body width) ──
+  //
+  // Constraints we deliberately did NOT touch:
+  //   - @page size: 58mm auto, margins 2mm 3mm
+  //   - Body width: 52mm
+  //   - Pure black on pure white (thermal printer is monochrome)
+  //   - Courier-family monospace (rasterises crisply on thermals)
+  //
+  // What changed:
+  //   - Brand header set in a small caps display block with letter-spaced
+  //     SMART CANTEEN wordmark plus three-dot dividers; the address lines
+  //     drop to a lighter weight and tighter leading.
+  //   - "RECEIPT" stamp under the address: bracketed banner so the
+  //     document type reads in one glance instead of being implied.
+  //   - Customer/Invoice block uses label : value rows with consistent
+  //     8-char label column so colons line up perfectly down the receipt.
+  //   - Items table gets a heading row in inverse (black on white text on
+  //     a black band — common thermal idiom that prints fine because the
+  //     printer just turns those pixels on).
+  //   - Item rows pad qty as "×N" right after the name in a smaller font
+  //     so the price column lines up cleanly even with mixed-length names.
+  //   - Totals block: subtotal and discount in regular weight, TOTAL PAID
+  //     in a single full-width bordered band so it reads as the final
+  //     answer instead of yet another row.
+  //   - Payment + reward block split into mini stats with bold value.
+  //   - Footer gets the "thank you" message + a per-bill barcode-style
+  //     line so the receipt actually looks like an invoice instead of a
+  //     printer test page.
+  const itemHeader = `
+    <tr class="hdr"><td>Item</td><td style="text-align:right;">Amount</td></tr>
+  `;
   const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Bill ${invoiceNo}</title>
+<title>Receipt ${invoiceNo}</title>
 <style>
   @page { size: 58mm auto; margin: 2mm 3mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Courier New', Courier, monospace;
     font-size: 9.5px;
-    line-height: 1.3;
+    line-height: 1.32;
     color: #000;
     background: #fff;
     width: 52mm;
+    -webkit-font-smoothing: antialiased;
   }
   .center { text-align: center; }
-  .bold   { font-weight: bold; }
-  .big    { font-size: 13.5px; }
-  .sep    { border-top: 1px dashed #555; margin: 3px 0; }
-  table   { width: 100%; border-collapse: collapse; }
-  td      { padding: 1px 0; vertical-align: top; }
-  .grand td { font-size: 12px; font-weight: bold;
-               border-top: 1.5px solid #000; padding-top: 3px; }
-  .footer { margin-top: 6px; text-align: center; font-size: 9.5px; }
+  .right  { text-align: right; }
+  .bold   { font-weight: 700; }
+  .upper  { letter-spacing: 1.5px; text-transform: uppercase; }
+  .mute   { color: #222; }
+  .tiny   { font-size: 8.2px; }
+
+  /* Brand block */
+  .brand-mark {
+    display: flex; align-items: center; justify-content: center;
+    gap: 4px; margin-bottom: 1px;
+  }
+  .brand-mark .bar {
+    flex: 1; height: 1px; background: #000;
+    max-width: 6mm;
+  }
+  .brand-name {
+    font-size: 13.5px; font-weight: 800;
+    letter-spacing: 3.5px; padding: 0 2px;
+  }
+  .brand-addr { font-size: 8.5px; }
+
+  /* Stamp banner */
+  .stamp {
+    display: inline-block;
+    margin: 3px auto 1px;
+    padding: 2px 8px;
+    border: 1px solid #000;
+    font-weight: 700;
+    letter-spacing: 4px;
+    font-size: 9px;
+  }
+
+  /* Dividers */
+  .sep      { border-top: 1px dashed #000; margin: 3px 0; }
+  .sep-solid{ border-top: 1px solid  #000; margin: 3px 0; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  td    { padding: 1px 0; vertical-align: top; }
+
+  /* Label : value rows */
+  .kv td:first-child {
+    width: 18mm; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .kv td:last-child  { text-align: right; }
+
+  /* Item table */
+  .items .hdr td {
+    background: #000; color: #fff;
+    padding: 2px 4px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; font-size: 8.5px;
+  }
+  .items td { padding: 2px 0; }
+  .items .qty {
+    font-size: 8.5px; color: #000;
+    margin-left: 2px; letter-spacing: 0.5px;
+  }
+
+  /* Totals — TOTAL PAID gets its own bordered band */
+  .totals td { padding: 1px 0; }
+  .total-row td {
+    padding: 4px 4px; font-weight: 800; font-size: 12px;
+    border-top: 1.5px solid #000; border-bottom: 1.5px solid #000;
+    letter-spacing: 1.5px;
+  }
+
+  /* Stats blocks (payment / reward) */
+  .stat-row td { padding: 1px 0; font-size: 9px; }
+  .stat-row td:last-child { font-weight: 700; }
+
+  /* Reward — tiny boxed call-out */
+  .reward {
+    margin: 4px 0 2px;
+    border: 1px dashed #000;
+    padding: 3px 5px;
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 6px; text-align: center;
+    font-size: 9px; line-height: 1.4;
+  }
+  .footer .thanks {
+    font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; font-size: 9.5px;
+  }
+  .barcode {
+    margin-top: 4px;
+    font-family: 'Libre Barcode 39', 'Courier New', monospace;
+    font-size: 18px; letter-spacing: 1px;
+  }
+  /* Fallback "barcode" if the font isn't available — render alternating
+     vertical strokes via Unicode "▌" so the receipt still ends in an
+     unmistakable invoice-style band. */
+  .barcode-fallback {
+    font-family: 'Courier New', monospace;
+    font-weight: 700; letter-spacing: 0;
+    font-size: 14px; margin-top: 3px;
+  }
+  .invoice-no {
+    font-size: 8.2px; letter-spacing: 1px; margin-top: 2px;
+  }
 </style>
 </head>
 <body>
-<div class="center bold big">SMART CANTEEN</div>
-<div class="center" style="font-size:9px;">COIMBATORE INSTITUTE OF ENGINEERING AND TECHNOLOGY</div>
-<div class="center" style="font-size:9px;">THONDAMUTHUR Road, COIMBATORE - 641109</div>
-<div class="sep"></div>
-<table>
-  <tr><td class="bold">INVOICE #</td><td style="text-align:right;">${invoiceNo}</td></tr>
-  <tr><td class="bold">DATE</td><td style="text-align:right;">${dateStr}</td></tr>
-  <tr><td class="bold">CUSTOMER</td><td style="text-align:right;">${bill.studentName || 'Guest'}</td></tr>
-  ${bill.studentRoll ? `<tr><td class="bold">ROLL NO</td><td style="text-align:right;">${bill.studentRoll}</td></tr>` : ''}
-</table>
-<div class="sep"></div>
-<table>
-  <thead>
-    <tr>
-      <th style="text-align:left;">Item</th>
-      <th style="text-align:right;">Amt</th>
-    </tr>
-  </thead>
-  <tbody>${itemRows}</tbody>
-</table>
-<div class="sep"></div>
-<table>
-  <tr><td>Subtotal</td><td style="text-align:right;">&#8377;${bill.subtotal.toFixed(2)}</td></tr>
-  ${bill.pointsUsed > 0
-    ? `<tr><td>Points (${bill.pointsUsed} pts)</td><td style="text-align:right;">-&#8377;${bill.pointsDiscount.toFixed(2)}</td></tr>`
+  <!-- Brand block -->
+  <div class="brand-mark">
+    <span class="bar"></span>
+    <span class="brand-name">SMART CANTEEN</span>
+    <span class="bar"></span>
+  </div>
+  <div class="center brand-addr">Coimbatore Institute of Engineering &amp; Technology</div>
+  <div class="center brand-addr mute">Thondamuthur Road · Coimbatore 641109</div>
+
+  <div class="center"><span class="stamp">RECEIPT</span></div>
+
+  <div class="sep"></div>
+
+  <!-- Customer + invoice block -->
+  <table class="kv">
+    <tr><td>Invoice</td><td>${invoiceNo}</td></tr>
+    <tr><td>Date</td><td>${dateStr}</td></tr>
+    <tr><td>Customer</td><td>${bill.studentName || 'Guest'}</td></tr>
+    ${bill.studentRoll ? `<tr><td>Roll No</td><td>${bill.studentRoll}</td></tr>` : ''}
+  </table>
+
+  <div class="sep"></div>
+
+  <!-- Item lines with inverse-band header -->
+  <table class="items">
+    ${itemHeader}
+    ${bill.items.map(item => {
+      const unitPrice = parseFloat(item.price as unknown as string) || 0;
+      const amt = item.qty * unitPrice;
+      return `
+        <tr>
+          <td style="word-break:break-word;">${item.name} <span class="qty">×${item.qty}</span></td>
+          <td style="text-align:right;white-space:nowrap;">&#8377;${amt.toFixed(2)}</td>
+        </tr>`;
+    }).join('')}
+  </table>
+
+  <div class="sep"></div>
+
+  <!-- Totals -->
+  <table class="totals">
+    <tr><td>Subtotal</td><td class="right">&#8377;${bill.subtotal.toFixed(2)}</td></tr>
+    ${bill.pointsUsed > 0
+      ? `<tr><td>Points (${bill.pointsUsed} pts)</td><td class="right">- &#8377;${bill.pointsDiscount.toFixed(2)}</td></tr>`
+      : ''}
+  </table>
+  <table class="totals">
+    <tr class="total-row"><td>TOTAL PAID</td><td class="right">&#8377;${bill.totalAmount.toFixed(2)}</td></tr>
+  </table>
+
+  <!-- Payment + reward stats -->
+  <table class="stat-row" style="margin-top:4px;">
+    <tr><td>Paid via</td><td class="right">${bill.paymentMethod}</td></tr>
+    <tr><td>Points earned</td><td class="right">+${bill.pointsEarned} pts</td></tr>
+  </table>
+
+  ${bill.pointsEarned > 0
+    ? `<div class="reward">&#9733; +${bill.pointsEarned} POINTS BANKED &#9733;</div>`
     : ''}
-  <tr class="grand"><td>TOTAL PAID</td><td style="text-align:right;">&#8377;${bill.totalAmount.toFixed(2)}</td></tr>
-</table>
-<div class="sep"></div>
-<table>
-  <tr><td>Method</td><td style="text-align:right;">${bill.paymentMethod}</td></tr>
-  <tr><td>Points Earned</td><td style="text-align:right;">+${bill.pointsEarned} pts</td></tr>
-</table>
-<div class="sep"></div>
-<div class="footer">
-  <div class="bold">Thank you for ordering!</div>
-  <div>Please come again</div>
-</div>
+
+  <div class="sep"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="thanks">Thank you · Visit again</div>
+    <div class="mute" style="font-size:8.2px;">Keep this receipt for your records</div>
+    <div class="barcode-fallback">▌ ▌▌ ▌ ▌▌▌ ▌ ▌▌ ▌ ▌ ▌▌</div>
+    <div class="invoice-no">#${invoiceNo}</div>
+  </div>
 </body>
 </html>`;
 
