@@ -39,14 +39,18 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
+  // Defensive — match the OwnerDashboard fetcher fix, so a legacy API shape
+  // that arrives as the wrapper object never crashes the table.
+  const safeOrders = Array.isArray(orders) ? orders : [];
+
   const counts = useMemo(() => {
-    const map: Record<string, number> = { all: orders.length };
-    for (const o of orders) map[o.status] = (map[o.status] ?? 0) + 1;
+    const map: Record<string, number> = { all: safeOrders.length };
+    for (const o of safeOrders) map[o.status] = (map[o.status] ?? 0) + 1;
     return map;
-  }, [orders]);
+  }, [safeOrders]);
 
   const filtered = useMemo(() => {
-    let arr = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+    let arr = filter === 'all' ? safeOrders : safeOrders.filter(o => o.status === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       arr = arr.filter(o =>
@@ -60,7 +64,7 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
       const tb = new Date(b.created_at || 0).getTime();
       return tb - ta;
     });
-  }, [orders, filter, search]);
+  }, [safeOrders, filter, search]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -314,7 +318,7 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           <div className="orders-empty-glyph">◯</div>
           <div className="orders-empty-title">No orders in this slice</div>
           <div className="orders-empty-sub">
-            {orders.length === 0 ? 'Waiting for the first transmission' : 'Try a different filter or query'}
+            {safeOrders.length === 0 ? 'Waiting for the first transmission' : 'Try a different filter or query'}
           </div>
         </div>
       ) : (
