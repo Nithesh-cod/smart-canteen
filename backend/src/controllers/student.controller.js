@@ -149,13 +149,15 @@ const getOrderHistory = asyncHandler(async (req, res) => {
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
   const offset = (page - 1) * limit;
 
-  // Order model's getByStudent fetches up to `limit` rows; we pass limit + offset
-  // by using getAll with student filter for proper pagination support.
-  const orders = await Order.getAll({
+  // Order.getAll honours the student_id filter — without it the result would
+  // include every order in the system (privacy leak).
+  const { orders, total } = await Order.getAll({
     student_id: req.user.id,
     limit,
     offset
   });
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return res.status(200).json({
     success: true,
@@ -164,7 +166,9 @@ const getOrderHistory = asyncHandler(async (req, res) => {
       pagination: {
         page,
         limit,
-        has_next: orders.length === limit
+        total,
+        total_pages: totalPages,
+        has_next: page < totalPages
       }
     }
   });

@@ -41,6 +41,13 @@ router.post('/login', authController.login);
 router.get('/profile', verifyToken, authController.getProfile);
 
 /**
+ * @route   GET /api/auth/me
+ * @desc    Server-authoritative identity + role check (for frontend route guards)
+ * @access  Private (requires JWT token)
+ */
+router.get('/me', verifyToken, authController.getMe);
+
+/**
  * @route   POST /api/auth/logout
  * @desc    Logout student (client-side token removal)
  * @access  Private (requires JWT token)

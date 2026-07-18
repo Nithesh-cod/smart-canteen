@@ -8,38 +8,30 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/payment.controller');
-const { verifyToken, isAdmin, optionalAuth } = require('../middleware/auth.middleware');
-
-// ============================================================================
-// WEBHOOK ROUTE (must be before body-parsed routes if using raw body)
-// ============================================================================
-
-/**
- * @route   POST /api/payments/webhook
- * @desc    Razorpay webhook for payment notifications
- * @access  Public (Razorpay servers only — verified by HMAC signature)
- */
-router.post('/webhook', paymentController.handleWebhook);
+const { verifyToken, isAdmin, verifyTokenOrGuest } = require('../middleware/auth.middleware');
 
 // ============================================================================
 // STUDENT ROUTES
 // ============================================================================
+// NOTE: /webhook is mounted directly on the Express app in app.js — it needs
+// express.raw() before express.json() so the HMAC verifier can hash the
+// untouched request body (FIX C3). Do NOT register it here.
 
 /**
  * @route   POST /api/payments/create
  * @desc    Create Razorpay order for a canteen order
- * @access  Private (Student)
+ * @access  Private (Student JWT) or Guest (order-scoped guest token)
  * @body    { order_id }
  */
-router.post('/create', optionalAuth, paymentController.createPaymentOrder);
+router.post('/create', verifyTokenOrGuest, paymentController.createPaymentOrder);
 
 /**
  * @route   POST /api/payments/verify
  * @desc    Verify Razorpay payment signature, mark order paid, print bill
- * @access  Private (Student)
+ * @access  Private (Student JWT) or Guest (order-scoped guest token)
  * @body    { order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature }
  */
-router.post('/verify', optionalAuth, paymentController.verifyPayment);
+router.post('/verify', verifyTokenOrGuest, paymentController.verifyPayment);
 
 /**
  * @route   GET /api/payments/history

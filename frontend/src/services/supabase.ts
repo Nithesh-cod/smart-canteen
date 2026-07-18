@@ -48,6 +48,11 @@ type ChangeCallback = (payload: {
 // Track retry state per channel to avoid log spam
 const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+// Track the actual RealtimeChannel instance by name so we can properly remove
+// it in scheduleRetry — supabase.channel(name) always creates a NEW channel
+// object and does NOT look up an existing one, so we must keep our own registry.
+const activeChannels = new Map<string, RealtimeChannel>();
+
 /**
  * Subscribe to all row changes on a table.
  * Auto-retries with 5-second delay on TIMED_OUT (tables not in publication yet)
@@ -67,6 +72,13 @@ export const subscribeToTable = (
   // always get a RealtimeChannel back but NO WebSocket connection is attempted.
   if (!REALTIME_ENABLED) {
     return supabase.channel(`noop:${name}`);
+  }
+
+  // Guard: if a channel with this exact name is already subscribed, don't create
+  // a second one (React StrictMode / double-mount would crash with:
+  // "cannot add postgres_changes callbacks after subscribe()").
+  if (activeChannels.has(name)) {
+    return activeChannels.get(name)!;
   }
 
   const channel = supabase
@@ -99,18 +111,21 @@ export const subscribeToTable = (
             `   alter publication supabase_realtime add table orders, menu_items, students;`
           );
         }
-        scheduleRetry(table, onChange, name);
+        scheduleRetry(table, onChange, name, (channel as any)._retryAttempt ?? 1);
 
       } else if (status === 'CHANNEL_ERROR') {
         console.warn(`⚠️  Supabase Realtime: CHANNEL_ERROR on "${table}" — retrying…`);
-        scheduleRetry(table, onChange, name);
+        scheduleRetry(table, onChange, name, (channel as any)._retryAttempt ?? 1);
       }
     });
+
+  // Register the real instance so retry and unsubscribe can reference it.
+  activeChannels.set(name, channel);
 
   return channel;
 };
 
-/** Retry a failed subscription after a delay (5s → 15s → 30s → 60s cap). */
+/** Retry a failed subscription after a growing delay (5s → 10s → … → 60s cap). */
 function scheduleRetry(
   table: string,
   onChange: ChangeCallback,
@@ -121,11 +136,20 @@ function scheduleRetry(
   if (retryTimers.has(channelName)) return;
 
   const delayMs = Math.min(5_000 * attempt, 60_000);
+  // Closure captures the current attempt so the next retry uses attempt+1.
+  // The previous version recursed into subscribeToTable() with the default
+  // attempt=1, capping the back-off at 5 s forever (FIX L1).
+  const nextAttempt = attempt + 1;
   const timer = setTimeout(() => {
     retryTimers.delete(channelName);
-    // Remove old channel and re-subscribe
-    supabase.removeChannel(supabase.channel(channelName));
-    subscribeToTable(table, onChange, channelName);
+    const existing = activeChannels.get(channelName);
+    if (existing) {
+      supabase.removeChannel(existing);
+      activeChannels.delete(channelName);
+    }
+    const fresh = subscribeToTable(table, onChange, channelName);
+    // Stamp the new channel so a future failure picks up the incremented attempt.
+    (fresh as any)._retryAttempt = nextAttempt;
   }, delayMs);
   retryTimers.set(channelName, timer);
 }
@@ -140,6 +164,7 @@ export const unsubscribe = (channel: RealtimeChannel | null): void => {
     if (name) {
       const t = retryTimers.get(name);
       if (t) { clearTimeout(t); retryTimers.delete(name); }
+      activeChannels.delete(name);
     }
     supabase.removeChannel(channel);
   }

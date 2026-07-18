@@ -31,7 +31,7 @@ const getDashboard = asyncHandler(async (req, res) => {
   const topItems = await MenuItem.getTopSelling(5);
 
   // Recent 10 orders
-  const recentOrders = await Order.getAll({ limit: 10, offset: 0 });
+  const { orders: recentOrders } = await Order.getAll({ limit: 10, offset: 0 });
 
   // Pending orders count (from today's status_breakdown)
   const pendingEntry = (stats.status_breakdown || []).find(s => s.status === 'pending');
@@ -40,7 +40,7 @@ const getDashboard = asyncHandler(async (req, res) => {
   // Student tier distribution
   let tierDistribution = [];
   try {
-    const { students: allStudents } = await Student.getAll(1000, 0);
+    const { students: allStudents } = await Student.getAll({ limit: 1000, offset: 0 });
     const tierCounts = allStudents.reduce((acc, s) => {
       acc[s.tier] = (acc[s.tier] || 0) + 1;
       return acc;
@@ -179,36 +179,10 @@ const getStudents = asyncHandler(async (req, res) => {
 
   const offset = (page - 1) * limit;
 
-  // Student.getAll only supports limit/offset — fetch a larger batch and
-  // filter in-process when tier/search filters are requested
-  let { students, total } = await Student.getAll(
-    tier || search ? 1000 : limit,   // fetch more if we need to filter
-    tier || search ? 0    : offset
-  );
+  // Student.getAll pushes tier + search into SQL and returns the real total.
+  const { students, total } = await Student.getAll({ limit, offset, tier, search });
 
-  // Apply optional in-memory filters
-  if (tier) {
-    students = students.filter(s => s.tier === tier);
-  }
-
-  if (search) {
-    const q = search.toLowerCase();
-    students = students.filter(
-      s =>
-        (s.name         && s.name.toLowerCase().includes(q))      ||
-        (s.roll_number  && s.roll_number.toLowerCase().includes(q)) ||
-        (s.phone        && s.phone.includes(q))                    ||
-        (s.email        && s.email && s.email.toLowerCase().includes(q))
-    );
-  }
-
-  // If filters were applied we need to re-paginate manually
-  if (tier || search) {
-    total    = students.length;
-    students = students.slice(offset, offset + limit);
-  }
-
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return res.json({
     success: true,
@@ -318,36 +292,22 @@ const getOrders = asyncHandler(async (req, res) => {
     limit = 20
   } = req.query;
 
+  const parsedPage   = parseInt(page);
   const parsedLimit  = parseInt(limit);
-  const parsedOffset = (parseInt(page) - 1) * parsedLimit;
+  const parsedOffset = (parsedPage - 1) * parsedLimit;
 
   const filters = {
     status:         status         || undefined,
     payment_status: payment_status || undefined,
     from_date:      from_date      || undefined,
     to_date:        to_date        || undefined,
-    limit:          search ? 1000 : parsedLimit,  // fetch more if searching by student
-    offset:         search ? 0    : parsedOffset
+    search:         search         || undefined,
+    limit:          parsedLimit,
+    offset:         parsedOffset
   };
 
-  let orders = await Order.getAll(filters);
-
-  // In-memory search on student name / roll number
-  if (search) {
-    const q = search.toLowerCase();
-    orders = orders.filter(
-      o =>
-        (o.student_name && o.student_name.toLowerCase().includes(q)) ||
-        (o.student_roll && o.student_roll.toLowerCase().includes(q)) ||
-        (o.order_number && o.order_number.toLowerCase().includes(q))
-    );
-  }
-
-  const total = orders.length;
-
-  if (search) {
-    orders = orders.slice(parsedOffset, parsedOffset + parsedLimit);
-  }
+  const { orders, total } = await Order.getAll(filters);
+  const totalPages = Math.max(1, Math.ceil(total / parsedLimit));
 
   return res.json({
     success: true,
@@ -355,9 +315,9 @@ const getOrders = asyncHandler(async (req, res) => {
       orders,
       pagination: {
         total,
-        page:        parseInt(page),
+        page:        parsedPage,
         limit:       parsedLimit,
-        total_pages: Math.ceil(total / parsedLimit)
+        total_pages: totalPages
       }
     }
   });
@@ -654,8 +614,8 @@ const toggleOffer = asyncHandler(async (req, res) => {
 // ============================================================================
 
 const getPendingOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.getAll({ status: 'pending', limit: 200, offset: 0 });
-  return res.json({ success: true, data: { count: orders.length, orders } });
+  const { orders, total } = await Order.getAll({ status: 'pending', limit: 200, offset: 0 });
+  return res.json({ success: true, data: { count: total, orders } });
 });
 
 const getAnalyticsOverview = asyncHandler(async (req, res) => {
@@ -676,9 +636,9 @@ const getPeakHours = asyncHandler(async (req, res) => {
 
 const getDailyReport = asyncHandler(async (req, res) => {
   const date = req.query.date || new Date().toISOString().split('T')[0];
-  const orders = await Order.getAll({ from_date: date, to_date: date, limit: 500, offset: 0 });
+  const { orders, total } = await Order.getAll({ from_date: date, to_date: date, limit: 500, offset: 0 });
   const revenue = orders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
-  return res.json({ success: true, data: { date, orders, revenue, count: orders.length } });
+  return res.json({ success: true, data: { date, orders, revenue, count: total } });
 });
 
 const getMonthlyReport = asyncHandler(async (req, res) => {

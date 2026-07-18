@@ -72,12 +72,25 @@ const setupSocketHandlers = (io) => {
       socket.join('admin');
       connectedClients.owners.add(socket);
       logger.success(`👔 Owner joined admin room`);
-      
+
       // Send confirmation
       socket.emit('joined', {
         role: 'owner',
         message: 'Connected to admin dashboard'
       });
+    });
+
+    /**
+     * Join a per-order room. Used by the public tracking page and by guest
+     * kiosks that have no student account to subscribe to. The controller
+     * fans out order:status-change / order:ready-alert here too so guests
+     * receive the same realtime updates as logged-in students.
+     * @event order:join
+     * @param {string|number} orderId
+     */
+    socket.on('order:join', (orderId) => {
+      if (orderId === undefined || orderId === null || orderId === '') return;
+      socket.join(`order:${orderId}`);
     });
 
     // ========================================================================
