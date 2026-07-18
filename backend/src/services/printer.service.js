@@ -9,9 +9,11 @@
 
 const { ThermalPrinter, PrinterTypes } = require('node-thermal-printer');
 const PDFDocument = require('pdfkit');
-const fs   = require('fs');
-const os   = require('os');
-const path = require('path');
+const fs     = require('fs');
+const fsp    = require('fs').promises;
+const os     = require('os');
+const path   = require('path');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const isWindows = process.platform === 'win32';
@@ -171,9 +173,12 @@ const printToWindowsPrinter = async (pdfBuffer) => {
     return false;
   }
 
-  const tmpFile = path.join(os.tmpdir(), `receipt_${Date.now()}.pdf`);
+  // UUID instead of Date.now() — two concurrent prints can hit the same
+  // millisecond and clobber each other's temp file. Async I/O so the spooler
+  // doesn't block the Node event loop.
+  const tmpFile = path.join(os.tmpdir(), `receipt_${crypto.randomUUID()}.pdf`);
   try {
-    fs.writeFileSync(tmpFile, pdfBuffer);
+    await fsp.writeFile(tmpFile, pdfBuffer);
     await pdfToPrinter.print(tmpFile, {
       printer: printerName,
       scale:   'noscale',
@@ -184,7 +189,7 @@ const printToWindowsPrinter = async (pdfBuffer) => {
     console.warn('⚠️  pdf-to-printer error:', err.message);
     return false;
   } finally {
-    try { fs.unlinkSync(tmpFile); } catch {}
+    try { await fsp.unlink(tmpFile); } catch {}
   }
 };
 

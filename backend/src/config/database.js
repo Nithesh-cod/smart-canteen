@@ -101,22 +101,26 @@ pool.on('connect', () => {
 
 // Test the connection at startup — delay 2s so the pool has time to authenticate
 // before we probe it (avoids a false-positive error on Supabase's pooler).
-setTimeout(async () => {
-  try {
-    const result = await pool.query('SELECT NOW() AS now');
-    console.log(`✅ Database reachable — server time: ${result.rows[0].now}`);
-  } catch (err) {
-    console.error(
-      '\n❌  Database startup check failed.\n' +
-      '    Error: ' + err.message + '\n\n' +
-      '    Most likely causes:\n' +
-      '    1. Wrong password in DATABASE_URL (backend/.env)\n' +
-      '    2. Wrong host — make sure you copied the full URI from Supabase\n' +
-      '    3. Tables not created yet — run database/schema.sql in Supabase SQL Editor\n'
-    );
-    // Do not exit — requests will return 500 until the DB is fixed
-  }
-}, 2000);
+// Skipped when run by the migration script (MIGRATION_MODE) — that process is
+// short-lived and ends the pool itself.
+if (!process.env.MIGRATION_MODE) {
+  setTimeout(async () => {
+    try {
+      const result = await pool.query('SELECT NOW() AS now');
+      console.log(`✅ Database reachable — server time: ${result.rows[0].now}`);
+    } catch (err) {
+      console.error(
+        '\n❌  Database startup check failed.\n' +
+        '    Error: ' + err.message + '\n\n' +
+        '    Most likely causes:\n' +
+        '    1. Wrong password in DATABASE_URL (backend/.env)\n' +
+        '    2. Wrong host — make sure you copied the full URI from Supabase\n' +
+        '    3. Migrations not run — run `npm run migrate` in backend/\n'
+      );
+      // Do not exit — requests will return 500 until the DB is fixed
+    }
+  }, 2000);
+}
 
 pool.on('error', (err) => {
   // Log but never exit — errors are handled per-request
@@ -184,72 +188,14 @@ const checkConnection = async () => {
   }
 };
 
-// ─── Auto-migration: add stock_quantity to menu_items if missing ──────────────
-const runMigrations = async () => {
-  // ── stock_quantity column ────────────────────────────────────────────────
-  try {
-    await pool.query(`
-      ALTER TABLE menu_items
-      ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT -1
-    `);
-    console.log('✅ Migration: stock_quantity column ready');
-  } catch (err) {
-    console.warn('⚠️  Migration warning (stock_quantity):', err.message);
-  }
-
-  // ── Drop overly-restrictive category CHECK constraint ───────────────────
-  // The original schema locked categories to 4 values; we now allow any string.
-  try {
-    await pool.query(`
-      ALTER TABLE menu_items
-      DROP CONSTRAINT IF EXISTS menu_items_category_check
-    `);
-    console.log('✅ Migration: category CHECK constraint removed');
-  } catch (err) {
-    console.warn('⚠️  Migration warning (category check):', err.message);
-  }
-
-  // ── guest columns on orders (no-login student checkout) ─────────────────
-  try {
-    await pool.query(`
-      ALTER TABLE orders
-      ADD COLUMN IF NOT EXISTS guest_name  VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS guest_phone VARCHAR(20),
-      ADD COLUMN IF NOT EXISTS guest_roll  VARCHAR(50)
-    `);
-    console.log('✅ Migration: guest columns on orders ready');
-  } catch (err) {
-    console.warn('⚠️  Migration warning (guest columns):', err.message);
-  }
-
-  // ── offers table ─────────────────────────────────────────────────────────
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS offers (
-        id                  SERIAL PRIMARY KEY,
-        title               VARCHAR(200) NOT NULL,
-        description         TEXT DEFAULT '',
-        discount_percentage NUMERIC(5,2),
-        discount_amount     NUMERIC(10,2),
-        min_order_amount    NUMERIC(10,2),
-        valid_from          TIMESTAMPTZ NOT NULL,
-        valid_until         TIMESTAMPTZ NOT NULL,
-        is_active           BOOLEAN DEFAULT TRUE,
-        created_at          TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    console.log('✅ Migration: offers table ready');
-  } catch (err) {
-    console.warn('⚠️  Migration warning (offers table):', err.message);
-  }
-  // NOTE: To enable Supabase Realtime on orders/menu_items/students tables,
-  // run this once in the Supabase SQL Editor (requires superuser):
-  //   alter publication supabase_realtime add table orders, menu_items, students;
-  // The pooler connection user does not have ALTER PUBLICATION privileges.
-};
-
-// Run migrations after a short delay to allow pool to stabilize
-setTimeout(runMigrations, 3000);
+// ─── Migrations ──────────────────────────────────────────────────────────────
+// Schema changes are NO LONGER applied from inside the app process. The old
+// setTimeout auto-migration was non-deterministic and noisy (it fired AFTER
+// the migrate script had already ended the pool, producing scary errors).
+//
+// Migrations now run as an explicit pre-start step:
+//   npm run migrate    (backend/scripts/migrate.js → database/migrations/*.sql)
+// database/schema.sql is the single source of truth for fresh installs.
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 

@@ -102,12 +102,18 @@ export const selectCartCount = createSelector([selectCartItems], (items) =>
 /**
  * Final amount after subtracting points redemption value (1 pt = ₹0.10)
  * and any flat discount. Floored at 0.
+ *
+ * Math runs in paise to dodge IEEE-754 drift on 0.10 — keeps the displayed
+ * total consistent with the backend's authoritative paise-based calculation.
  */
 export const selectFinalTotal = createSelector(
   [selectCartTotal, selectDiscount, selectPointsToRedeem],
   (total, discount, points) => {
-    const pointsValue = points * 0.1;
-    return Math.max(0, total - pointsValue - discount);
+    const totalPaise    = Math.round(total * 100);
+    const discountPaise = Math.round(discount * 100);
+    const pointsPaise   = points * 10;
+    const finalPaise    = Math.max(0, totalPaise - pointsPaise - discountPaise);
+    return finalPaise / 100;
   }
 );
 

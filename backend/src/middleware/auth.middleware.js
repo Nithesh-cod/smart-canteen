@@ -1,7 +1,12 @@
 // ============================================================================
 // AUTH MIDDLEWARE
 // ============================================================================
-// JWT token verification and role-based access control
+// JWT verification and role-based access control.
+//
+// FIX S1/S2 — role is read from the students.role DB column, NOT from
+//             ADMIN_ROLLS / CHEF_ROLLS env-var lists (which are removed).
+// FIX S5    — verifyTokenOrGuest accepts a real student JWT OR a short-lived
+//             guest-checkout token scoped to one order.
 // ============================================================================
 
 const jwt = require('jsonwebtoken');
@@ -11,260 +16,203 @@ const Student = require('../models/Student');
 // VERIFY JWT TOKEN
 // ============================================================================
 /**
- * Verify JWT token and attach student to request
- * @middleware
+ * Verify the JWT and attach the student (with DB role) to req.user.
  */
 const verifyToken = async (req, res, next) => {
   try {
-    // Get token from header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Access denied. No token provided.'
-      });
+      return res.status(401).json({ status: 'error', message: 'Access denied. No token provided.' });
     }
-
-    // Check if Bearer token
     if (!authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid token format. Use: Bearer <token>'
-      });
+      return res.status(401).json({ status: 'error', message: 'Invalid token format. Use: Bearer <token>' });
     }
 
-    // Extract token
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    // Verify token
+    const token   = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Get student from database
+    // Guest tokens are not valid for student-authenticated routes.
+    if (decoded.guest === true) {
+      return res.status(401).json({ status: 'error', message: 'A full account is required for this action.' });
+    }
+
     const student = await Student.findById(decoded.id);
-
     if (!student) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Student not found'
-      });
+      return res.status(404).json({ status: 'error', message: 'Student not found' });
     }
-
     if (!student.is_active) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Account is deactivated'
-      });
+      return res.status(403).json({ status: 'error', message: 'Account is deactivated' });
     }
 
-    // Derive role from ADMIN_ROLLS / CHEF_ROLLS env vars so that
-    // routes using verifyToken alone (e.g. GET /orders) get the right role.
-    const adminRolls = (process.env.ADMIN_ROLLS || '').split(',').map(r => r.trim()).filter(Boolean);
-    const chefRolls  = (process.env.CHEF_ROLLS  || '').split(',').map(r => r.trim()).filter(Boolean);
-
-    let role = 'student';
-    if (adminRolls.includes(student.roll_number)) {
-      role = 'admin';
-    } else if (chefRolls.includes(student.roll_number)) {
-      role = 'chef';
-    }
-
-    // Attach student to request object
+    // Role is the DB column — the single source of truth.
     req.user = {
-      id: student.id,
+      id:          student.id,
       roll_number: student.roll_number,
-      name: student.name,
-      role
+      name:        student.name,
+      role:        student.role || 'student',
     };
 
     next();
-
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid token'
-      });
+      return res.status(401).json({ status: 'error', message: 'Invalid token' });
     }
-
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Token expired. Please login again.'
-      });
+      return res.status(401).json({ status: 'error', message: 'Token expired. Please login again.' });
     }
-
     console.error('Token verification error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to authenticate token',
-      error: error.message
-    });
+    res.status(500).json({ status: 'error', message: 'Failed to authenticate token' });
   }
 };
 
 // ============================================================================
-// CHECK IF ADMIN
+// VERIFY TOKEN OR GUEST  (FIX S5 — payment endpoints)
 // ============================================================================
 /**
- * Check if user has admin role
- * @middleware
- * @requires verifyToken
+ * Accepts either:
+ *   • a normal student JWT  → req.user populated, req.guestOrderId = null
+ *   • a guest-checkout JWT  → req.user = null, req.guestOrderId = <order id>
+ * A token is mandatory — unauthenticated callers are rejected.
  */
+const verifyTokenOrGuest = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ status: 'error', message: 'Access denied. No token provided.' });
+    }
+
+    const token   = authHeader.substring(7);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Guest checkout token — scoped to exactly one order id.
+    if (decoded.guest === true && decoded.order_id) {
+      req.user = null;
+      req.guestOrderId = decoded.order_id;
+      return next();
+    }
+
+    const student = await Student.findById(decoded.id);
+    if (!student) {
+      return res.status(404).json({ status: 'error', message: 'Student not found' });
+    }
+    if (!student.is_active) {
+      return res.status(403).json({ status: 'error', message: 'Account is deactivated' });
+    }
+
+    req.user = {
+      id:          student.id,
+      roll_number: student.roll_number,
+      name:        student.name,
+      role:        student.role || 'student',
+    };
+    req.guestOrderId = null;
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ status: 'error', message: 'Session expired. Please start the order again.' });
+    }
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+};
+
+// ============================================================================
+// ROLE CHECKS  (require verifyToken first)
+// ============================================================================
+
+/** Admin-only. */
 const isAdmin = (req, res, next) => {
-  try {
-    // This is a simplified version
-    // In production, you would:
-    // 1. Have an 'admins' table with admin user IDs
-    // 2. OR have a 'role' field in students table
-    // 3. OR use a separate admin authentication system
-
-    // For now, check if roll number is in admin list
-    const adminRolls = (process.env.ADMIN_ROLLS || '').split(',').map(r => r.trim()).filter(Boolean);
-
-    if (!adminRolls.includes(req.user.roll_number)) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Access denied. Admin privileges required.'
-      });
-    }
-
-    req.user.role = 'admin';
-    next();
-
-  } catch (error) {
-    console.error('Admin check error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to verify admin privileges'
-    });
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ status: 'error', message: 'Access denied. Admin privileges required.' });
   }
+  next();
 };
 
-// ============================================================================
-// CHECK IF CHEF
-// ============================================================================
-/**
- * Check if user has chef role
- * @middleware
- * @requires verifyToken
- */
+/** Chef OR admin. */
 const isChef = (req, res, next) => {
-  try {
-    // Similar to admin check
-    // In production, you would have a proper role system
-
-    const chefRolls  = (process.env.CHEF_ROLLS  || '').split(',').map(r => r.trim()).filter(Boolean);
-    const adminRolls = (process.env.ADMIN_ROLLS || '').split(',').map(r => r.trim()).filter(Boolean);
-
-    // Chef OR Admin can access
-    if (!chefRolls.includes(req.user.roll_number) &&
-        !adminRolls.includes(req.user.roll_number)) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Access denied. Chef privileges required.'
-      });
-    }
-
-    req.user.role = chefRolls.includes(req.user.roll_number) ? 'chef' : 'admin';
-    next();
-
-  } catch (error) {
-    console.error('Chef check error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to verify chef privileges'
-    });
+  if (!['chef', 'admin'].includes(req.user?.role)) {
+    return res.status(403).json({ status: 'error', message: 'Access denied. Chef privileges required.' });
   }
+  next();
 };
 
 // ============================================================================
-// CHECK IF OWNER OF RESOURCE
+// RESOURCE OWNERSHIP CHECK
 // ============================================================================
-/**
- * Check if user owns the resource (e.g., their own order)
- * @middleware
- * @requires verifyToken
- * @param {Function} getResourceOwnerId - Function to get owner ID from request
- */
 const isOwner = (getResourceOwnerId) => {
   return async (req, res, next) => {
     try {
       const ownerId = await getResourceOwnerId(req);
-      
       if (req.user.id !== ownerId) {
         return res.status(403).json({
           status: 'error',
-          message: 'Access denied. You can only access your own resources.'
+          message: 'Access denied. You can only access your own resources.',
         });
       }
-
       next();
-
     } catch (error) {
       console.error('Ownership check error:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to verify resource ownership'
-      });
+      res.status(500).json({ status: 'error', message: 'Failed to verify resource ownership' });
     }
   };
 };
 
 // ============================================================================
-// OPTIONAL AUTH (Token not required but validated if present)
+// OPTIONAL AUTH  (token not required, but validated if present)
 // ============================================================================
-/**
- * Optional authentication - validates token if present but doesn't require it
- * @middleware
- */
 const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // No token provided, continue without user
       req.user = null;
       return next();
     }
 
-    const token = authHeader.substring(7);
+    const token   = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const student = await Student.findById(decoded.id);
 
+    if (decoded.guest === true) {
+      req.user = null;
+      return next();
+    }
+
+    const student = await Student.findById(decoded.id);
     if (student && student.is_active) {
-      const adminRolls = (process.env.ADMIN_ROLLS || '').split(',').map(r => r.trim()).filter(Boolean);
-      const chefRolls  = (process.env.CHEF_ROLLS  || '').split(',').map(r => r.trim()).filter(Boolean);
-      let role = 'student';
-      if (adminRolls.includes(student.roll_number)) role = 'admin';
-      else if (chefRolls.includes(student.roll_number)) role = 'chef';
       req.user = {
-        id: student.id,
+        id:          student.id,
         roll_number: student.roll_number,
-        name: student.name,
-        role
+        name:        student.name,
+        role:        student.role || 'student',
       };
     } else {
       req.user = null;
     }
-
     next();
-
-  } catch (error) {
-    // Token invalid or expired, continue without user
+  } catch {
     req.user = null;
     next();
   }
 };
 
 // ============================================================================
+// GUEST TOKEN ISSUER  (FIX S5)
+// ============================================================================
+/**
+ * Issue a short-lived token that authorises payment calls for ONE specific
+ * order. Used for guest (no-account) checkout.
+ */
+const issueGuestToken = (orderId) =>
+  jwt.sign({ guest: true, order_id: orderId }, process.env.JWT_SECRET, { expiresIn: '30m' });
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
-
 module.exports = {
   verifyToken,
+  verifyTokenOrGuest,
   isAdmin,
   isChef,
   isOwner,
-  optionalAuth
+  optionalAuth,
+  issueGuestToken,
 };

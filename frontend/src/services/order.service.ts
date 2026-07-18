@@ -21,18 +21,30 @@ export interface GetAllParams {
 /**
  * Place a new order.
  * Pass guestInfo when the student is not logged in (guest checkout).
- * No Authorization header is sent — the backend accepts anonymous POST /orders.
+ *
+ * IMPORTANT — guest orders skip the auth interceptor entirely so that a
+ * stale admin token in localStorage (from the owner panel open in another
+ * tab) can never accidentally attach itself and make the order appear as if
+ * the admin placed it.  The backend's optionalAuth middleware correctly
+ * treats requests with no Authorization header as guest/anonymous.
  */
 export const create = async (
   items: CreateOrderItem[],
   pointsToRedeem: number = 0,
   guestInfo?: GuestInfo
 ): Promise<ApiResponse<Order>> => {
-  const response = await api.post<ApiResponse<Order>>('/orders', {
-    items,
-    points_to_redeem: pointsToRedeem,
-    ...(guestInfo ?? {}),
-  });
+  const isGuest = !!guestInfo;
+  const response = await api.post<ApiResponse<Order>>(
+    '/orders',
+    {
+      items,
+      points_to_redeem: pointsToRedeem,
+      ...(guestInfo ?? {}),
+    },
+    // skipAuth tells the request interceptor NOT to attach any JWT —
+    // anonymous kiosk orders must never be associated with an admin account.
+    isGuest ? ({ skipAuth: true } as any) : undefined
+  );
   return response.data;
 };
 

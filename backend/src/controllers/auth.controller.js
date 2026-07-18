@@ -1,13 +1,23 @@
 // ============================================================================
 // AUTH CONTROLLER
 // ============================================================================
-// Handles student authentication: signup, login, profile, logout, token refresh
+// Student authentication: signup, login, profile, me, logout, token refresh.
+//
+// FIX S1/S2 — Real authentication:
+//   • Passwords are bcrypt-hashed (cost 12) and stored in students.password_hash.
+//   • Login requires identifier + password.
+//   • Role comes from the students.role DB column — NOT from env-var roll lists.
+//   • Admin/chef accounts are created offline via scripts/create-admin.js.
 // ============================================================================
 
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const Student = require('../models/Student');
 const logger = require('../utils/logger');
 const { asyncHandler } = require('../middleware/error.middleware');
+
+const BCRYPT_COST = 12;
+const MIN_PASSWORD_LENGTH = 6;
 
 // ============================================================================
 // HELPERS
@@ -15,229 +25,222 @@ const { asyncHandler } = require('../middleware/error.middleware');
 
 /**
  * Build the JWT payload from a student row.
- * Role is derived from ADMIN_ROLLS / CHEF_ROLLS env vars so the frontend
- * can check access without making an extra API call.
- * @param {Object} student
- * @returns {{ id, roll_number, name, tier, role }}
+ * Role is read straight from the DB column — the single source of truth.
  */
-const buildPayload = (student) => {
-  const adminRolls = (process.env.ADMIN_ROLLS || '').split(',').map(r => r.trim()).filter(Boolean);
-  const chefRolls  = (process.env.CHEF_ROLLS  || '').split(',').map(r => r.trim()).filter(Boolean);
-  let role = 'student';
-  if (adminRolls.includes(student.roll_number))      role = 'admin';
-  else if (chefRolls.includes(student.roll_number))  role = 'chef';
-  return {
-    id: student.id,
-    roll_number: student.roll_number,
-    name: student.name,
-    tier: student.tier,
-    role,
-  };
-};
+const buildPayload = (student) => ({
+  id:          student.id,
+  roll_number: student.roll_number,
+  name:        student.name,
+  tier:        student.tier,
+  role:        student.role || 'student',
+});
 
-/**
- * Issue a short-lived access token (15 min).
- * @param {Object} student
- * @returns {string}
- */
+/** Issue an access token (default 24h). */
 const generateAccessToken = (student) =>
-  jwt.sign(buildPayload(student), process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '8h' });
+  jwt.sign(buildPayload(student), process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  });
 
-/**
- * Issue a long-lived refresh token (7 days).
- * @param {Object} student
- * @returns {string}
- */
+/** Issue a refresh token (7 days). */
 const generateRefreshToken = (student) =>
   jwt.sign(buildPayload(student), process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
-/**
- * Safe student shape to return in responses (no sensitive internals).
- * @param {Object} student - Raw DB row
- * @returns {Object}
- */
+/** Safe student shape for responses — never includes password_hash. */
 const safeStudent = (student) => ({
-  id: student.id,
-  name: student.name,
-  roll_number: student.roll_number,
-  phone: student.phone,
-  email: student.email,
-  department: student.department,
+  id:                student.id,
+  name:              student.name,
+  roll_number:       student.roll_number,
+  phone:             student.phone,
+  email:             student.email,
+  department:        student.department,
+  role:              student.role || 'student',
   profile_image_url: student.profile_image_url || null,
-  points: student.points,
-  tier: student.tier,
-  total_orders: student.total_orders || 0,
-  total_spent: student.total_spent || 0,
-  created_at: student.created_at,
-  last_login: student.last_login
+  points:            student.points,
+  tier:              student.tier,
+  total_orders:      student.total_orders || 0,
+  total_spent:       student.total_spent || 0,
+  created_at:        student.created_at,
+  last_login:        student.last_login,
 });
 
 // ============================================================================
 // SIGNUP
 // ============================================================================
-
 /**
  * POST /api/auth/signup
- * Create a new student account.
- * No password is stored — students authenticate via roll number or phone only.
- * Body: { name, roll_number, phone, email?, department? }
+ * Create a new STUDENT account (role is always 'student' here — admin/chef
+ * accounts are created offline via scripts/create-admin.js).
+ * Body: { name, roll_number, phone, password, email?, department? }
  */
 const signup = asyncHandler(async (req, res) => {
-  const { name, roll_number, phone, email, department } = req.body;
+  const { name, roll_number, phone, password, email, department } = req.body;
 
-  // Required field validation
-  if (!name || !roll_number || !phone) {
+  if (!name || !roll_number || !phone || !password) {
     return res.status(400).json({
       success: false,
-      message: 'name, roll_number, and phone are required'
+      message: 'name, roll_number, phone, and password are required',
     });
   }
 
-  // Duplicate roll number check
+  if (String(password).length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({
+      success: false,
+      message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+    });
+  }
+
   const existingRoll = await Student.findByRoll(roll_number.trim());
   if (existingRoll) {
-    return res.status(400).json({
+    return res.status(409).json({
       success: false,
-      message: 'A student account with this roll number already exists'
+      message: 'A student account with this roll number already exists',
     });
   }
 
-  // Duplicate phone check
   const existingPhone = await Student.findByPhone(phone.trim());
   if (existingPhone) {
-    return res.status(400).json({
+    return res.status(409).json({
       success: false,
-      message: 'A student account with this phone number already exists'
+      message: 'A student account with this phone number already exists',
     });
   }
 
-  // Persist new student (points = 0, tier = 'Bronze' set by model)
+  const password_hash = await bcrypt.hash(String(password), BCRYPT_COST);
+
   const student = await Student.create({
-    name: name.trim(),
-    roll_number: roll_number.trim(),
-    phone: phone.trim(),
-    email: email ? email.trim() : null,
-    department: department ? department.trim() : null
+    name:          name.trim(),
+    roll_number:   roll_number.trim(),
+    phone:         phone.trim(),
+    email:         email ? email.trim() : null,
+    department:    department ? department.trim() : null,
+    password_hash,
+    role:          'student',
   });
 
-  const token = generateAccessToken(student);
+  const token         = generateAccessToken(student);
   const refresh_token = generateRefreshToken(student);
 
   logger.success('Student registered', { id: student.id, roll_number: student.roll_number });
 
   return res.status(201).json({
     success: true,
-    data: {
-      student: safeStudent(student),
-      token,
-      refresh_token
-    }
+    data: { student: safeStudent(student), token, refresh_token },
   });
 });
 
 // ============================================================================
 // LOGIN
 // ============================================================================
-
 /**
  * POST /api/auth/login
- * Authenticate with roll number OR phone number (no password needed).
- * Body: { identifier }  — identifier is roll_number or phone
+ * Authenticate with roll number OR phone, plus a password.
+ * Body: { identifier, password }
  */
 const login = asyncHandler(async (req, res) => {
-  const { identifier } = req.body;
+  const { identifier, password } = req.body;
 
-  if (!identifier) {
+  if (!identifier || !password) {
     return res.status(400).json({
       success: false,
-      message: 'identifier (roll number or phone) is required'
+      message: 'identifier (roll number or phone) and password are required',
     });
   }
 
   const student = await Student.findByIdentifier(identifier.trim());
-  if (!student) {
-    // 404 — not 401 — so the axios interceptor does NOT fire auth:unauthorized.
-    // The student kiosk uses this to detect "new user" and falls through to signup.
-    return res.status(404).json({
+
+  // Uniform 401 for "no account" and "wrong password" — do not leak which.
+  if (!student || !student.password_hash) {
+    return res.status(401).json({
       success: false,
-      message: 'No account found with that roll number or phone number'
+      message: 'Invalid credentials',
     });
+  }
+
+  const passwordOk = await bcrypt.compare(String(password), student.password_hash);
+  if (!passwordOk) {
+    return res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
 
   if (!student.is_active) {
     return res.status(403).json({
       success: false,
-      message: 'Your account has been deactivated. Please contact support.'
+      message: 'Your account has been deactivated. Please contact support.',
     });
   }
 
-  // Record the login timestamp
   await Student.updateLastLogin(student.id);
 
-  const token = generateAccessToken(student);
+  const token         = generateAccessToken(student);
   const refresh_token = generateRefreshToken(student);
 
-  logger.info('Student logged in', { id: student.id, roll_number: student.roll_number });
+  logger.info('Student logged in', {
+    id: student.id, roll_number: student.roll_number, role: student.role,
+  });
 
   return res.status(200).json({
     success: true,
-    data: {
-      student: safeStudent(student),
-      token,
-      refresh_token
-    }
+    data: { student: safeStudent(student), token, refresh_token },
   });
 });
 
 // ============================================================================
 // GET PROFILE
 // ============================================================================
-
 /**
  * GET /api/auth/profile
- * Return the authenticated student's profile.
- * Requires verifyToken middleware — req.user is populated.
+ * Return the authenticated student's profile. Requires verifyToken.
  */
 const getProfile = asyncHandler(async (req, res) => {
   const student = await Student.findById(req.user.id);
 
   if (!student) {
-    return res.status(404).json({
-      success: false,
-      message: 'Student profile not found'
-    });
+    return res.status(404).json({ success: false, message: 'Student profile not found' });
   }
 
   return res.status(200).json({
     success: true,
+    data: { student: safeStudent(student) },
+  });
+});
+
+// ============================================================================
+// GET ME  (server-authoritative role check — used by frontend route guards)
+// ============================================================================
+/**
+ * GET /api/auth/me
+ * Returns the authenticated user's identity and role, verified server-side.
+ * Frontend route guards MUST use this instead of decoding the JWT client-side.
+ */
+const getMe = asyncHandler(async (req, res) => {
+  return res.status(200).json({
+    success: true,
     data: {
-      student: safeStudent(student)
-    }
+      id:          req.user.id,
+      role:        req.user.role,
+      name:        req.user.name,
+      roll_number: req.user.roll_number,
+    },
   });
 });
 
 // ============================================================================
 // LOGOUT
 // ============================================================================
-
 /**
  * POST /api/auth/logout
  * JWT is stateless — instruct the client to discard tokens.
- * Server-side confirmation only; no token blacklisting.
  */
 const logout = asyncHandler(async (req, res) => {
   logger.info('Student logged out', { id: req.user?.id });
-
   return res.status(200).json({
     success: true,
-    message: 'Logged out successfully. Please discard your tokens on the client.'
+    message: 'Logged out successfully. Please discard your tokens on the client.',
   });
 });
 
 // ============================================================================
 // REFRESH TOKEN
 // ============================================================================
-
 /**
  * POST /api/auth/refresh
  * Exchange a valid refresh token for a new access token.
@@ -247,13 +250,9 @@ const refreshToken = asyncHandler(async (req, res) => {
   const { refresh_token } = req.body;
 
   if (!refresh_token) {
-    return res.status(400).json({
-      success: false,
-      message: 'refresh_token is required'
-    });
+    return res.status(400).json({ success: false, message: 'refresh_token is required' });
   }
 
-  // Verify with the dedicated refresh secret
   let decoded;
   try {
     decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
@@ -261,45 +260,29 @@ const refreshToken = asyncHandler(async (req, res) => {
     if (err.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
-        message: 'Refresh token has expired. Please log in again.'
+        message: 'Refresh token has expired. Please log in again.',
       });
     }
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid refresh token'
-    });
+    return res.status(401).json({ success: false, message: 'Invalid refresh token' });
   }
 
-  // Confirm the student still exists and is active
+  // Re-fetch the student so role/active state is always current.
   const student = await Student.findById(decoded.id);
   if (!student) {
-    return res.status(404).json({
-      success: false,
-      message: 'Student not found'
-    });
+    return res.status(404).json({ success: false, message: 'Student not found' });
   }
-
   if (!student.is_active) {
-    return res.status(403).json({
-      success: false,
-      message: 'Account is deactivated'
-    });
+    return res.status(403).json({ success: false, message: 'Account is deactivated' });
   }
 
   const newToken = generateAccessToken(student);
 
   logger.info('Access token refreshed', { id: student.id });
 
-  return res.status(200).json({
-    success: true,
-    data: {
-      token: newToken
-    }
-  });
+  return res.status(200).json({ success: true, data: { token: newToken } });
 });
 
 // ============================================================================
 // EXPORTS
 // ============================================================================
-
-module.exports = { signup, login, getProfile, logout, refreshToken };
+module.exports = { signup, login, getProfile, getMe, logout, refreshToken };
