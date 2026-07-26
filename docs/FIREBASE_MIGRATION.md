@@ -128,13 +128,21 @@ valid_from, valid_until, created_at.
       in Chef / Kiosk / Owner; deleted `supabase.ts`; removed the dep; build passes
 - [x] Chef panel consolidated to a SINGLE Firestore realtime source (fixes the
       "orders don't show on other chef panels" bug); order ids are now strings
-- [ ] Security rules (lock down test-mode DB) + any composite indexes
+- [x] Security rules deployed (firestore.rules) — clients read-only, writes
+      server-only; orders/students gated by a Firebase Auth role claim. Verified
+      live: anon can read menu but NOT orders/students (S7 PII leak closed).
+- [x] Firebase custom-token auth: backend GET /api/auth/firebase-token +
+      AdminAuthGate signs staff into Firebase Auth so dashboard onSnapshot reads
+      are authorized. (Uses cert() signing — no IAM Credentials API needed.)
+- [ ] **USER ACTION**: enable Firebase Authentication in the console (one click)
+      so signInWithCustomToken works — until then dashboards fall back to 30s poll.
 - [x] Multilingual chef announcer (English/Tamil/Hindi/Marathi) — offline
       per-language templates, sequential queue, voice detection + "no voice"
       warning, tap-to-preview on language select. Text verified in all 4 langs.
+- [x] Live browser test: two chef panels sync via Firestore; ACCEPT on one moved
+      the order to PREPARING on the other automatically. **Multi-chef bug fixed.**
 - [ ] Migrate `print-agent.js` from Supabase Realtime → Firestore listener
-- [ ] Live browser test of multi-chef sync
-- [ ] End-to-end verification against the user's Firebase project
+- [ ] End-to-end re-verify once Firebase Authentication is enabled
 
 ## What the user must provide (critical path — I cannot create these)
 

@@ -15,6 +15,7 @@ const bcrypt = require('bcrypt');
 const Student = require('../models/Student');
 const logger = require('../utils/logger');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { createFirebaseToken } = require('../config/firebase');
 
 const BCRYPT_COST = 12;
 const MIN_PASSWORD_LENGTH = 6;
@@ -224,6 +225,20 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 // ============================================================================
+// FIREBASE CUSTOM TOKEN  (for authenticated client-side Firestore reads)
+// ============================================================================
+/**
+ * GET /api/auth/firebase-token
+ * Returns a short-lived Firebase custom token carrying the user's role so the
+ * staff dashboards can sign into Firebase Auth and be authorized by Firestore
+ * Security Rules (request.auth.token.role). Requires verifyToken.
+ */
+const getFirebaseToken = asyncHandler(async (req, res) => {
+  const firebase_token = await createFirebaseToken(req.user.id, { role: req.user.role });
+  return res.status(200).json({ success: true, data: { firebase_token } });
+});
+
+// ============================================================================
 // LOGOUT
 // ============================================================================
 /**
@@ -285,4 +300,4 @@ const refreshToken = asyncHandler(async (req, res) => {
 // ============================================================================
 // EXPORTS
 // ============================================================================
-module.exports = { signup, login, getProfile, getMe, logout, refreshToken };
+module.exports = { signup, login, getProfile, getMe, getFirebaseToken, logout, refreshToken };

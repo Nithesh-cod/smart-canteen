@@ -1,5 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as authService from '../../services/auth.service';
+import { signIntoFirebase } from '../../services/firebase';
+
+/**
+ * Sign into Firebase Auth (custom token from the backend) so the dashboard's
+ * client-side Firestore listeners are authorized by Security Rules. Best-effort:
+ * if it fails, realtime reads will be denied but the REST-backed UI still works.
+ */
+async function ensureFirebaseAuth(): Promise<void> {
+  try {
+    const res = await authService.getFirebaseToken();
+    if (res.success && res.data?.firebase_token) {
+      await signIntoFirebase(res.data.firebase_token);
+    }
+  } catch {
+    /* non-fatal — dashboards degrade to REST polling if realtime is denied */
+  }
+}
 
 // ============================================================================
 // AdminAuthGate  (FIX S1/S2)
@@ -42,6 +59,7 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
     try {
       const me = await authService.getMe();
       if (me.success && me.data && requiredRoles.includes(me.data.role)) {
+        await ensureFirebaseAuth(); // authorize Firestore realtime before showing the dashboard
         setStatus('authenticated');
       } else if (me.success && me.data) {
         setStatus('wrong_role');
@@ -88,6 +106,7 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
         return;
       }
       authService.saveAuthData(result.data.token, result.data.student);
+      await ensureFirebaseAuth(); // authorize Firestore realtime before showing the dashboard
       setStatus('authenticated');
     } catch (err) {
       const msg =
