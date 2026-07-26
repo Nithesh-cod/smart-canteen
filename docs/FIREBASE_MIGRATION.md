@@ -114,14 +114,20 @@ valid_from, valid_until, created_at.
 - [x] Firestore data-model design (this doc)
 - [x] Backend Firebase Admin config (`backend/src/config/firebase.js`)
 - [x] Frontend Firebase client config (`frontend/src/services/firebase.ts`)
-- [ ] Port models: `Student`, `MenuItem`, `Order` → Firestore
-- [ ] Order-create transaction with atomic stock reserve (Firestore)
-- [ ] Seed script: menu + admin/chef/student accounts → Firestore
+- [x] Port `Student` model → Firestore (live-verified)
+- [x] Port `MenuItem` model → Firestore (live-verified)
+- [x] Port `Order` model → Firestore (live-verified)
+- [x] Order-create transaction with atomic stock reserve — **race-tested, no oversell**
+- [x] Owner report aggregations on Firestore (getStats / getRevenueData / getTopSelling)
+- [x] Seed script: menu + admin/chef/student accounts → Firestore (live-verified)
+- [x] Controllers: rewrite pg `transaction()` blocks (payment finalise/refund) → Firestore
+- [x] Remove `config/database` from the boot path — **server boots on Firestore**
+- [x] Offers ported to Firestore (`Offer` model)
+- [x] End-to-end HTTP smoke test: health, menu, login, /me, dashboard, order+stock
 - [ ] Frontend: replace Supabase `subscribeToTable` with Firestore `onSnapshot`
       in Chef / Kiosk / Owner / Tracking; delete `supabase.ts`
 - [ ] Retire Socket.IO order-sync (Firestore listeners replace it)
 - [ ] Security rules + composite indexes
-- [ ] Owner report aggregations on Firestore
 - [ ] Multilingual chef announcer (Tamil/Hindi/Marathi/English)
 - [ ] End-to-end verification against the user's Firebase project
 

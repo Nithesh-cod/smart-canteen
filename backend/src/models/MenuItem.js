@@ -1,306 +1,259 @@
 // ============================================================================
-// MENU ITEM MODEL
+// MENU ITEM MODEL  (Firestore)
 // ============================================================================
-// Database operations for menu_items table
+// Firestore implementation of menu_items. Public API + return shapes match the
+// old Postgres model so controllers don't change.
+//
+// IDs: the frontend treats menu-item ids as NUMBERS (cart keys, favorites[]),
+// so we keep numeric ids — stored as the string doc-id ("1","2",…) and
+// returned as `id: Number(doc.id)`. New items get their next id from
+// counters/menu_item_id (the seed script sets that counter to the max seeded id).
+//
+// Collection: menu_items/{numericId}
 // ============================================================================
 
-const { query } = require('../config/database');
+const { FieldValue, runTransaction, collections } = require('../config/firebase');
+
+const menuCol = collections.menuItems;
+
+const tsToIso = (v) => (v && typeof v.toDate === 'function' ? v.toDate().toISOString() : v);
+
+/** Doc → plain menu item with a numeric id. */
+const toItem = (doc) => {
+  if (!doc || !doc.exists) return null;
+  const d = doc.data();
+  return {
+    id: Number(doc.id),
+    ...d,
+    created_at: tsToIso(d.created_at),
+    updated_at: tsToIso(d.updated_at),
+  };
+};
+
+const byCategoryThenName = (a, b) =>
+  String(a.category || '').localeCompare(String(b.category || '')) ||
+  String(a.name || '').localeCompare(String(b.name || ''));
 
 // ============================================================================
-// FIND OPERATIONS
+// FIND
 // ============================================================================
 
-/**
- * Get all menu items
- * @returns {Promise<Array>} Array of all menu items
- */
+/** All menu items, ordered by category then name. */
 const getAll = async () => {
-  const result = await query(
-    'SELECT * FROM menu_items ORDER BY category, name'
-  );
-  return result.rows;
+  const snap = await menuCol().get();
+  return snap.docs.map(toItem).sort(byCategoryThenName);
 };
 
-/**
- * Get only available menu items
- * @returns {Promise<Array>} Array of available menu items
- */
+/** Available items only. */
 const getAvailable = async () => {
-  const result = await query(
-    'SELECT * FROM menu_items WHERE is_available = true ORDER BY category, name'
-  );
-  return result.rows;
+  const snap = await menuCol().where('is_available', '==', true).get();
+  return snap.docs.map(toItem).sort(byCategoryThenName);
 };
 
-/**
- * Get menu items by category
- * @param {string} category - Category name (starters, mains, desserts, beverages)
- * @returns {Promise<Array>} Array of menu items
- */
+/** Available items in a category, ordered by name. */
 const getByCategory = async (category) => {
-  const result = await query(
-    'SELECT * FROM menu_items WHERE category = $1 AND is_available = true ORDER BY name',
-    [category]
-  );
-  return result.rows;
+  const snap = await menuCol().where('category', '==', category).get();
+  return snap.docs
+    .map(toItem)
+    .filter((m) => m.is_available === true)
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 };
 
-/**
- * Get single menu item by ID
- * @param {number} id - Menu item ID
- * @returns {Promise<Object|null>} Menu item or null
- */
-const getById = async (id) => {
-  const result = await query(
-    'SELECT * FROM menu_items WHERE id = $1',
-    [id]
-  );
-  return result.rows[0] || null;
-};
+/** Single item by (numeric) id. */
+const getById = async (id) => toItem(await menuCol().doc(String(id)).get());
 
-/**
- * Search menu items by name
- * @param {string} searchTerm - Search term
- * @returns {Promise<Array>} Array of matching menu items
- */
+/** Search available items by name substring, best-rated first. */
 const search = async (searchTerm) => {
-  const result = await query(
-    `SELECT * FROM menu_items 
-     WHERE LOWER(name) LIKE LOWER($1) 
-     AND is_available = true 
-     ORDER BY rating DESC`,
-    [`%${searchTerm}%`]
-  );
-  return result.rows;
+  const term = String(searchTerm).toLowerCase();
+  const snap = await menuCol().where('is_available', '==', true).get();
+  return snap.docs
+    .map(toItem)
+    .filter((m) => m.name && m.name.toLowerCase().includes(term))
+    .sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
 };
 
 // ============================================================================
-// CREATE OPERATION
+// CREATE
 // ============================================================================
-
 /**
- * Create a new menu item (Admin only)
- * @param {Object} itemData - Menu item data
- * @returns {Promise<Object>} Created menu item
+ * Create a menu item (admin). Assigns the next numeric id from the counter.
  */
 const create = async ({
-  name,
-  description,
-  category,
-  price,
-  image_url,
-  is_vegetarian,
-  preparation_time,
-  stock_quantity
+  name, description, category, price, image_url,
+  is_vegetarian, preparation_time, stock_quantity,
 }) => {
-  const result = await query(
-    `INSERT INTO menu_items
-     (name, description, category, price, image_url, is_vegetarian, preparation_time, stock_quantity)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING *`,
-    [name, description || null, category, price, image_url || null, is_vegetarian || true, preparation_time || 10, stock_quantity !== undefined ? stock_quantity : -1]
-  );
-  return result.rows[0];
+  const counterRef = collections.counters().doc('menu_item_id');
+
+  const newId = await runTransaction(async (tx) => {
+    const snap = await tx.get(counterRef);
+    const next = (snap.exists ? Number(snap.data().seq) || 0 : 0) + 1;
+    tx.set(counterRef, { seq: next }, { merge: true });
+    return next;
+  });
+
+  const ref = menuCol().doc(String(newId));
+  await ref.set({
+    name,
+    description:      description || null,
+    category,
+    price:            Number(price),
+    image_url:        image_url || null,
+    is_available:     true,
+    rating:           4.0,
+    is_vegetarian:    is_vegetarian === undefined ? true : is_vegetarian,
+    preparation_time: preparation_time || 10,
+    stock_quantity:   stock_quantity !== undefined ? stock_quantity : -1,
+    created_at:       FieldValue.serverTimestamp(),
+    updated_at:       FieldValue.serverTimestamp(),
+  });
+  return toItem(await ref.get());
 };
 
 // ============================================================================
-// UPDATE OPERATIONS
+// UPDATE
 // ============================================================================
-
-/**
- * Update menu item (Admin only)
- * @param {number} id - Menu item ID
- * @param {Object} data - Fields to update
- * @returns {Promise<Object>} Updated menu item
- */
+/** Partial update of the allowed fields. */
 const update = async (id, data) => {
-  const fields = [];
-  const values = [];
-  let paramCount = 1;
+  const ref = menuCol().doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) return null;
 
-  // Build dynamic UPDATE query
-  if (data.name !== undefined) {
-    fields.push(`name = $${paramCount++}`);
-    values.push(data.name);
-  }
-  if (data.description !== undefined) {
-    fields.push(`description = $${paramCount++}`);
-    values.push(data.description);
-  }
-  if (data.category !== undefined) {
-    fields.push(`category = $${paramCount++}`);
-    values.push(data.category);
-  }
-  if (data.price !== undefined) {
-    fields.push(`price = $${paramCount++}`);
-    values.push(data.price);
-  }
-  if (data.image_url !== undefined) {
-    fields.push(`image_url = $${paramCount++}`);
-    values.push(data.image_url);
-  }
-  if (data.is_vegetarian !== undefined) {
-    fields.push(`is_vegetarian = $${paramCount++}`);
-    values.push(data.is_vegetarian);
-  }
-  if (data.preparation_time !== undefined) {
-    fields.push(`preparation_time = $${paramCount++}`);
-    values.push(data.preparation_time);
-  }
-  if (data.rating !== undefined) {
-    fields.push(`rating = $${paramCount++}`);
-    values.push(data.rating);
-  }
-  if (data.stock_quantity !== undefined) {
-    fields.push(`stock_quantity = $${paramCount++}`);
-    values.push(data.stock_quantity);
-  }
+  const allowed = ['name', 'description', 'category', 'price', 'image_url',
+    'is_vegetarian', 'preparation_time', 'rating', 'stock_quantity'];
+  const upd = {};
+  for (const k of allowed) if (data[k] !== undefined) upd[k] = data[k];
+  if (Object.keys(upd).length === 0) throw new Error('No fields to update');
+  upd.updated_at = FieldValue.serverTimestamp();
 
-  if (fields.length === 0) {
-    throw new Error('No fields to update');
-  }
-
-  values.push(id);
-  const result = await query(
-    `UPDATE menu_items SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-    values
-  );
-  return result.rows[0];
+  await ref.update(upd);
+  return toItem(await ref.get());
 };
 
-/**
- * Toggle item availability (Chef/Admin)
- * @param {number} id - Menu item ID
- * @param {boolean} isAvailable - Availability status
- * @returns {Promise<Object>} Updated menu item
- */
+/** Toggle availability (chef/admin). */
 const toggleAvailability = async (id, isAvailable) => {
-  const result = await query(
-    'UPDATE menu_items SET is_available = $1 WHERE id = $2 RETURNING *',
-    [isAvailable, id]
-  );
-  return result.rows[0];
+  const ref = menuCol().doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  await ref.update({ is_available: isAvailable, updated_at: FieldValue.serverTimestamp() });
+  return toItem(await ref.get());
 };
 
 // ============================================================================
-// DELETE OPERATION
+// DELETE
 // ============================================================================
-
-/**
- * Delete menu item (Admin only)
- * @param {number} id - Menu item ID
- * @returns {Promise<boolean>} Success status
- */
 const deleteItem = async (id) => {
-  const result = await query(
-    'DELETE FROM menu_items WHERE id = $1',
-    [id]
-  );
-  return result.rowCount > 0;
+  const ref = menuCol().doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) return false;
+  await ref.delete();
+  return true;
 };
 
 // ============================================================================
-// STATISTICS
+// STOCK  (kept for compatibility; order-create's reserveStock is authoritative)
 // ============================================================================
+/** Decrement tracked stock (clamped at 0). -1 = unlimited, left untouched. */
+const decrementStock = async (id, quantity) => {
+  const ref = menuCol().doc(String(id));
+  return runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const cur = Number(snap.data().stock_quantity);
+    if (cur === -1) return null; // unlimited — not tracked
+    const next = Math.max(0, cur - quantity);
+    tx.update(ref, { stock_quantity: next, updated_at: FieldValue.serverTimestamp() });
+    return { ...toItem(snap), stock_quantity: next };
+  });
+};
 
+// ============================================================================
+// BULK
+// ============================================================================
+/** Bulk availability toggle. Returns number of items updated. */
+const bulkUpdateAvailability = async (ids, isAvailable) => {
+  const { db } = require('../config/firebase');
+  const batch = db.batch();
+  for (const id of ids) {
+    batch.update(menuCol().doc(String(id)), {
+      is_available: isAvailable,
+      updated_at:   FieldValue.serverTimestamp(),
+    });
+  }
+  await batch.commit();
+  return ids.length;
+};
+
+// ============================================================================
+// STATISTICS  (aggregated in memory — Firestore has no JOIN/GROUP BY)
+// ============================================================================
 /**
- * Get top-selling items
- * @param {number} limit - Number of items to return
- * @returns {Promise<Array>} Top selling items
+ * Top-selling items over the last 30 days, from paid orders. Order items are
+ * inline on each order doc, so we scan recent orders and tally per item.
  */
 const getTopSelling = async (limit = 10) => {
-  const result = await query(
-    `SELECT 
-       m.id,
-       m.name,
-       m.category,
-       m.price,
-       m.image_url,
-       COUNT(oi.id) as order_count,
-       SUM(oi.quantity) as total_quantity,
-       SUM(oi.price * oi.quantity) as total_revenue
-     FROM menu_items m
-     INNER JOIN order_items oi ON m.id = oi.menu_item_id
-     INNER JOIN orders o ON oi.order_id = o.id
-     WHERE o.payment_status = 'paid'
-     AND o.created_at >= NOW() - INTERVAL '30 days'
-     GROUP BY m.id, m.name, m.category, m.price, m.image_url
-     ORDER BY order_count DESC
-     LIMIT $1`,
-    [limit]
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  // Single-field range on created_at (auto-indexed); filter paid in memory.
+  const snap = await collections.orders().where('created_at', '>=', cutoff).get();
+
+  const tally = new Map(); // menu_item_id → { order_count, total_quantity, total_revenue }
+  for (const doc of snap.docs) {
+    const o = doc.data();
+    if (o.payment_status !== 'paid') continue;
+    for (const it of o.items || []) {
+      const key = Number(it.menu_item_id);
+      const cur = tally.get(key) || { order_count: 0, total_quantity: 0, total_revenue: 0 };
+      cur.order_count   += 1;
+      cur.total_quantity += Number(it.quantity) || 0;
+      cur.total_revenue  += (Number(it.price) || 0) * (Number(it.quantity) || 0);
+      tally.set(key, cur);
+    }
+  }
+
+  const top = [...tally.entries()]
+    .sort((a, b) => b[1].order_count - a[1].order_count)
+    .slice(0, limit);
+
+  // Attach menu-item display fields.
+  const results = await Promise.all(
+    top.map(async ([menuId, agg]) => {
+      const m = await getById(menuId);
+      return {
+        id: menuId,
+        name:     m?.name     ?? `#${menuId}`,
+        category: m?.category ?? null,
+        price:    m?.price    ?? null,
+        image_url: m?.image_url ?? null,
+        ...agg,
+      };
+    })
   );
-  return result.rows;
+  return results;
 };
 
-/**
- * Get menu statistics by category
- * @returns {Promise<Array>} Category statistics
- */
+/** Per-category stats over available items. */
 const getCategoryStats = async () => {
-  const result = await query(
-    `SELECT 
-       category,
-       COUNT(*) as item_count,
-       AVG(price) as avg_price,
-       MIN(price) as min_price,
-       MAX(price) as max_price
-     FROM menu_items
-     WHERE is_available = true
-     GROUP BY category
-     ORDER BY category`
-  );
-  return result.rows;
+  const snap = await menuCol().where('is_available', '==', true).get();
+  const groups = new Map();
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    const g = groups.get(d.category) || { prices: [] };
+    g.prices.push(Number(d.price) || 0);
+    groups.set(d.category, g);
+  }
+  return [...groups.entries()]
+    .map(([category, g]) => ({
+      category,
+      item_count: g.prices.length,
+      avg_price:  g.prices.reduce((s, p) => s + p, 0) / g.prices.length,
+      min_price:  Math.min(...g.prices),
+      max_price:  Math.max(...g.prices),
+    }))
+    .sort((a, b) => String(a.category).localeCompare(String(b.category)));
 };
 
 // ============================================================================
-// BULK OPERATIONS
+// EXPORTS  (identical surface to the old pg model)
 // ============================================================================
-
-// ============================================================================
-// STOCK OPERATIONS
-// ============================================================================
-
-/**
- * Decrement stock quantity for an item after order placement.
- * Only decrements if stock is tracked (stock_quantity >= 0, not -1 = unlimited).
- * Uses GREATEST(0, ...) so it never goes negative.
- * @param {number} id - Menu item ID
- * @param {number} quantity - Amount to decrement
- * @returns {Promise<Object|null>} Updated menu item, or null if not tracked / not found
- */
-const decrementStock = async (id, quantity) => {
-  const result = await query(
-    `UPDATE menu_items
-     SET stock_quantity = GREATEST(0, stock_quantity - $1)
-     WHERE id = $2 AND stock_quantity IS NOT NULL AND stock_quantity <> -1
-     RETURNING *`,
-    [quantity, id]
-  );
-  return result.rows[0] || null;
-};
-
-// ============================================================================
-// BULK OPERATIONS
-// ============================================================================
-
-/**
- * Bulk update availability (e.g., mark all items unavailable)
- * @param {Array<number>} ids - Array of menu item IDs
- * @param {boolean} isAvailable - Availability status
- * @returns {Promise<number>} Number of items updated
- */
-const bulkUpdateAvailability = async (ids, isAvailable) => {
-  const result = await query(
-    'UPDATE menu_items SET is_available = $1 WHERE id = ANY($2::int[])',
-    [isAvailable, ids]
-  );
-  return result.rowCount;
-};
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
 module.exports = {
   getAll,
   getAvailable,
@@ -314,5 +267,5 @@ module.exports = {
   decrementStock,
   getTopSelling,
   getCategoryStats,
-  bulkUpdateAvailability
+  bulkUpdateAvailability,
 };

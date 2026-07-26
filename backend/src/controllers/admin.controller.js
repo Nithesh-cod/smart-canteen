@@ -9,6 +9,7 @@
 const Order    = require('../models/Order');
 const Student  = require('../models/Student');
 const MenuItem = require('../models/MenuItem');
+const Offer    = require('../models/Offer');
 const logger   = require('../utils/logger');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { getConnectedClientsCount } = require('../sockets/orderSocket');
@@ -252,28 +253,18 @@ const toggleStudentStatus = asyncHandler(async (req, res) => {
     });
   }
 
-  // Student.updateProfile handles is_active if the DB column exists.
-  // We pass it via a direct query since updateProfile only allows select fields.
-  // Re-use the query utility through the model's connection.
-  const { query } = require('../config/database');
+  // adminUpdate writes is_active and returns the sanitized row (no hash).
+  const updatedStudent = await Student.adminUpdate(studentId, { is_active });
 
-  const result = await query(
-    'UPDATE students SET is_active = $1 WHERE id = $2 RETURNING *',
-    [is_active, studentId]
-  );
-
-  if (result.rowCount === 0) {
+  if (!updatedStudent) {
     return res.status(404).json({ success: false, message: 'Student not found' });
   }
-
-  const updatedStudent = result.rows[0];
 
   logger.info(`Student ${studentId} (${updatedStudent.name}) is_active set to ${is_active}`);
 
   return res.json({
     success: true,
-    // Strip password_hash — RETURNING * includes it.
-    data: { student: Student.toSafe(updatedStudent) }
+    data: { student: updatedStudent }
   });
 });
 
@@ -406,11 +397,11 @@ const bulkUpdateMenuAvailability = asyncHandler(async (req, res) => {
 const getSystemHealth = asyncHandler(async (req, res) => {
   const uptimeSeconds = process.uptime();
 
-  // DB connectivity check — run a lightweight query
+  // DB connectivity check — a lightweight Firestore read
   let dbStatus = 'connected';
   try {
-    const { query } = require('../config/database');
-    await query('SELECT 1');
+    const { db } = require('../config/firebase');
+    await db.collection('menu_items').limit(1).get();
   } catch {
     dbStatus = 'disconnected';
   }
@@ -521,22 +512,13 @@ const groupByPeriod = (dailyRows, period) => {
  * DELETE /api/admin/offers/:id — delete an offer
  * PATCH /api/admin/offers/:id/toggle — flip is_active
  */
-const { query: dbQuery } = require('../config/database');
-
 const getOffers = asyncHandler(async (req, res) => {
-  const result = await dbQuery(
-    'SELECT * FROM offers ORDER BY created_at DESC'
-  );
-  return res.json({ success: true, data: result.rows });
+  const offers = await Offer.getAll();
+  return res.json({ success: true, data: offers });
 });
 
 const createOffer = asyncHandler(async (req, res) => {
-  const {
-    title, description = '',
-    discount_percentage = null, discount_amount = null,
-    min_order_amount = null, valid_from, valid_until,
-    is_active = true,
-  } = req.body;
+  const { title, valid_from, valid_until } = req.body;
 
   if (!title || !valid_from || !valid_until) {
     return res.status(400).json({
@@ -545,68 +527,32 @@ const createOffer = asyncHandler(async (req, res) => {
     });
   }
 
-  const result = await dbQuery(
-    `INSERT INTO offers
-       (title, description, discount_percentage, discount_amount,
-        min_order_amount, valid_from, valid_until, is_active)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-     RETURNING *`,
-    [title, description, discount_percentage, discount_amount,
-     min_order_amount, valid_from, valid_until, is_active]
-  );
-
-  return res.status(201).json({ success: true, data: result.rows[0] });
+  const offer = await Offer.create(req.body);
+  return res.status(201).json({ success: true, data: offer });
 });
 
 const updateOffer = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const {
-    title, description, discount_percentage, discount_amount,
-    min_order_amount, valid_from, valid_until, is_active,
-  } = req.body;
-
-  const result = await dbQuery(
-    `UPDATE offers SET
-       title               = COALESCE($1, title),
-       description         = COALESCE($2, description),
-       discount_percentage = $3,
-       discount_amount     = $4,
-       min_order_amount    = $5,
-       valid_from          = COALESCE($6, valid_from),
-       valid_until         = COALESCE($7, valid_until),
-       is_active           = COALESCE($8, is_active)
-     WHERE id = $9
-     RETURNING *`,
-    [title, description, discount_percentage ?? null, discount_amount ?? null,
-     min_order_amount ?? null, valid_from, valid_until, is_active, id]
-  );
-
-  if (result.rowCount === 0) {
+  const offer = await Offer.update(req.params.id, req.body);
+  if (!offer) {
     return res.status(404).json({ success: false, message: 'Offer not found' });
   }
-
-  return res.json({ success: true, data: result.rows[0] });
+  return res.json({ success: true, data: offer });
 });
 
 const deleteOffer = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const result = await dbQuery('DELETE FROM offers WHERE id = $1', [id]);
-  if (result.rowCount === 0) {
+  const ok = await Offer.remove(req.params.id);
+  if (!ok) {
     return res.status(404).json({ success: false, message: 'Offer not found' });
   }
   return res.status(204).send();
 });
 
 const toggleOffer = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const result = await dbQuery(
-    'UPDATE offers SET is_active = NOT is_active WHERE id = $1 RETURNING *',
-    [id]
-  );
-  if (result.rowCount === 0) {
+  const offer = await Offer.toggle(req.params.id);
+  if (!offer) {
     return res.status(404).json({ success: false, message: 'Offer not found' });
   }
-  return res.json({ success: true, data: result.rows[0] });
+  return res.json({ success: true, data: offer });
 });
 
 // ============================================================================

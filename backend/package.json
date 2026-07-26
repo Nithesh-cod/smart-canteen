@@ -9,6 +9,7 @@
     "print-agent": "node print-agent.js",
     "migrate": "node scripts/migrate.js",
     "create-admin": "node scripts/create-admin.js",
+    "seed:firebase": "node scripts/seed-firebase.js",
     "db:setup": "psql -U postgres -d canteen_db -f ../database/schema.sql"
   },
   "keywords": [
