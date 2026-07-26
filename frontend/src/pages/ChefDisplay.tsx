@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as orderService from '../services/order.service';
 import * as menuService from '../services/menu.service';
-import socketService from '../services/socket.service';
-import { subscribeToTable, unsubscribe } from '../services/supabase';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { subscribeToCollection } from '../services/firebase';
 import type { Order, MenuItem, OrderStatus } from '../types';
 import api from '../services/api';
 import { useToast } from '../components/common/Toast';
@@ -142,7 +140,7 @@ const STATUS_CONFIG: Record<string, { border: string; glow: string; label: strin
 
 const ChefOrderCard: React.FC<{
   order: Order;
-  onStatusUpdate: (id: number, status: OrderStatus) => void;
+  onStatusUpdate: (id: string, status: OrderStatus) => void;
   onSpeak?: (order: Order) => void;
   isSpeaking?: boolean;
 }> = ({ order, onStatusUpdate, onSpeak, isSpeaking }) => {
@@ -606,9 +604,9 @@ const COLUMNS: Array<{ status: OrderStatus; label: string; color: string; glow: 
 
 const OrdersTab: React.FC<{
   orders: Order[];
-  onStatusUpdate: (id: number, s: OrderStatus) => void;
+  onStatusUpdate: (id: string, s: OrderStatus) => void;
   onSpeak: (order: Order) => void;
-  speakingOrderId: number | null;
+  speakingOrderId: string | null;
 }> = ({ orders, onStatusUpdate, onSpeak, speakingOrderId }) => (
   <>
     <style>{`
@@ -1183,7 +1181,7 @@ const ChefDisplay: React.FC = () => {
   const [ttsEnabled, setTtsEnabled]     = useState(true);
   const [ttsLang, setTtsLang]           = useState('en-IN');
   const [ttsLangOpen, setTtsLangOpen]   = useState(false);
-  const [speakingOrderId, setSpeakingOrderId] = useState<number | null>(null);
+  const [speakingOrderId, setSpeakingOrderId] = useState<string | null>(null);
   const ttsQueueRef = useRef<SpeechSynthesisUtterance[]>([]);
   const ttsDropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -1368,115 +1366,53 @@ const ChefDisplay: React.FC = () => {
     init();
 
     const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
-    // Polling fallback — refresh active orders + today's stats every 20s
-    const pollInterval = setInterval(() => { fetchOrders(); fetchTodayOrders(); }, 20_000);
+    // Backstop poll — Firestore is the primary realtime push; this only covers
+    // a dropped listener / brief offline blip.
+    const pollInterval = setInterval(() => { fetchOrders(); fetchTodayOrders(); }, 30_000);
 
-    try {
-      socketService.connect();
-      socketService.joinAsChef();
-      socketService.on('connect', () => setConnectionStatus('connected'));
-      socketService.on('disconnect', () => setConnectionStatus('disconnected'));
-      socketService.on('order:created', (newOrder: Order) => {
-        setOrders(prev => {
-          if (prev.find(o => o.id === newOrder.id)) return prev;
-          return [newOrder, ...prev];
-        });
-        playNotificationBeep();
-        // Auto-announce new order in chef's preferred language
-        speakOrder(newOrder);
-      });
-      // Backend emits `order:updated` to the kitchen room with a partial
-      // payload (orderId / status / orderNumber). Look up by id locally and
-      // patch the status — don't replace the entire order with the partial.
-      socketService.on('order:updated', (data: { orderId: number; status: OrderStatus }) => {
-        if (!data || data.orderId === undefined) return;
-        setOrders(prev => {
-          if (['completed', 'cancelled'].includes(data.status)) {
-            return prev.filter(o => o.id !== data.orderId);
-          }
-          return prev.map(o => o.id === data.orderId ? { ...o, status: data.status } : o);
-        });
-        // Keep today's grid in sync whenever an order status changes
-        fetchTodayOrders();
-      });
-      socketService.on('order:cancelled', (data: { id: number }) => {
-        setOrders(prev => prev.filter(o => o.id !== data.id));
-      });
-      socketService.on('menu:availability-changed', (updatedItem: MenuItem) => {
-        setMenuItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
-      });
-      socketService.on('menu:stock-updated', (data: { id: number; stock_quantity: number; is_available: boolean }) => {
-        setMenuItems(prev => prev.map(item =>
-          item.id === data.id
-            ? { ...item, stock_quantity: data.stock_quantity, is_available: data.is_available }
-            : item
-        ));
-      });
-      socketService.on('menu:item-updated', (updated: any) => {
-        setMenuItems(prev => prev.map(item =>
-          item.id === updated.id ? { ...item, ...updated } : item
-        ));
-      });
+    // ── Firestore realtime — the SINGLE source of truth ──────────────────────
+    // Every chef panel that mounts this listener receives every order change
+    // pushed instantly by Firestore. THIS is what keeps multiple chef screens
+    // in sync — the old Supabase + Socket.IO combo (which depended on a working
+    // WebSocket proxy) was the cause of "orders don't show on other panels".
+    const knownActiveIds = new Set<string>();
+    let primed = false;
+
+    const ordersUnsub = subscribeToCollection<any>('orders', (rows) => {
       setConnectionStatus('connected');
-    } catch (err) {
-      console.error('Socket connection failed:', err);
-      setConnectionStatus('disconnected');
-    }
 
-    // ── Supabase Realtime — direct DB-level subscriptions ─────────────────
-    // These fire independently of Socket.IO so nothing is missed even if
-    // the WebSocket briefly disconnects.
-    const ordersChannel = subscribeToTable('orders', ({ eventType, new: row }) => {
-      if (eventType === 'INSERT') {
-        // Re-fetch so we get the full joined data (items, student name, etc.)
-        // TTS is triggered by the socket:order:created event (which has full data);
-        // Supabase Realtime INSERT is a backup signal — only beep here to avoid double-speech.
-        fetchOrders();
-        fetchTodayOrders();
-        playNotificationBeep();
-      } else if (eventType === 'UPDATE') {
-        const updated = row as any;
-        if (['completed', 'cancelled'].includes(updated.status)) {
-          setOrders(prev => prev.filter(o => o.id !== updated.id));
-          fetchTodayOrders(); // update food grid when order completes
-        } else if (['pending', 'preparing', 'ready'].includes(updated.status)) {
-          // Partial update — just patch the status; full data arrives via Socket.IO
-          setOrders(prev => prev.map(o =>
-            o.id === updated.id ? { ...o, status: updated.status } : o
-          ));
+      // Detect newly-arrived active orders → beep + voice announce (once each).
+      const active = rows.filter((r) => ['pending', 'preparing', 'ready'].includes(r.status));
+      if (primed) {
+        for (const r of active) {
+          if (!knownActiveIds.has(r.id)) {
+            playNotificationBeep();
+            speakOrder(r as Order); // announce in the chef's chosen language
+          }
         }
       }
-    }, 'chef:orders');
+      knownActiveIds.clear();
+      active.forEach((r) => knownActiveIds.add(r.id));
+      primed = true;
 
-    const menuChannel = subscribeToTable('menu_items', ({ eventType, new: row }) => {
-      if (eventType === 'UPDATE') {
-        const item = row as any;
-        setMenuItems(prev => prev.map(m =>
-          m.id === item.id ? { ...m, ...item } : m
-        ));
-      } else {
-        // INSERT / DELETE — full refresh
-        fetchMenuItems();
-      }
-    }, 'chef:menu_items');
+      // Refresh the enriched display data (student names, joined fields) via REST.
+      fetchOrders();
+      fetchTodayOrders();
+    });
+
+    const menuUnsub = subscribeToCollection<any>('menu_items', () => {
+      fetchMenuItems();
+    });
 
     return () => {
       clearInterval(clockInterval);
       clearInterval(pollInterval);
-      socketService.off('connect');
-      socketService.off('disconnect');
-      socketService.off('order:created');
-      socketService.off('order:updated');
-      socketService.off('order:cancelled');
-      socketService.off('menu:availability-changed');
-      socketService.off('menu:stock-updated');
-      socketService.off('menu:item-updated');
-      unsubscribe(ordersChannel);
-      unsubscribe(menuChannel);
+      ordersUnsub();
+      menuUnsub();
     };
   }, [fetchOrders, fetchMenuItems, fetchTodayOrders, playNotificationBeep, speakOrder]);
 
-  const handleStatusUpdate = useCallback(async (orderId: number, status: OrderStatus) => {
+  const handleStatusUpdate = useCallback(async (orderId: string, status: OrderStatus) => {
     setOrders(prev => {
       if (['completed', 'cancelled'].includes(status)) {
         return prev.filter(o => o.id !== orderId);

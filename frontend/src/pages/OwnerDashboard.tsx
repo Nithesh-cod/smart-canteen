@@ -10,8 +10,7 @@ import Modal from '../components/common/Modal';
 import { useToast } from '../components/common/Toast';
 import api from '../services/api';
 import socketService from '../services/socket.service';
-import { subscribeToTable, unsubscribe } from '../services/supabase';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { subscribeToCollection } from '../services/firebase';
 import type { Order, MenuItem, Student, DashboardStats, Offer } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1313,24 +1312,16 @@ const OwnerDashboard: React.FC = () => {
     socket.on('menu:item-updated', handleMenuChange);
     socket.on('menu:bulk-updated', handleMenuChange);
 
-    // ─ Supabase Realtime (direct DB subscriptions — catches anything missed) ─
-    const ordersChannel: RealtimeChannel = subscribeToTable(
-      'orders',
-      () => { fetchOrders(); fetchDashboard(); },
-      'owner:orders'
-    );
-
-    const menuChannel: RealtimeChannel = subscribeToTable(
-      'menu_items',
-      () => { fetchMenu(); },
-      'owner:menu_items'
-    );
-
-    const studentsChannel: RealtimeChannel = subscribeToTable(
-      'students',
-      () => { fetchStudents(); fetchDashboard(); },
-      'owner:students'
-    );
+    // ─ Firestore Realtime — the reliable push that keeps the dashboard live ─
+    const ordersUnsub = subscribeToCollection('orders', () => {
+      fetchOrders(); fetchDashboard();
+    });
+    const menuUnsub = subscribeToCollection('menu_items', () => {
+      fetchMenu();
+    });
+    const studentsUnsub = subscribeToCollection('students', () => {
+      fetchStudents(); fetchDashboard();
+    });
 
     return () => {
       socket.off('order:created', handleOrderChange);
@@ -1340,9 +1331,9 @@ const OwnerDashboard: React.FC = () => {
       socket.off('menu:stock-updated', handleMenuChange);
       socket.off('menu:item-updated', handleMenuChange);
       socket.off('menu:bulk-updated', handleMenuChange);
-      unsubscribe(ordersChannel);
-      unsubscribe(menuChannel);
-      unsubscribe(studentsChannel);
+      ordersUnsub();
+      menuUnsub();
+      studentsUnsub();
     };
   }, [fetchOrders, fetchDashboard, fetchMenu, fetchStudents]);
 

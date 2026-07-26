@@ -12,7 +12,7 @@ export interface VerifyPaymentData {
   razorpay_order_id: string;
   razorpay_payment_id: string;
   razorpay_signature: string;
-  order_id: number;
+  order_id: string;
 }
 
 /**
@@ -25,7 +25,7 @@ export interface VerifyPaymentData {
  * would otherwise be overwritten by an order-scoped token.
  */
 export const createPaymentOrder = async (
-  orderId: number,
+  orderId: string,
   guestToken?: string | null
 ): Promise<ApiResponse<RazorpayOrderData>> => {
   const config: any = {};
@@ -109,7 +109,7 @@ export const downloadBillPDF = (base64: string, filename: string): void => {
 
 export interface BillData {
   orderNumber: string;
-  orderId: number;
+  orderId: string;
   createdAt: string;
   studentName: string;
   studentRoll: string;
@@ -408,7 +408,7 @@ export const loadRazorpayScript = (): Promise<boolean> => {
 };
 
 export interface InitiatePaymentOptions {
-  orderId: number;
+  orderId: string;
   amount: number;
   studentName: string;
   studentPhone: string;

@@ -15,7 +15,7 @@ import { addItem, removeItem, updateQuantity, clearCart, selectCartCount } from 
 // removeItem is used by handleDecrement below
 import * as menuService from '../services/menu.service';
 import * as authService from '../services/auth.service';
-import { subscribeToTable, unsubscribe } from '../services/supabase';
+import { subscribeToCollection } from '../services/firebase';
 import socketService from '../services/socket.service';
 import MenuGrid from '../components/student/MenuGrid';
 import Cart from '../components/student/Cart';
@@ -203,23 +203,10 @@ const StudentKiosk: React.FC = () => {
       loadMenu();
     }
 
-    // ── Supabase Realtime: auto-update menu when any row changes ─────────────
-    const menuChannel = subscribeToTable('menu_items', ({ eventType, new: row }) => {
-      if (eventType === 'UPDATE') {
-        const updated = row as Record<string, any>;
-        dispatch(updateItem({
-          id:             updated.id            as number,
-          is_available:   updated.is_available  as boolean,
-          stock_quantity: updated.stock_quantity as number | undefined,
-          price:          updated.price         as number,
-          name:           updated.name          as string,
-          image_url:      updated.image_url     as string | undefined,
-        }));
-      } else {
-        // INSERT or DELETE → full refresh
-        loadMenu();
-      }
-    }, 'kiosk:menu_items');
+    // ── Firestore Realtime: refresh the menu whenever any item changes ───────
+    const menuUnsub = subscribeToCollection('menu_items', () => {
+      loadMenu();
+    });
 
     // ── Socket.IO fallback for stock/availability changes ────────────────────
     // Fires when owner/chef edits a menu item directly (even if Supabase Realtime
@@ -272,7 +259,7 @@ const StudentKiosk: React.FC = () => {
     socket.on('menu:bulk-updated',         handleBulkUpdate);
 
     return () => {
-      unsubscribe(menuChannel);
+      menuUnsub();
       socket.off('menu:stock-updated',       handleStockUpdate);
       socket.off('menu:availability-changed', handleAvailabilityChange);
       socket.off('menu:item-updated',         handleItemUpdated);

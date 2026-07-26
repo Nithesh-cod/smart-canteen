@@ -53,7 +53,7 @@ export interface OrderItem {
 }
 
 export interface Order {
-  id: number;
+  id: string; // Firestore document id
   student_id: string;
   order_number: string;
   status: OrderStatus;

@@ -124,11 +124,15 @@ valid_from, valid_until, created_at.
 - [x] Remove `config/database` from the boot path — **server boots on Firestore**
 - [x] Offers ported to Firestore (`Offer` model)
 - [x] End-to-end HTTP smoke test: health, menu, login, /me, dashboard, order+stock
-- [ ] Frontend: replace Supabase `subscribeToTable` with Firestore `onSnapshot`
-      in Chef / Kiosk / Owner / Tracking; delete `supabase.ts`
-- [ ] Retire Socket.IO order-sync (Firestore listeners replace it)
-- [ ] Security rules + composite indexes
-- [ ] Multilingual chef announcer (Tamil/Hindi/Marathi/English)
+- [x] Frontend: replaced Supabase `subscribeToTable` with Firestore `onSnapshot`
+      in Chef / Kiosk / Owner; deleted `supabase.ts`; removed the dep; build passes
+- [x] Chef panel consolidated to a SINGLE Firestore realtime source (fixes the
+      "orders don't show on other chef panels" bug); order ids are now strings
+- [ ] Security rules (lock down test-mode DB) + any composite indexes
+- [ ] Multilingual chef announcer (Tamil/Hindi/Marathi/English) — new-order
+      detection is already wired to speakOrder; upgrade speakOrder for languages
+- [ ] Migrate `print-agent.js` from Supabase Realtime → Firestore listener
+- [ ] Live browser test of multi-chef sync
 - [ ] End-to-end verification against the user's Firebase project
 
 ## What the user must provide (critical path — I cannot create these)
