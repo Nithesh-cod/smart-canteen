@@ -187,7 +187,9 @@ const getStudents = asyncHandler(async (req, res) => {
   return res.json({
     success: true,
     data: {
-      students,
+      // Strip password_hash — SELECT * in Student.getAll includes it, and it
+      // must never reach a client, admin or not.
+      students: students.map(Student.toSafe),
       pagination: {
         total,
         page,
@@ -224,7 +226,8 @@ const getStudentDetail = asyncHandler(async (req, res) => {
   return res.json({
     success: true,
     data: {
-      student,
+      // getStats does SELECT s.* — strip password_hash before returning.
+      student: Student.toSafe(student),
       recent_orders: recentOrders
     }
   });
@@ -269,7 +272,8 @@ const toggleStudentStatus = asyncHandler(async (req, res) => {
 
   return res.json({
     success: true,
-    data: { student: updatedStudent }
+    // Strip password_hash — RETURNING * includes it.
+    data: { student: Student.toSafe(updatedStudent) }
   });
 });
 

@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
+const accountController = require('../controllers/account.controller');
 const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
 
 // ============================================================================
@@ -91,6 +92,35 @@ router.get('/students/:studentId', adminController.getStudentDetail);
  * @body    { is_active } (boolean)
  */
 router.patch('/students/:studentId/status', adminController.toggleStudentStatus);
+
+// ============================================================================
+// ACCOUNT MANAGEMENT ROUTES  (staff & student accounts)
+// ============================================================================
+
+/**
+ * @route   GET /api/admin/accounts
+ * @desc    List accounts, optionally filtered by role
+ * @access  Private (Admin only)
+ * @query   role? - student|chef|admin|staff|all (default: staff)
+ * @query   page?, limit?
+ */
+router.get('/accounts', accountController.listAccounts);
+
+/**
+ * @route   POST /api/admin/accounts
+ * @desc    Create a student / chef / admin account
+ * @access  Private (Admin only)
+ * @body    { name, roll_number, phone, password, role, email?, department? }
+ */
+router.post('/accounts', accountController.createAccount);
+
+/**
+ * @route   PATCH /api/admin/accounts/:id
+ * @desc    Update an account's role, password, and/or active state
+ * @access  Private (Admin only)
+ * @body    { role?, password?, is_active? }
+ */
+router.patch('/accounts/:id', accountController.updateAccount);
 
 // ============================================================================
 // ORDER MANAGEMENT ROUTES

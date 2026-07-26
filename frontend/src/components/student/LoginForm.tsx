@@ -23,7 +23,7 @@ function getRecentStudents(): Student[] {
 
 function saveRecentStudent(student: Student): void {
   const existing = getRecentStudents().filter((s) => s.id !== student.id);
-  const updated = [student, ...existing].slice(0, 5);e
+  const updated = [student, ...existing].slice(0, 5);
   localStorage.setItem(RECENT_KEY, JSON.stringify(updated));
 }
 
