@@ -7,7 +7,6 @@
 
 const Order          = require('../models/Order');
 const Student        = require('../models/Student');
-const { query, transaction } = require('../config/database');
 const razorpayService = require('../services/razorpay.service');
 const printerService  = require('../services/printer.service');
 const logger          = require('../utils/logger');
@@ -320,15 +319,12 @@ async function finalisePayment(order, { io, skipBill = false } = {}) {
   let updatedStudent = null;
   if (order.student_id) {
     try {
-      updatedStudent = await transaction(async (client) => {
-        if (order.points_used > 0) {
-          await Student.deductPoints(order.student_id, order.points_used, client);
-        }
-        if (order.points_earned > 0) {
-          await Student.addPoints(order.student_id, order.points_earned, client);
-        }
-        await Student.updateStats(order.student_id, parseFloat(order.total_amount), client);
-        return await Student.updateTier(order.student_id, client);
+      // One atomic Firestore transaction: points (used deducted, earned added),
+      // spend/order stats, and tier — same semantics as the old pg block.
+      updatedStudent = await Student.applyPurchase(order.student_id, {
+        pointsUsed:   order.points_used,
+        pointsEarned: order.points_earned,
+        amount:       parseFloat(order.total_amount),
       });
     } catch (pointsErr) {
       logger.error('finalisePayment: points reconciliation failed', pointsErr);
@@ -497,14 +493,8 @@ const processRefund = asyncHandler(async (req, res) => {
   // admin saw a confusing error after a successful refund. The
   // UPDATE … WHERE payment_status='paid' is race-free: exactly one
   // request flips the row, the other sees rowCount === 0 and 400s out.
-  const claim = await query(
-    `UPDATE orders
-        SET payment_status = 'refunding'
-      WHERE id = $1 AND payment_status = 'paid'
-      RETURNING *`,
-    [order_id]
-  );
-  if (claim.rowCount === 0) {
+  const claimed = await Order.compareAndSetPaymentStatus(order_id, 'paid', 'refunding');
+  if (!claimed) {
     return res.status(400).json({
       success: false,
       message: `Cannot refund an order with payment_status="${order.payment_status}". ` +
@@ -522,10 +512,7 @@ const processRefund = asyncHandler(async (req, res) => {
     );
   } catch (rzpErr) {
     // Gateway refused — roll the row back to 'paid' so the admin can retry.
-    await query(
-      `UPDATE orders SET payment_status = 'paid' WHERE id = $1 AND payment_status = 'refunding'`,
-      [order_id]
-    );
+    await Order.compareAndSetPaymentStatus(order_id, 'refunding', 'paid');
     logger.error(`Razorpay refund call failed for order #${order.order_number}`, rzpErr);
     return res.status(502).json({
       success: false,
@@ -543,22 +530,17 @@ const processRefund = asyncHandler(async (req, res) => {
   let updatedOrder;
   let stockRestored;
   try {
-    const result = await transaction(async (client) => {
-      const updated = await Order.updatePayment(order.id, {
-        payment_status:      'refunded',
-        payment_method:      order.payment_method,
-        razorpay_order_id:   order.razorpay_order_id,
-        razorpay_payment_id: order.razorpay_payment_id,
-        razorpay_signature:  order.razorpay_signature
-      }, client);
-      const restored = await Order.restoreStock(order.id, client);
-      if (!['completed', 'cancelled'].includes(order.status)) {
-        await Order.cancel(order.id, client);
-      }
-      return { updated, restored };
+    updatedOrder = await Order.updatePayment(order.id, {
+      payment_status:      'refunded',
+      payment_method:      order.payment_method,
+      razorpay_order_id:   order.razorpay_order_id,
+      razorpay_payment_id: order.razorpay_payment_id,
+      razorpay_signature:  order.razorpay_signature
     });
-    updatedOrder  = result.updated;
-    stockRestored = result.restored;
+    stockRestored = await Order.restoreStock(order.id);
+    if (!['completed', 'cancelled'].includes(order.status)) {
+      await Order.cancel(order.id);
+    }
   } catch (dbErr) {
     logger.error(
       `Refund DB transaction failed AFTER successful Razorpay refund ` +
@@ -577,11 +559,7 @@ const processRefund = asyncHandler(async (req, res) => {
     // least mirror the gateway; stock + status are documented above for
     // human follow-up.
     try {
-      await query(
-        `UPDATE orders SET payment_status = 'refunded' ` +
-        `WHERE id = $1 AND payment_status = 'refunding'`,
-        [order_id]
-      );
+      await Order.compareAndSetPaymentStatus(order_id, 'refunding', 'refunded');
     } catch (rollbackErr) {
       logger.error(
         `Even the fallback payment_status update failed. ` +
@@ -606,19 +584,10 @@ const processRefund = asyncHandler(async (req, res) => {
   // cases) won't push them below zero. Skip entirely for guest orders.
   if (order.student_id) {
     try {
-      await transaction(async (client) => {
-        if (order.points_earned > 0) {
-          await Student.deductPoints(order.student_id, order.points_earned, client);
-        }
-        if (order.points_used > 0) {
-          await Student.addPoints(order.student_id, order.points_used, client);
-        }
-        await Student.updateStats(
-          order.student_id,
-          -parseFloat(order.total_amount), // negative delta reverses
-          client
-        );
-        await Student.updateTier(order.student_id, client);
+      await Student.applyReversal(order.student_id, {
+        pointsUsed:   order.points_used,
+        pointsEarned: order.points_earned,
+        amount:       parseFloat(order.total_amount),
       });
     } catch (pointsErr) {
       logger.error('Failed to reconcile points/stats on refund', pointsErr);

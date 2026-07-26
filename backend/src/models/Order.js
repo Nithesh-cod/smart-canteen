@@ -1,638 +1,440 @@
 // ============================================================================
-// ORDER MODEL
+// ORDER MODEL  (Firestore)
 // ============================================================================
-// Database operations for orders and order_items tables
-// ============================================================================
-
-const { query, transaction } = require('../config/database');
-
-// Mutating helpers below take an optional pg PoolClient so the controller
-// can group several writes inside one transaction. `runner` falls back to
-// the pool-based `query` when no client is supplied so existing callers
-// don't need to change.
-const runner = (client) =>
-  client
-    ? (text, params) => client.query(text, params)
-    : query;
-
-// ============================================================================
-// CREATE OPERATION
+// Firestore implementation of orders. Public API + return shapes match the old
+// Postgres model so the controllers don't change.
+//
+// Order items are stored INLINE on the order doc (orders/{id}.items[]) — no
+// separate order_items collection, so no joins. Orders are enriched with
+// student_name / student_roll / student_phone on read (from the student doc, or
+// the guest_* fields for guest checkouts), exactly like the old SQL COALESCE.
+//
+// The order-create path reserves stock ATOMICALLY inside one Firestore
+// transaction (read menu docs → verify stock → write decrements + order +
+// order-number counter), which fixes the overselling race.
 // ============================================================================
 
+const { FieldValue, runTransaction, collections } = require('../config/firebase');
+
+const ordersCol   = collections.orders;
+const menuCol      = collections.menuItems;
+const studentsCol  = collections.students;
+const countersCol  = collections.counters;
+
+const tsToIso   = (v) => (v && typeof v.toDate === 'function' ? v.toDate().toISOString() : v || null);
+const tsMillis  = (doc) => { const c = doc.data().created_at; return c && c.toMillis ? c.toMillis() : 0; };
+
+// ── enrichment ───────────────────────────────────────────────────────────────
+
+const shapeOrder = (doc, studentData) => {
+  const d = doc.data();
+  const o = {
+    id: doc.id,
+    ...d,
+    created_at:     tsToIso(d.created_at),
+    updated_at:     tsToIso(d.updated_at),
+    completed_at:   tsToIso(d.completed_at),
+    bill_issued_at: tsToIso(d.bill_issued_at),
+    items: d.items || [],
+  };
+  if (studentData) {
+    o.student_name   = studentData.name;
+    o.student_roll   = studentData.roll_number;
+    o.student_phone  = studentData.phone;
+    o.student_points = studentData.points;
+    o.student_dept   = studentData.department;
+  } else {
+    o.student_name  = d.guest_name  || null;
+    o.student_roll  = d.guest_roll  || null;
+    o.student_phone = d.guest_phone || null;
+  }
+  return o;
+};
+
+const enrichOne = async (doc) => {
+  if (!doc || !doc.exists) return null;
+  const sid = doc.data().student_id;
+  let sData = null;
+  if (sid) {
+    const s = await studentsCol().doc(String(sid)).get();
+    if (s.exists) sData = s.data();
+  }
+  return shapeOrder(doc, sData);
+};
+
+/** Batch-enrich a list of order docs (one read per unique student). */
+const enrichMany = async (docs) => {
+  const ids = [...new Set(docs.map((d) => d.data().student_id).filter(Boolean).map(String))];
+  const map = new Map();
+  await Promise.all(ids.map(async (id) => {
+    const s = await studentsCol().doc(id).get();
+    if (s.exists) map.set(id, s.data());
+  }));
+  return docs.map((doc) => shapeOrder(doc, doc.data().student_id ? map.get(String(doc.data().student_id)) : null));
+};
+
+// ============================================================================
+// CREATE  (atomic stock reserve + order-number counter)
+// ============================================================================
 /**
- * Create a new order with items (Transaction)
- * @param {Object} orderData - Order data
- * @param {Array} items - Array of order items
- * @returns {Promise<Object>} Created order with items
+ * Create an order with inline items, reserving stock atomically.
+ * @param {Object} orderData
+ * @param {Array}  items - [{ menu_item_id, item_name, quantity, price }]
+ * @returns {Promise<Object>} complete order; `._stockChanges` carries the
+ *          post-commit menu deltas for the controller's socket/realtime fanout.
+ * @throws {Error} err.status 400 (out of stock) / 404 (item vanished)
  */
 const create = async (orderData, items) => {
-  return await transaction(async (client) => {
-    // 0. Reserve stock atomically (FIX H4).
-    // Must happen inside this transaction, BEFORE the order row exists, so a
-    // shortfall rolls everything back. The conditional UPDATE is the single
-    // authoritative stock check — the controller's pre-flight only screens
-    // out unknown/unavailable ids and is deliberately not a stock check,
-    // because a check-then-decrement pair is a TOCTOU race: two concurrent
-    // orders both read stock=1, both pass, both decrement, stock oversells.
-    const stockChanges = await reserveStock(client, items);
+  // Fold duplicate lines so the stock check sees the TOTAL per item.
+  const wanted = new Map();
+  for (const it of items) {
+    const id = String(it.menu_item_id);
+    wanted.set(id, (wanted.get(id) || 0) + Number(it.quantity));
+  }
+  const ids = [...wanted.keys()].sort();
+  const counterRef = countersCol().doc('order_number');
 
-    // 1. Insert order — student_id is null for guest (no-login) checkouts
-    const orderResult = await client.query(
-      `INSERT INTO orders
-       (student_id, order_number, total_amount, original_amount, points_used, points_earned,
-        payment_status, payment_method, guest_name, guest_phone, guest_roll)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING *`,
-      [
-        orderData.student_id || null,
-        orderData.order_number,
-        orderData.total_amount,
-        orderData.original_amount || orderData.total_amount,
-        orderData.points_used || 0,
-        orderData.points_earned || 0,
-        orderData.payment_status || 'pending',
-        orderData.payment_method || null,
-        orderData.guest_name  || null,
-        orderData.guest_phone || null,
-        orderData.guest_roll  || null,
-      ]
-    );
+  const result = await runTransaction(async (tx) => {
+    // ── READS FIRST (Firestore requires all reads before any write) ──────────
+    const snaps = new Map();
+    for (const id of ids) snaps.set(id, await tx.get(menuCol().doc(id)));
+    const counterSnap = await tx.get(counterRef);
 
-    const order = orderResult.rows[0];
-
-    // 2. Insert order items
-    for (const item of items) {
-      await client.query(
-        `INSERT INTO order_items (order_id, menu_item_id, item_name, quantity, price)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [order.id, item.menu_item_id, item.item_name, item.quantity, item.price]
-      );
+    // ── VALIDATE + compute stock decrements ──────────────────────────────────
+    const stockWrites  = [];
+    const stockChanges = [];
+    for (const id of ids) {
+      const qty  = wanted.get(id);
+      const snap = snaps.get(id);
+      if (!snap.exists) { const e = new Error(`Menu item ${id} no longer exists`); e.status = 404; throw e; }
+      const data = snap.data();
+      const cur  = Number(data.stock_quantity);
+      if (cur === -1) continue; // unlimited — untracked
+      if (cur < qty) {
+        const e = new Error(`"${data.name}" is out of stock — only ${Math.max(0, cur)} left, you requested ${qty}`);
+        e.status = 400; throw e;
+      }
+      const next = cur - qty;
+      const is_available = next <= 0 ? false : data.is_available;
+      stockWrites.push({ ref: menuCol().doc(id), next, is_available });
+      stockChanges.push({ id: Number(id), name: data.name, stock_quantity: next, is_available });
     }
 
-    // 3. Get complete order with items using the SAME transaction client
-    // (getById uses a separate pool connection and can't see uncommitted rows)
-    const completeResult = await client.query(
-      `SELECT
-         o.*,
-         COALESCE(s.name,        o.guest_name)  as student_name,
-         COALESCE(s.roll_number, o.guest_roll)  as student_roll,
-         COALESCE(s.phone,       o.guest_phone) as student_phone,
-         s.points     as student_points,
-         s.department as student_dept,
-         COALESCE(
-           json_agg(
-             json_build_object(
-               'id',           oi.id,
-               'menu_item_id', oi.menu_item_id,
-               'item_name',    oi.item_name,
-               'quantity',     oi.quantity,
-               'price',        oi.price
-             ) ORDER BY oi.id
-           ) FILTER (WHERE oi.id IS NOT NULL),
-           '[]'::json
-         ) as items
-       FROM orders o
-       LEFT JOIN students s ON o.student_id = s.id
-       LEFT JOIN order_items oi ON o.id = oi.order_id
-       WHERE o.id = $1
-       GROUP BY o.id, s.name, s.roll_number, s.phone, s.points, s.department`,
-      [order.id]
-    );
+    // ── order number (collision-free, from the counter) ──────────────────────
+    const seq = (counterSnap.exists ? Number(counterSnap.data().seq) || 0 : 0) + 1;
+    const orderNumber = `OZ${String(seq).padStart(6, '0')}`;
 
-    // Hand the post-commit stock deltas back to the controller so it can
-    // broadcast menu:stock-updated / menu:availability-changed. Transient —
-    // never persisted, and absent when every item was unlimited.
-    const complete = completeResult.rows[0] || order;
-    complete._stockChanges = stockChanges;
-    return complete;
+    // ── WRITES ────────────────────────────────────────────────────────────────
+    tx.set(counterRef, { seq }, { merge: true });
+    for (const w of stockWrites) {
+      tx.update(w.ref, { stock_quantity: w.next, is_available: w.is_available, updated_at: FieldValue.serverTimestamp() });
+    }
+
+    const orderRef = ordersCol().doc(); // auto-id
+    tx.set(orderRef, {
+      student_id:       orderData.student_id || null,
+      order_number:     orderNumber,
+      total_amount:     Number(orderData.total_amount),
+      original_amount:  Number(orderData.original_amount ?? orderData.total_amount),
+      points_used:      orderData.points_used   || 0,
+      points_earned:    orderData.points_earned || 0,
+      status:           'pending',
+      payment_status:   orderData.payment_status || 'pending',
+      payment_method:   orderData.payment_method || null,
+      razorpay_order_id:   null,
+      razorpay_payment_id: null,
+      razorpay_signature:  null,
+      guest_name:  orderData.guest_name  || null,
+      guest_phone: orderData.guest_phone || null,
+      guest_roll:  orderData.guest_roll  || null,
+      bill_issued_at: null,
+      completed_at:   null,
+      items: items.map((it) => ({
+        menu_item_id: Number(it.menu_item_id),
+        item_name:    it.item_name,
+        quantity:     Number(it.quantity),
+        price:        Number(it.price),
+      })),
+      created_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp(),
+    });
+
+    return { orderId: orderRef.id, stockChanges };
+  });
+
+  const complete = await getById(result.orderId);
+  complete._stockChanges = result.stockChanges;
+  return complete;
+};
+
+// ============================================================================
+// FIND
+// ============================================================================
+
+const getById = async (id) => {
+  if (!id) return null;
+  return enrichOne(await ordersCol().doc(String(id)).get());
+};
+
+/** Look an order up by its Razorpay order id (webhook path). */
+const findByRazorpayOrderId = async (razorpayOrderId) => {
+  if (!razorpayOrderId) return null;
+  const snap = await ordersCol().where('razorpay_order_id', '==', razorpayOrderId).limit(1).get();
+  return snap.empty ? null : enrichOne(snap.docs[0]);
+};
+
+/** Look an order up by its human order number. */
+const getByOrderNumber = async (orderNumber) => {
+  const snap = await ordersCol().where('order_number', '==', orderNumber).limit(1).get();
+  return snap.empty ? null : enrichOne(snap.docs[0]);
+};
+
+/** A student's orders, newest first. */
+const getByStudent = async (studentId, limit = 50) => {
+  // Single-field equality; sort/limit in memory (a student has few orders) to
+  // avoid a composite (student_id + created_at) index.
+  const snap = await ordersCol().where('student_id', '==', String(studentId)).get();
+  const docs = snap.docs.sort((a, b) => tsMillis(b) - tsMillis(a)).slice(0, limit);
+  return enrichMany(docs);
+};
+
+/**
+ * All orders with optional filters. One single-field filter is pushed to
+ * Firestore to bound reads; remaining filters + sort + pagination happen in
+ * memory (avoids composite indexes; fine at canteen scale).
+ */
+const getAll = async (filters = {}) => {
+  const { status, payment_status, from_date, to_date } = filters;
+  const limit  = filters.limit  || 100;
+  const offset = filters.offset || 0;
+
+  let q = ordersCol();
+  if (status)              q = q.where('status', '==', status);
+  else if (payment_status) q = q.where('payment_status', '==', payment_status);
+  else if (from_date)      q = q.where('created_at', '>=', new Date(from_date));
+
+  const snap = await q.limit(3000).get();
+
+  let docs = snap.docs.filter((d) => {
+    const o = d.data();
+    if (status && o.status !== status) return false;
+    if (payment_status && o.payment_status !== payment_status) return false;
+    const created = o.created_at && o.created_at.toDate ? o.created_at.toDate() : null;
+    if (from_date && created && created < new Date(from_date)) return false;
+    if (to_date   && created && created > new Date(to_date))   return false;
+    return true;
+  });
+
+  // Kitchen queues want oldest-first; everything else newest-first.
+  const asc = status === 'pending' || status === 'preparing';
+  docs.sort((a, b) => (asc ? tsMillis(a) - tsMillis(b) : tsMillis(b) - tsMillis(a)));
+
+  const total  = docs.length;
+  const orders = await enrichMany(docs.slice(offset, offset + limit));
+  return { orders, total };
+};
+
+/**
+ * Sum of points_used across a student's in-flight (pending) orders that are
+ * still unpaid or mid-refund. Used to stop double-redeeming the same points
+ * across concurrent orders.
+ */
+const reservedPoints = async (studentId) => {
+  const snap = await ordersCol().where('student_id', '==', String(studentId)).get();
+  let sum = 0;
+  for (const d of snap.docs) {
+    const o = d.data();
+    if (o.status === 'pending' && (o.payment_status === 'pending' || o.payment_status === 'refunding')) {
+      sum += Number(o.points_used) || 0;
+    }
+  }
+  return sum;
+};
+
+/**
+ * Atomically move an order's payment_status from `fromStatus` to `toStatus`,
+ * only if it's currently `fromStatus`. Returns true iff this call made the
+ * change — the race-free replacement for `UPDATE … WHERE payment_status = $x`.
+ * Used by the cancel/refund flows to claim the transient 'refunding' state.
+ */
+const compareAndSetPaymentStatus = async (id, fromStatus, toStatus) => {
+  const ref = ordersCol().doc(String(id));
+  return runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists || snap.data().payment_status !== fromStatus) return false;
+    tx.update(ref, { payment_status: toStatus, updated_at: FieldValue.serverTimestamp() });
+    return true;
   });
 };
 
-/**
- * Atomically decrement stock for every item in an order.
- *
- * Semantics match restoreStock(): stock_quantity = -1 means UNLIMITED and is
- * left untouched; 0+ is tracked stock. An item that would go negative aborts
- * the whole order with a 400.
- *
- * @param {import('pg').PoolClient} client - transaction client (required)
- * @param {Array} items - [{ menu_item_id, quantity }]
- * @returns {Promise<Array>} rows whose stock actually moved
- * @throws {Error} err.status 400 (short) / 404 (item vanished)
- */
-const reserveStock = async (client, items) => {
-  // Fold duplicates: the same item can appear twice in one cart, and the
-  // `stock_quantity >= $1` guard must see the TOTAL, not each line alone.
-  const wanted = new Map();
-  for (const it of items) {
-    const id  = parseInt(it.menu_item_id, 10);
-    const qty = parseInt(it.quantity, 10);
-    wanted.set(id, (wanted.get(id) || 0) + qty);
-  }
-
-  // Lock rows in a deterministic order. Two carts holding the same two items
-  // in opposite order would otherwise deadlock each other mid-transaction.
-  const ids = [...wanted.keys()].sort((a, b) => a - b);
-
-  const changed = [];
-  for (const id of ids) {
-    const qty = wanted.get(id);
-
-    // The WHERE clause IS the check — Postgres re-evaluates it against the
-    // committed row under READ COMMITTED, so a concurrent decrement makes
-    // this match zero rows instead of overselling.
-    const result = await client.query(
-      `UPDATE menu_items
-          SET stock_quantity = stock_quantity - $1,
-              is_available   = CASE
-                WHEN stock_quantity - $1 <= 0 THEN false ELSE is_available
-              END
-        WHERE id = $2
-          AND stock_quantity <> -1
-          AND stock_quantity >= $1
-        RETURNING id, name, stock_quantity, is_available`,
-      [qty, id]
-    );
-
-    if (result.rowCount > 0) {
-      changed.push(result.rows[0]);
-      continue;
-    }
-
-    // Zero rows means either "unlimited item" (fine) or "not enough left"
-    // (fatal). Re-read to tell them apart and produce an honest message.
-    const { rows } = await client.query(
-      'SELECT name, stock_quantity FROM menu_items WHERE id = $1',
-      [id]
-    );
-
-    if (!rows[0]) {
-      const err = new Error(`Menu item ${id} no longer exists`);
-      err.status = 404;
-      throw err;
-    }
-
-    if (rows[0].stock_quantity === -1) continue; // unlimited — nothing to do
-
-    const err = new Error(
-      `"${rows[0].name}" is out of stock — only ` +
-      `${Math.max(0, rows[0].stock_quantity)} left, you requested ${qty}`
-    );
-    err.status = 400;
-    throw err;
-  }
-
-  return changed;
-};
-
 // ============================================================================
-// FIND OPERATIONS
+// UPDATE
 // ============================================================================
 
 /**
- * Get order by ID with items and student info
- * @param {number} id - Order ID
- * @returns {Promise<Object|null>} Complete order object
- */
-const getById = async (id) => {
-  const result = await query(
-    `SELECT
-       o.*,
-       COALESCE(s.name,        o.guest_name)  as student_name,
-       COALESCE(s.roll_number, o.guest_roll)  as student_roll,
-       COALESCE(s.phone,       o.guest_phone) as student_phone,
-       s.points     as student_points,
-       s.department as student_dept,
-       COALESCE(
-         json_agg(
-           json_build_object(
-             'id',          oi.id,
-             'menu_item_id',oi.menu_item_id,
-             'item_name',   oi.item_name,
-             'quantity',    oi.quantity,
-             'price',       oi.price
-           ) ORDER BY oi.id
-         ) FILTER (WHERE oi.id IS NOT NULL),
-         '[]'::json
-       ) as items
-     FROM orders o
-     LEFT JOIN students s ON o.student_id = s.id
-     LEFT JOIN order_items oi ON o.id = oi.order_id
-     WHERE o.id = $1
-     GROUP BY o.id, s.name, s.roll_number, s.phone, s.points, s.department`,
-    [id]
-  );
-  return result.rows[0] || null;
-};
-
-/**
- * Get order by Razorpay order ID.
- *
- * The payment.captured webhook only knows the gateway's order id, so this is
- * the webhook's only way in. Backed by idx_orders_razorpay (migration 003) —
- * the previous approach scanned getAll({payment_status:'pending'}) and
- * json_agg'd every candidate on each delivery.
- *
- * @param {string} razorpayOrderId - Razorpay order ID (order_xxx)
- * @returns {Promise<Object|null>} Complete order object
- */
-const findByRazorpayOrderId = async (razorpayOrderId) => {
-  if (!razorpayOrderId) return null;
-
-  // Resolve the id off the index, then reuse getById so the webhook gets the
-  // exact same shape (items + student fields) every other caller sees.
-  const result = await query(
-    `SELECT id FROM orders
-      WHERE razorpay_order_id = $1
-      ORDER BY id DESC
-      LIMIT 1`,
-    [razorpayOrderId]
-  );
-
-  return result.rows[0] ? await getById(result.rows[0].id) : null;
-};
-
-/**
- * Get order by order number
- * @param {string} orderNumber - Order number
- * @returns {Promise<Object|null>} Complete order object
- */
-const getByOrderNumber = async (orderNumber) => {
-  const result = await query(
-    `SELECT
-       o.*,
-       COALESCE(s.name,        o.guest_name) as student_name,
-       COALESCE(s.roll_number, o.guest_roll) as student_roll,
-       COALESCE(
-         json_agg(
-           json_build_object(
-             'item_name', oi.item_name,
-             'quantity',  oi.quantity,
-             'price',     oi.price
-           ) ORDER BY oi.id
-         ) FILTER (WHERE oi.id IS NOT NULL),
-         '[]'::json
-       ) as items
-     FROM orders o
-     LEFT JOIN students s ON o.student_id = s.id
-     LEFT JOIN order_items oi ON o.id = oi.order_id
-     WHERE o.order_number = $1
-     GROUP BY o.id, s.name, s.roll_number`,
-    [orderNumber]
-  );
-  return result.rows[0] || null;
-};
-
-/**
- * Get orders by student ID
- * @param {string} studentId - Student UUID
- * @param {number} limit - Number of orders to return
- * @returns {Promise<Array>} Array of orders
- */
-const getByStudent = async (studentId, limit = 50) => {
-  const result = await query(
-    `SELECT 
-       o.*,
-       json_agg(
-         json_build_object(
-           'item_name', oi.item_name,
-           'quantity', oi.quantity,
-           'price', oi.price
-         )
-       ) as items
-     FROM orders o
-     LEFT JOIN order_items oi ON o.id = oi.order_id
-     WHERE o.student_id = $1
-     GROUP BY o.id
-     ORDER BY o.created_at DESC
-     LIMIT $2`,
-    [studentId, limit]
-  );
-  return result.rows;
-};
-
-/**
- * Get all orders with filters
- * @param {Object} filters - Filter options
- * @returns {Promise<Array>} Array of orders
- */
-const getAll = async (filters = {}) => {
-  let queryText = `
-    SELECT
-      o.*,
-      COALESCE(s.name,        o.guest_name) as student_name,
-      COALESCE(s.roll_number, o.guest_roll) as student_roll,
-      COALESCE(
-        json_agg(
-          json_build_object(
-            'item_name', oi.item_name,
-            'quantity',  oi.quantity,
-            'price',     oi.price
-          ) ORDER BY oi.id
-        ) FILTER (WHERE oi.id IS NOT NULL),
-        '[]'::json
-      ) as items
-    FROM orders o
-    LEFT JOIN students s ON o.student_id = s.id
-    LEFT JOIN order_items oi ON o.id = oi.order_id
-    WHERE 1=1
-  `;
-  
-  const params = [];
-  let paramCount = 1;
-
-  // Apply filters
-  if (filters.status) {
-    queryText += ` AND o.status = $${paramCount++}`;
-    params.push(filters.status);
-  }
-  
-  if (filters.payment_status) {
-    queryText += ` AND o.payment_status = $${paramCount++}`;
-    params.push(filters.payment_status);
-  }
-  
-  if (filters.from_date) {
-    queryText += ` AND o.created_at >= $${paramCount++}`;
-    params.push(filters.from_date);
-  }
-  
-  if (filters.to_date) {
-    queryText += ` AND o.created_at <= $${paramCount++}`;
-    params.push(filters.to_date);
-  }
-
-  queryText += ` GROUP BY o.id, s.name, s.roll_number`;
-  
-  // Sorting
-  if (filters.status && (filters.status === 'pending' || filters.status === 'preparing')) {
-    queryText += ` ORDER BY o.created_at ASC`; // Oldest first for kitchen
-  } else {
-    queryText += ` ORDER BY o.created_at DESC`; // Newest first
-  }
-  
-  // Pagination
-  const limit = filters.limit || 100;
-  const offset = filters.offset || 0;
-  queryText += ` LIMIT $${paramCount++} OFFSET $${paramCount++}`;
-  params.push(limit, offset);
-
-  const result = await query(queryText, params);
-  return result.rows;
-};
-
-// ============================================================================
-// UPDATE OPERATIONS
-// ============================================================================
-
-/**
- * Update order status.
- *
- * When `fromStatus` is supplied the UPDATE only fires if the row is still
- * in that status — used by finalisePayment so a webhook-vs-chef race can't
- * silently rewrite a freshly-cancelled order back to 'preparing'. Returns
- * null when the guard didn't match. Existing callers can omit the arg and
- * behave unchanged (FIX V5).
- *
- * @param {number} id
- * @param {string} status
- * @param {string} [fromStatus] Optional WHERE status = $? guard
- * @returns {Promise<Object|null>}
+ * Update status. When `fromStatus` is given, the write only happens if the
+ * order is still in that status (guards a webhook-vs-chef race). Returns the
+ * updated order, or null when the guard didn't match / order missing.
  */
 const updateStatus = async (id, status, fromStatus = null) => {
-  let queryText = 'UPDATE orders SET status = $1';
-  const params = [status, id];
-
-  // Set completed_at timestamp if status is completed
-  if (status === 'completed') {
-    queryText += ', completed_at = NOW()';
-  }
-
-  queryText += ' WHERE id = $2';
-  if (fromStatus) {
-    params.push(fromStatus);
-    queryText += ` AND status = $${params.length}`;
-  }
-  queryText += ' RETURNING *';
-
-  const result = await query(queryText, params);
-  return result.rows[0] || null;
+  const ref = ordersCol().doc(String(id));
+  const ok = await runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return false;
+    if (fromStatus && snap.data().status !== fromStatus) return false;
+    const upd = { status, updated_at: FieldValue.serverTimestamp() };
+    if (status === 'completed') upd.completed_at = FieldValue.serverTimestamp();
+    tx.update(ref, upd);
+    return true;
+  });
+  return ok ? getById(id) : null;
 };
 
 /**
- * Update payment information after successful payment
- * @param {number} id - Order ID
- * @param {Object} paymentData - Payment details
- * @returns {Promise<Object>} Updated order
+ * Update payment fields. razorpay_* are only overwritten when a non-null value
+ * is supplied (preserves the old COALESCE behaviour so a partial update from
+ * the webhook / createPaymentOrder path doesn't wipe values verify already set).
  */
-const updatePayment = async (id, paymentData, client = null) => {
-  const run = runner(client);
-  // COALESCE on razorpay_* fields so a partial update (e.g. the webhook
-  // path which has no signature, or createPaymentOrder which only knows
-  // the order id) doesn't wipe values an earlier verify call already
-  // wrote (FIX M6 + V7). The `?? null` on the call site turns undefined
-  // args into NULL so COALESCE then preserves the existing DB value.
-  const result = await run(
-    `UPDATE orders
-     SET payment_status      = $1,
-         payment_method      = $2,
-         razorpay_order_id   = COALESCE($3, razorpay_order_id),
-         razorpay_payment_id = COALESCE($4, razorpay_payment_id),
-         razorpay_signature  = COALESCE($5, razorpay_signature)
-     WHERE id = $6
-     RETURNING *`,
-    [
-      paymentData.payment_status || 'paid',
-      paymentData.payment_method || 'Razorpay',
-      paymentData.razorpay_order_id   ?? null,
-      paymentData.razorpay_payment_id ?? null,
-      paymentData.razorpay_signature  ?? null,
-      id
-    ]
-  );
-  return result.rows[0];
+const updatePayment = async (id, paymentData) => {
+  const ref = ordersCol().doc(String(id));
+  const upd = {
+    payment_status: paymentData.payment_status || 'paid',
+    payment_method: paymentData.payment_method || 'Razorpay',
+    updated_at:     FieldValue.serverTimestamp(),
+  };
+  if (paymentData.razorpay_order_id   != null) upd.razorpay_order_id   = paymentData.razorpay_order_id;
+  if (paymentData.razorpay_payment_id != null) upd.razorpay_payment_id = paymentData.razorpay_payment_id;
+  if (paymentData.razorpay_signature  != null) upd.razorpay_signature  = paymentData.razorpay_signature;
+
+  await ref.update(upd);
+  return getById(id);
+};
+
+/** Cancel an order (payment_status untouched — refund path owns that). */
+const cancel = async (id) => {
+  await ordersCol().doc(String(id)).update({ status: 'cancelled', updated_at: FieldValue.serverTimestamp() });
+  return getById(id);
 };
 
 /**
- * Cancel order
- * @param {number} id - Order ID
- * @returns {Promise<Object>} Updated order
- */
-const cancel = async (id, client = null) => {
-  // payment_status is NOT auto-flipped to 'refunded' here. Marking money
-  // returned without actually calling Razorpay was a books-of-record lie.
-  // The cancel controller now drives the Razorpay refund first and the
-  // refund path itself sets payment_status via Order.updatePayment when
-  // the gateway confirms (FIX T1).
-  const run = runner(client);
-  const result = await run(
-    `UPDATE orders
-        SET status = 'cancelled'
-      WHERE id = $1
-      RETURNING *`,
-    [id]
-  );
-  return result.rows[0];
-};
-
-/**
- * Restore stock for every line item on an order (FIX T2).
- *
- * Untracked items (stock_quantity = -1) are skipped. When a previously-zero
- * row goes back above zero we auto-flip is_available back on, mirroring the
- * decrement-on-create behaviour. Run optionally inside a caller-supplied
- * transaction client.
- *
- * @param {number} orderId
- * @param {import('pg').PoolClient} [client]
+ * Restore stock for every line item on an order. Untracked items (-1) skipped;
+ * a previously-zero item that goes back above zero flips is_available on again.
  * @returns {Promise<Array<{id, stock_quantity, is_available, name}>>}
  */
-const restoreStock = async (orderId, client = null) => {
-  const run = runner(client);
+const restoreStock = async (orderId) => {
+  const orderSnap = await ordersCol().doc(String(orderId)).get();
+  if (!orderSnap.exists) return [];
 
-  const { rows: items } = await run(
-    'SELECT menu_item_id, quantity FROM order_items WHERE order_id = $1',
-    [orderId]
-  );
+  const wanted = new Map();
+  for (const it of orderSnap.data().items || []) {
+    const id = String(it.menu_item_id);
+    wanted.set(id, (wanted.get(id) || 0) + Number(it.quantity));
+  }
 
   const restored = [];
-  for (const it of items) {
-    const r = await run(
-      `UPDATE menu_items
-          SET stock_quantity = stock_quantity + $1,
-              is_available   = CASE
-                WHEN stock_quantity + $1 > 0 AND is_available = false
-                THEN true ELSE is_available
-              END
-        WHERE id = $2 AND stock_quantity <> -1
-        RETURNING id, stock_quantity, is_available, name`,
-      [it.quantity, it.menu_item_id]
-    );
-    if (r.rows[0]) restored.push(r.rows[0]);
+  for (const [id, qty] of wanted) {
+    const r = await runTransaction(async (tx) => {
+      const ref  = menuCol().doc(id);
+      const snap = await tx.get(ref);
+      if (!snap.exists) return null;
+      const data = snap.data();
+      const cur  = Number(data.stock_quantity);
+      if (cur === -1) return null; // untracked
+      const next = cur + qty;
+      const is_available = next > 0 && data.is_available === false ? true : data.is_available;
+      tx.update(ref, { stock_quantity: next, is_available, updated_at: FieldValue.serverTimestamp() });
+      return { id: Number(id), stock_quantity: next, is_available, name: data.name };
+    });
+    if (r) restored.push(r);
   }
   return restored;
 };
 
 // ============================================================================
-// STATISTICS
+// STATISTICS  (aggregated in memory over a bounded window)
 // ============================================================================
 
-/**
- * Get order statistics for dashboard
- * @param {Object} filters - Date filters
- * @returns {Promise<Object>} Statistics object
- */
-const getStats = async (filters = {}) => {
-  // Today's stats — only completed orders count as revenue
-  const todayResult = await query(
-    `SELECT
-       COUNT(*) as order_count,
-       COALESCE(SUM(total_amount), 0) as revenue
-     FROM orders
-     WHERE DATE(created_at) = CURRENT_DATE
-     AND status = 'completed'`
-  );
+const startOfToday = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
+const startOfWeek  = () => { const n = new Date(); const dow = n.getDay(); const back = dow === 0 ? 6 : dow - 1; return new Date(n.getFullYear(), n.getMonth(), n.getDate() - back); };
+const startOfMonth = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); };
 
-  // This week's stats — only completed orders
-  const weekResult = await query(
-    `SELECT
-       COUNT(*) as order_count,
-       COALESCE(SUM(total_amount), 0) as revenue
-     FROM orders
-     WHERE created_at >= DATE_TRUNC('week', CURRENT_DATE)
-     AND status = 'completed'`
-  );
+/** Dashboard stats: completed-order revenue for today/week/month + today's status breakdown. */
+const getStats = async () => {
+  // One read window (this month) covers today ⊆ week ⊆ month.
+  const monthStart = startOfMonth();
+  const weekStart  = startOfWeek();
+  const todayStart = startOfToday();
+  const snap = await ordersCol().where('created_at', '>=', monthStart).get();
 
-  // This month's stats — only completed orders
-  const monthResult = await query(
-    `SELECT
-       COUNT(*) as order_count,
-       COALESCE(SUM(total_amount), 0) as revenue
-     FROM orders
-     WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
-     AND status = 'completed'`
-  );
+  const rows = snap.docs.map((d) => ({
+    created: d.data().created_at && d.data().created_at.toDate ? d.data().created_at.toDate() : null,
+    status:  d.data().status,
+    amount:  Number(d.data().total_amount) || 0,
+  }));
 
-  // Status breakdown
-  const statusResult = await query(
-    `SELECT 
-       status,
-       COUNT(*) as count
-     FROM orders
-     WHERE DATE(created_at) = CURRENT_DATE
-     GROUP BY status`
-  );
+  const agg = (fromDate) => {
+    const sub = rows.filter((r) => r.status === 'completed' && r.created && r.created >= fromDate);
+    return { order_count: sub.length, revenue: sub.reduce((s, r) => s + r.amount, 0) };
+  };
+
+  const breakdown = new Map();
+  for (const r of rows) if (r.created && r.created >= todayStart) breakdown.set(r.status, (breakdown.get(r.status) || 0) + 1);
 
   return {
-    today: todayResult.rows[0],
-    week: weekResult.rows[0],
-    month: monthResult.rows[0],
-    status_breakdown: statusResult.rows
+    today: agg(todayStart),
+    week:  agg(weekStart),
+    month: agg(monthStart),
+    status_breakdown: [...breakdown.entries()].map(([status, count]) => ({ status, count })),
   };
 };
 
-/**
- * Get revenue data for charts
- * @param {number} days - Number of days to include
- * @returns {Promise<Array>} Daily revenue data
- */
+/** Daily completed-order revenue for the last N days. */
 const getRevenueData = async (days = 30) => {
-  const result = await query(
-    `SELECT
-       DATE(created_at) as date,
-       COUNT(*) as order_count,
-       COALESCE(SUM(total_amount), 0) as revenue
-     FROM orders
-     WHERE created_at >= CURRENT_DATE - INTERVAL '${days} days'
-     AND status = 'completed'
-     GROUP BY DATE(created_at)
-     ORDER BY date ASC`
-  );
-  return result.rows;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const snap = await ordersCol().where('created_at', '>=', cutoff).get();
+
+  const byDate = new Map();
+  for (const d of snap.docs) {
+    const o = d.data();
+    if (o.status !== 'completed') continue;
+    const dt = o.created_at && o.created_at.toDate ? o.created_at.toDate() : null;
+    if (!dt) continue;
+    const key = dt.toISOString().slice(0, 10);
+    const cur = byDate.get(key) || { order_count: 0, revenue: 0 };
+    cur.order_count += 1;
+    cur.revenue     += Number(o.total_amount) || 0;
+    byDate.set(key, cur);
+  }
+
+  return [...byDate.entries()]
+    .map(([date, v]) => ({ date, ...v }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 };
 
 // ============================================================================
-// HELPER FUNCTIONS
+// HELPERS
 // ============================================================================
+
+/** Legacy order-number generator (create() now uses the counter). Kept for API compat. */
+const generateOrderNumber = async () => `OZ${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
 /**
- * Generate unique order number
- * @returns {Promise<string>} Unique order number
+ * Stamp bill_issued_at the FIRST time a receipt is produced (idempotent).
+ * @returns {Promise<boolean>} true when this call set the timestamp.
  */
-const generateOrderNumber = async () => {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
-  return `OZ${timestamp}${random}`;
-};
-
-/**
- * Stamp bill_issued_at the FIRST time a receipt is produced (FIX Z3).
- *
- * The WHERE bill_issued_at IS NULL guard makes this idempotent — repeat
- * calls don't refresh the timestamp, and the row count tells the caller
- * whether they were the one to actually claim issuance. Used by both
- * finalisePayment (verify path) and the verifyPayment idempotent branch
- * so a kiosk refresh / retry doesn't spool a fresh print on every hit.
- *
- * @param {number} id
- * @param {import('pg').PoolClient} [client]
- * @returns {Promise<boolean>} true when this call set the timestamp
- */
-const markBillIssued = async (id, client = null) => {
-  const run = runner(client);
-  const r = await run(
-    `UPDATE orders
-        SET bill_issued_at = NOW()
-      WHERE id = $1 AND bill_issued_at IS NULL`,
-    [id]
-  );
-  return r.rowCount > 0;
+const markBillIssued = async (id) => {
+  const ref = ordersCol().doc(String(id));
+  return runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists || snap.data().bill_issued_at) return false;
+    tx.update(ref, { bill_issued_at: FieldValue.serverTimestamp() });
+    return true;
+  });
 };
 
 // ============================================================================
-// EXPORTS
+// EXPORTS  (identical surface to the old pg model)
 // ============================================================================
-
 module.exports = {
   create,
   getById,
@@ -640,6 +442,8 @@ module.exports = {
   getByOrderNumber,
   getByStudent,
   getAll,
+  reservedPoints,
+  compareAndSetPaymentStatus,
   updateStatus,
   updatePayment,
   cancel,
@@ -647,5 +451,5 @@ module.exports = {
   getStats,
   getRevenueData,
   generateOrderNumber,
-  markBillIssued
+  markBillIssued,
 };

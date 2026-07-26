@@ -1,149 +1,43 @@
 // ============================================================================
-// STUDENT MODEL
+// STUDENT MODEL  (Firestore)
 // ============================================================================
-// Database operations for students table
-// ============================================================================
-
-const { query } = require('../config/database');
-
-// Some methods accept an optional `client` arg so callers can run them inside
-// a transaction (config/database.js `transaction(async (client) => …)`). When
-// no client is supplied, the default pool-based `query()` runs the statement
-// in its own connection.
-const runner = (client) =>
-  client
-    ? (text, params) => client.query(text, params)
-    : query;
-
-// ============================================================================
-// FIND OPERATIONS
+// Firestore implementation of the students collection. The PUBLIC API and
+// return shapes are kept identical to the old Postgres model so controllers
+// don't change: every function returns plain objects whose `id` is the
+// Firestore document id and whose timestamp fields are ISO strings.
+//
+// Collection: students/{studentId}
+//   name, roll_number, phone, email, department, password_hash, role,
+//   points, tier, total_orders, total_spent, is_active, profile_image_url,
+//   created_at (Timestamp), last_login (Timestamp)
+// Sub-collection: students/{studentId}/favorites/{menuItemId} → { created_at }
 // ============================================================================
 
-/**
- * Find student by roll number
- * @param {string} rollNumber - Student roll number
- * @returns {Promise<Object|null>} Student object or null
- */
-const findByRoll = async (rollNumber) => {
-  const result = await query(
-    'SELECT * FROM students WHERE roll_number = $1',
-    [rollNumber]
-  );
-  return result.rows[0] || null;
+const { db, FieldValue, runTransaction, collections } = require('../config/firebase');
+
+const col     = collections.students;
+const menuCol = collections.menuItems;
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+/** Firestore Timestamp → ISO string (pass through anything else). */
+const tsToIso = (v) => (v && typeof v.toDate === 'function' ? v.toDate().toISOString() : v);
+
+/** Doc snapshot → plain student object with normalized fields. */
+const toStudent = (doc) => {
+  if (!doc || !doc.exists) return null;
+  const d = doc.data();
+  return {
+    id: doc.id,
+    ...d,
+    created_at: tsToIso(d.created_at),
+    last_login: tsToIso(d.last_login),
+  };
 };
 
 /**
- * Find student by phone number
- * @param {string} phone - Phone number
- * @returns {Promise<Object|null>} Student object or null
- */
-const findByPhone = async (phone) => {
-  const result = await query(
-    'SELECT * FROM students WHERE phone = $1',
-    [phone]
-  );
-  return result.rows[0] || null;
-};
-
-/**
- * Find student by ID
- * @param {string} id - Student UUID
- * @returns {Promise<Object|null>} Student object or null
- */
-const findById = async (id) => {
-  const result = await query(
-    'SELECT * FROM students WHERE id = $1',
-    [id]
-  );
-  return result.rows[0] || null;
-};
-
-/**
- * Find student by roll number or phone (for login)
- * @param {string} identifier - Roll number or phone
- * @returns {Promise<Object|null>} Student object or null
- */
-const findByIdentifier = async (identifier) => {
-  const result = await query(
-    'SELECT * FROM students WHERE roll_number = $1 OR phone = $1',
-    [identifier]
-  );
-  return result.rows[0] || null;
-};
-
-// ============================================================================
-// CREATE OPERATION
-// ============================================================================
-
-/**
- * Create a new student
- * @param {Object} studentData - Student information
- * @returns {Promise<Object>} Created student object
- */
-const create = async ({ name, roll_number, phone, email, department, password_hash, role }) => {
-  const result = await query(
-    `INSERT INTO students
-       (name, roll_number, phone, email, department, password_hash, role, points, tier, created_at, last_login)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 'Bronze', NOW(), NOW())
-     RETURNING *`,
-    [
-      name, roll_number, phone, email || null, department || null,
-      password_hash || null, role || 'student',
-    ]
-  );
-  return result.rows[0];
-};
-
-// ============================================================================
-// UPDATE OPERATIONS
-// ============================================================================
-
-/**
- * Update student profile
- * @param {string} id - Student ID
- * @param {Object} data - Fields to update
- * @returns {Promise<Object>} Updated student object
- */
-const updateProfile = async (id, data) => {
-  const fields = [];
-  const values = [];
-  let paramCount = 1;
-
-  // Build dynamic UPDATE query
-  if (data.name) {
-    fields.push(`name = $${paramCount++}`);
-    values.push(data.name);
-  }
-  if (data.email) {
-    fields.push(`email = $${paramCount++}`);
-    values.push(data.email);
-  }
-  if (data.department) {
-    fields.push(`department = $${paramCount++}`);
-    values.push(data.department);
-  }
-  if (data.profile_image_url) {
-    fields.push(`profile_image_url = $${paramCount++}`);
-    values.push(data.profile_image_url);
-  }
-
-  if (fields.length === 0) {
-    throw new Error('No fields to update');
-  }
-
-  values.push(id);
-  const result = await query(
-    `UPDATE students SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-    values
-  );
-  return result.rows[0];
-};
-
-/**
- * Strip secret columns from a student row before it leaves the API.
+ * Strip secret columns before a row leaves the API.
  * password_hash must NEVER reach a client — not even an admin one.
- * @param {Object|null} row
- * @returns {Object|null}
  */
 const toSafe = (row) => {
   if (!row) return row;
@@ -151,320 +45,350 @@ const toSafe = (row) => {
   return safe;
 };
 
+const firstOf = (snap) => (snap.empty ? null : toStudent(snap.docs[0]));
+
+// ============================================================================
+// FIND OPERATIONS
+// ============================================================================
+
+/** Find by roll number. */
+const findByRoll = async (rollNumber) => {
+  const snap = await col().where('roll_number', '==', rollNumber).limit(1).get();
+  return firstOf(snap);
+};
+
+/** Find by phone number. */
+const findByPhone = async (phone) => {
+  const snap = await col().where('phone', '==', phone).limit(1).get();
+  return firstOf(snap);
+};
+
+/** Find by document id. */
+const findById = async (id) => {
+  if (!id) return null;
+  return toStudent(await col().doc(String(id)).get());
+};
+
+/** Find by roll number OR phone (login identifier). */
+const findByIdentifier = async (identifier) => {
+  return (await findByRoll(identifier)) || (await findByPhone(identifier));
+};
+
+// ============================================================================
+// CREATE
+// ============================================================================
 /**
- * List accounts filtered by role — powers the admin account-management screen.
- * @param {Object} opts
- * @param {string} [opts.role]    'student' | 'chef' | 'admin' (omit = all)
- * @param {number} [opts.limit=50]
- * @param {number} [opts.offset=0]
- * @returns {Promise<{ accounts: Array, total: number }>} sanitized rows
+ * Create a new student/chef/admin. Mirrors the old columns + defaults
+ * (points 0, tier Bronze, is_active true). Returns the created row.
+ */
+const create = async ({ name, roll_number, phone, email, department, password_hash, role }) => {
+  const ref = col().doc(); // auto-id
+  await ref.set({
+    name,
+    roll_number,
+    phone,
+    email:             email || null,
+    department:        department || null,
+    password_hash:     password_hash || null,
+    role:              role || 'student',
+    points:            0,
+    tier:              'Bronze',
+    total_orders:      0,
+    total_spent:       0,
+    is_active:         true,
+    profile_image_url: null,
+    created_at:        FieldValue.serverTimestamp(),
+    last_login:        FieldValue.serverTimestamp(),
+  });
+  return toStudent(await ref.get());
+};
+
+// ============================================================================
+// ADMIN LIST / UPDATE
+// ============================================================================
+/**
+ * List accounts filtered by role (powers the admin account-management screen).
+ * Returns sanitized rows. Firestore has no server-side substring search, so
+ * this path is role/tier + pagination only (see getAll for the search path).
  */
 const listByRole = async ({ role = null, limit = 50, offset = 0 } = {}) => {
-  const where  = ['1=1'];
-  const params = [];
+  // Single-field equality (auto-indexed); sort + paginate in memory to avoid a
+  // composite index. Account lists are small at canteen scale.
+  let q = col();
+  if (role) q = q.where('role', '==', role);
 
-  if (role) {
-    params.push(role);
-    where.push(`role = $${params.length}`);
-  }
-  const whereSql = where.join(' AND ');
-
-  const countResult = await query(`SELECT COUNT(*) FROM students WHERE ${whereSql}`, params);
-
-  params.push(limit, offset);
-  const result = await query(
-    `SELECT * FROM students
-      WHERE ${whereSql}
-      ORDER BY
-        CASE role WHEN 'admin' THEN 0 WHEN 'chef' THEN 1 ELSE 2 END,
-        created_at DESC
-      LIMIT $${params.length - 1} OFFSET $${params.length}`,
-    params
-  );
+  const snap = await q.get();
+  const all = snap.docs
+    .map((d) => toSafe(toStudent(d)))
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
 
   return {
-    accounts: result.rows.map(toSafe),
-    total:    parseInt(countResult.rows[0].count, 10),
+    accounts: all.slice(offset, offset + limit),
+    total:    all.length,
   };
 };
 
 /**
  * Admin-only privileged update: role, password, and/or active state.
- * Only these three columns are writable here — deliberately narrow so this
- * can never be used to overwrite arbitrary fields. Returns the sanitized row.
- * @param {string} id
- * @param {Object} data
- * @param {string}  [data.role]           'student' | 'chef' | 'admin'
- * @param {string}  [data.password_hash]  pre-hashed (never plaintext)
- * @param {boolean} [data.is_active]
- * @returns {Promise<Object|null>} sanitized updated row, or null if not found
+ * Returns the sanitized updated row, or null if the account doesn't exist.
  */
 const adminUpdate = async (id, data) => {
-  const fields = [];
-  const values = [];
-  let i = 1;
+  const ref = col().doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) return null;
 
-  if (data.role !== undefined) {
-    fields.push(`role = $${i++}`);
-    values.push(data.role);
-  }
-  if (data.password_hash !== undefined) {
-    fields.push(`password_hash = $${i++}`);
-    values.push(data.password_hash);
-  }
-  if (data.is_active !== undefined) {
-    fields.push(`is_active = $${i++}`);
-    values.push(data.is_active);
-  }
+  const update = {};
+  if (data.role !== undefined)          update.role = data.role;
+  if (data.password_hash !== undefined) update.password_hash = data.password_hash;
+  if (data.is_active !== undefined)     update.is_active = data.is_active;
+  if (Object.keys(update).length === 0) throw new Error('No fields to update');
 
-  if (fields.length === 0) throw new Error('No fields to update');
-
-  values.push(id);
-  const result = await query(
-    `UPDATE students SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
-    values
-  );
-  return toSafe(result.rows[0] || null);
+  await ref.update(update);
+  return toSafe(toStudent(await ref.get()));
 };
 
 /**
- * Update last login timestamp
- * @param {string} id - Student ID
- * @returns {Promise<void>}
+ * Student self-service profile update (name/email/department/profile_image_url).
  */
+const updateProfile = async (id, data) => {
+  const ref = col().doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+
+  const update = {};
+  if (data.name)              update.name = data.name;
+  if (data.email)             update.email = data.email;
+  if (data.department)        update.department = data.department;
+  if (data.profile_image_url) update.profile_image_url = data.profile_image_url;
+  if (Object.keys(update).length === 0) throw new Error('No fields to update');
+
+  await ref.update(update);
+  return toStudent(await ref.get());
+};
+
+/** Bump last_login to now. */
 const updateLastLogin = async (id) => {
-  await query(
-    'UPDATE students SET last_login = NOW() WHERE id = $1',
-    [id]
-  );
+  await col().doc(String(id)).update({ last_login: FieldValue.serverTimestamp() });
+};
+
+// ============================================================================
+// POINTS / STATS / TIER  (each atomic on its own)
+// ============================================================================
+// NOTE: the payment pipeline reconciles points + stats + tier inside ONE
+// Firestore transaction in the controller for correctness. These standalone
+// helpers stay available for incidental single updates.
+
+/** Add loyalty points. */
+const addPoints = async (id, points) => {
+  const ref = col().doc(String(id));
+  await ref.update({ points: FieldValue.increment(points) });
+  return toStudent(await ref.get());
+};
+
+/** Deduct points, clamped at 0 (atomic read-modify-write). */
+const deductPoints = async (id, points) => {
+  const ref = col().doc(String(id));
+  return runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const next = Math.max(0, (Number(snap.data().points) || 0) - points);
+    tx.update(ref, { points: next });
+    return { ...toStudent(snap), points: next };
+  });
+};
+
+/** Recompute tier from total_spent. */
+const updateTier = async (id) => {
+  const ref = col().doc(String(id));
+  return runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const spent = Number(snap.data().total_spent) || 0;
+    const tier =
+      spent >= 5000 ? 'Platinum' :
+      spent >= 3000 ? 'Gold' :
+      spent >= 1000 ? 'Silver' : 'Bronze';
+    tx.update(ref, { tier });
+    return { ...toStudent(snap), tier };
+  });
 };
 
 /**
- * Add loyalty points to student
- * @param {string} id - Student ID
- * @param {number} points - Points to add
- * @returns {Promise<Object>} Updated student
+ * Update spend/order stats after a pay (amount > 0) or refund (amount < 0).
+ * Both columns clamp at 0. total_orders +1 on pay, -1 on refund (FIX T5).
  */
-const addPoints = async (id, points, client = null) => {
-  const run = runner(client);
-  const result = await run(
-    'UPDATE students SET points = points + $1 WHERE id = $2 RETURNING *',
-    [points, id]
-  );
-  return result.rows[0];
-};
-
-/**
- * Deduct points from student
- * @param {string} id - Student ID
- * @param {number} points - Points to deduct
- * @returns {Promise<Object>} Updated student
- */
-const deductPoints = async (id, points, client = null) => {
-  const run = runner(client);
-  const result = await run(
-    'UPDATE students SET points = GREATEST(0, points - $1) WHERE id = $2 RETURNING *',
-    [points, id]
-  );
-  return result.rows[0];
-};
-
-/**
- * Update tier based on total spent
- * @param {string} id - Student ID
- * @returns {Promise<Object>} Updated student
- */
-const updateTier = async (id, client = null) => {
-  const run = runner(client);
-  const result = await run(
-    `UPDATE students
-     SET tier = CASE
-       WHEN total_spent >= 5000 THEN 'Platinum'
-       WHEN total_spent >= 3000 THEN 'Gold'
-       WHEN total_spent >= 1000 THEN 'Silver'
-       ELSE 'Bronze'
-     END
-     WHERE id = $1
-     RETURNING *`,
-    [id]
-  );
-  return result.rows[0];
-};
-
-/**
- * Update student stats after order or refund.
- *
- * `amount` may be negative on refund — total_spent and total_orders are
- * both clamped at zero via GREATEST(0, …) so partial refunds and edge
- * cases (e.g. a refund issued before stats ever incremented) can't push
- * the columns below zero (FIX T5).
- *
- * On refund the caller passes -order.total_amount; total_orders is
- * decremented by one when amount < 0, incremented by one otherwise.
- *
- * @param {string} id - Student ID
- * @param {number} amount - Order amount (positive on pay, negative on refund)
- * @param {import('pg').PoolClient} [client]
- * @returns {Promise<Object>} Updated student
- */
-const updateStats = async (id, amount, client = null) => {
-  const run = runner(client);
+const updateStats = async (id, amount) => {
+  const ref = col().doc(String(id));
   const orderDelta = amount < 0 ? -1 : 1;
-  const result = await run(
-    `UPDATE students
-     SET total_spent  = GREATEST(0, total_spent  + $1),
-         total_orders = GREATEST(0, total_orders + $2)
-     WHERE id = $3
-     RETURNING *`,
-    [amount, orderDelta, id]
-  );
-  return result.rows[0];
+  return runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const d = snap.data();
+    const total_spent  = Math.max(0, (Number(d.total_spent)  || 0) + amount);
+    const total_orders = Math.max(0, (Number(d.total_orders) || 0) + orderDelta);
+    tx.update(ref, { total_spent, total_orders });
+    return { ...toStudent(snap), total_spent, total_orders };
+  });
+};
+
+const tierFor = (spent) =>
+  spent >= 5000 ? 'Platinum' : spent >= 3000 ? 'Gold' : spent >= 1000 ? 'Silver' : 'Bronze';
+
+/**
+ * Apply a completed purchase to a student ATOMICALLY (points + spend + tier).
+ * Preserves the old sequential semantics exactly:
+ *   points = max(0, points - pointsUsed) + pointsEarned
+ *   total_spent += amount (clamped ≥ 0), total_orders += 1, tier recomputed.
+ * One Firestore transaction — replaces the old multi-call pg transaction.
+ */
+const applyPurchase = async (id, { pointsUsed = 0, pointsEarned = 0, amount = 0 } = {}) => {
+  const ref = col().doc(String(id));
+  return runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const d = snap.data();
+    const points       = Math.max(0, (Number(d.points) || 0) - pointsUsed) + pointsEarned;
+    const total_spent  = Math.max(0, (Number(d.total_spent)  || 0) + amount);
+    const total_orders = Math.max(0, (Number(d.total_orders) || 0) + 1);
+    const tier = tierFor(total_spent);
+    tx.update(ref, { points, total_spent, total_orders, tier });
+    return { ...toStudent(snap), points, total_spent, total_orders, tier };
+  });
+};
+
+/**
+ * Reverse a purchase on refund/cancel ATOMICALLY (mirror of applyPurchase):
+ *   points = max(0, points - pointsEarned) + pointsUsed
+ *   total_spent -= amount (clamped ≥ 0), total_orders -= 1, tier recomputed.
+ */
+const applyReversal = async (id, { pointsUsed = 0, pointsEarned = 0, amount = 0 } = {}) => {
+  const ref = col().doc(String(id));
+  return runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const d = snap.data();
+    const points       = Math.max(0, (Number(d.points) || 0) - pointsEarned) + pointsUsed;
+    const total_spent  = Math.max(0, (Number(d.total_spent)  || 0) - amount);
+    const total_orders = Math.max(0, (Number(d.total_orders) || 0) - 1);
+    const tier = tierFor(total_spent);
+    tx.update(ref, { points, total_spent, total_orders, tier });
+    return { ...toStudent(snap), points, total_spent, total_orders, tier };
+  });
 };
 
 // ============================================================================
-// FAVORITES OPERATIONS
+// FAVORITES  (sub-collection students/{id}/favorites/{menuItemId})
 // ============================================================================
 
-/**
- * Get student's favorite items
- * @param {string} studentId - Student ID
- * @returns {Promise<Array>} Array of menu items
- */
+/** Available favorite menu items, newest-favorited first. */
 const getFavorites = async (studentId) => {
-  const result = await query(
-    `SELECT m.* FROM menu_items m
-     INNER JOIN favorites f ON m.id = f.menu_item_id
-     WHERE f.student_id = $1 AND m.is_available = true
-     ORDER BY f.created_at DESC`,
-    [studentId]
+  const favSnap = await col().doc(String(studentId))
+    .collection('favorites').orderBy('created_at', 'desc').get();
+  if (favSnap.empty) return [];
+
+  const items = await Promise.all(
+    favSnap.docs.map(async (f) => {
+      const m = await menuCol().doc(f.id).get();
+      if (!m.exists) return null;
+      const data = m.data();
+      return { id: m.id, ...data };
+    })
   );
-  return result.rows;
+  return items.filter((m) => m && m.is_available === true);
 };
 
-/**
- * Add item to favorites
- * @param {string} studentId - Student ID
- * @param {number} menuItemId - Menu item ID
- * @returns {Promise<Object>} Created favorite
- */
+/** Add a favorite (idempotent). */
 const addToFavorites = async (studentId, menuItemId) => {
-  const result = await query(
-    `INSERT INTO favorites (student_id, menu_item_id)
-     VALUES ($1, $2)
-     ON CONFLICT (student_id, menu_item_id) DO NOTHING
-     RETURNING *`,
-    [studentId, menuItemId]
-  );
-  return result.rows[0];
+  const ref = col().doc(String(studentId)).collection('favorites').doc(String(menuItemId));
+  await ref.set({ menu_item_id: menuItemId, created_at: FieldValue.serverTimestamp() }, { merge: true });
+  const snap = await ref.get();
+  return { student_id: studentId, menu_item_id: menuItemId, created_at: tsToIso(snap.data().created_at) };
 };
 
-/**
- * Remove item from favorites
- * @param {string} studentId - Student ID
- * @param {number} menuItemId - Menu item ID
- * @returns {Promise<boolean>} Success status
- */
+/** Remove a favorite. Returns true if it existed. */
 const removeFromFavorites = async (studentId, menuItemId) => {
-  const result = await query(
-    'DELETE FROM favorites WHERE student_id = $1 AND menu_item_id = $2',
-    [studentId, menuItemId]
-  );
-  return result.rowCount > 0;
+  const ref = col().doc(String(studentId)).collection('favorites').doc(String(menuItemId));
+  const snap = await ref.get();
+  if (!snap.exists) return false;
+  await ref.delete();
+  return true;
 };
 
-/**
- * Check if item is favorited
- * @param {string} studentId - Student ID
- * @param {number} menuItemId - Menu item ID
- * @returns {Promise<boolean>} Is favorited
- */
+/** Is this item favorited by the student? */
 const isFavorite = async (studentId, menuItemId) => {
-  const result = await query(
-    'SELECT id FROM favorites WHERE student_id = $1 AND menu_item_id = $2',
-    [studentId, menuItemId]
-  );
-  return result.rows.length > 0;
+  const snap = await col().doc(String(studentId))
+    .collection('favorites').doc(String(menuItemId)).get();
+  return snap.exists;
 };
 
 // ============================================================================
-// LIST OPERATIONS
+// ADMIN: PAGINATED STUDENT LIST
 // ============================================================================
-
 /**
- * Get students with server-side filtering and pagination.
- *
- * Pushes tier and search into SQL with a matching COUNT(*).
- *
- * @param {Object} [opts]
- * @param {number} [opts.limit=50]
- * @param {number} [opts.offset=0]
- * @param {string} [opts.tier]    Bronze|Silver|Gold|Platinum
- * @param {string} [opts.search]  Matched against name / roll_number / phone / email
- * @returns {Promise<{ students: Array, total: number }>}
+ * Paginated student list for the admin roster. tier filter + pagination are
+ * server-side. `search` has no native Firestore equivalent, so when a search
+ * term is present we scan a capped window and filter in memory (fine at
+ * canteen scale; documented limitation).
  */
-const getAll = async (opts = {}) => {
-  const { limit = 50, offset = 0, tier = null, search = null } = opts;
-
-  const where  = ['1=1'];
-  const params = [];
-
-  if (tier) {
-    params.push(tier);
-    where.push(`tier = $${params.length}`);
+const getAll = async ({ limit = 50, offset = 0, tier = null, search = null } = {}) => {
+  // tier and/or search → single-field filter (or none) + in-memory sort/filter,
+  // avoiding a composite (tier + created_at) index. Canteen scale is small.
+  if (tier || search) {
+    let q = col();
+    if (tier) q = q.where('tier', '==', tier);
+    const scan = await q.limit(3000).get();
+    let rows = scan.docs.map(toStudent);
+    if (search) {
+      const term = String(search).toLowerCase();
+      rows = rows.filter((s) =>
+        [s.name, s.roll_number, s.phone, s.email]
+          .some((f) => f && String(f).toLowerCase().includes(term))
+      );
+    }
+    rows.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    return { students: rows.slice(offset, offset + limit), total: rows.length };
   }
-  if (search) {
-    params.push(`%${search}%`);
-    const idx = params.length;
-    where.push(`(name ILIKE $${idx} OR roll_number ILIKE $${idx} OR phone ILIKE $${idx} OR email ILIKE $${idx})`);
-  }
-  const whereSql = where.join(' AND ');
 
-  const countResult = await query(
-    `SELECT COUNT(*) FROM students WHERE ${whereSql}`,
-    params
-  );
+  // No filters → true server-side pagination on a single-field orderBy (fine).
+  const countSnap = await col().count().get();
+  const snap = await col().orderBy('created_at', 'desc').offset(offset).limit(limit).get();
+  return { students: snap.docs.map(toStudent), total: countSnap.data().count };
+};
 
-  params.push(limit, offset);
-  const result = await query(
-    `SELECT * FROM students
-     WHERE ${whereSql}
-     ORDER BY created_at DESC
-     LIMIT $${params.length - 1} OFFSET $${params.length}`,
-    params
-  );
+// ============================================================================
+// STATS (single student detail)
+// ============================================================================
+/**
+ * Student + derived counters (order_count, lifetime_spent, favorites_count).
+ * Aggregated by reading the student's paid orders (small at canteen scale).
+ */
+const getStats = async (id) => {
+  const doc = await col().doc(String(id)).get();
+  if (!doc.exists) return null;
+  const student = toStudent(doc);
+
+  // Single-field filter (student_id) then filter paid in memory — avoids a
+  // composite (student_id + payment_status) index. A student has few orders.
+  const ordersSnap = await collections.orders()
+    .where('student_id', '==', String(id))
+    .get();
+  const paid = ordersSnap.docs.filter((o) => o.data().payment_status === 'paid');
+
+  const order_count    = paid.length;
+  const lifetime_spent = paid.reduce((s, o) => s + (Number(o.data().total_amount) || 0), 0);
+  const favSnap        = await col().doc(String(id)).collection('favorites').count().get();
 
   return {
-    students: result.rows,
-    total:    parseInt(countResult.rows[0].count, 10),
+    ...student,
+    order_count,
+    lifetime_spent,
+    favorites_count: favSnap.data().count,
   };
 };
 
-/**
- * Get student statistics
- * @param {string} id - Student ID
- * @returns {Promise<Object>} Student stats
- */
-const getStats = async (id) => {
-  const result = await query(
-    `SELECT 
-       s.*,
-       COUNT(DISTINCT o.id) as order_count,
-       COALESCE(SUM(o.total_amount), 0) as lifetime_spent,
-       COUNT(DISTINCT f.menu_item_id) as favorites_count
-     FROM students s
-     LEFT JOIN orders o ON s.id = o.student_id AND o.payment_status = 'paid'
-     LEFT JOIN favorites f ON s.id = f.student_id
-     WHERE s.id = $1
-     GROUP BY s.id`,
-    [id]
-  );
-  return result.rows[0];
-};
-
 // ============================================================================
-// EXPORTS
+// EXPORTS  (identical surface to the old pg model)
 // ============================================================================
-
 module.exports = {
   findByRoll,
   findByPhone,
@@ -480,10 +404,12 @@ module.exports = {
   deductPoints,
   updateTier,
   updateStats,
+  applyPurchase,
+  applyReversal,
   getFavorites,
   addToFavorites,
   removeFromFavorites,
   isFavorite,
   getAll,
-  getStats
+  getStats,
 };

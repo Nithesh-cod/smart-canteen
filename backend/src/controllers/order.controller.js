@@ -11,7 +11,6 @@ const MenuItem       = require('../models/MenuItem');
 const printerService = require('../services/printer.service');
 const razorpayService = require('../services/razorpay.service');
 const logger         = require('../utils/logger');
-const { query, transaction } = require('../config/database');
 const { asyncHandler }                  = require('../middleware/error.middleware');
 const { issueGuestToken }               = require('../middleware/auth.middleware');
 const { calculatePoints, generateOrderNumber } = require('../utils/helpers');
@@ -80,11 +79,12 @@ const create = asyncHandler(async (req, res) => {
     ids.push(parseInt(menu_item_id));
   }
 
-  const { rows: menuRows } = await query(
-    'SELECT id, name, price, is_available FROM menu_items WHERE id = ANY($1::int[])',
-    [ids]
-  );
-  const menuMap = new Map(menuRows.map(r => [r.id, r]));
+  // Batch-fetch the referenced menu items from Firestore. The authoritative
+  // stock check happens atomically inside Order.create — this pre-flight only
+  // screens out unknown / unavailable ids and reads server-side prices.
+  const menuRows = (await Promise.all([...new Set(ids)].map((id) => MenuItem.getById(id))))
+    .filter(Boolean);
+  const menuMap = new Map(menuRows.map((r) => [r.id, r]));
 
   const orderItems    = [];
   let   originalAmount = 0;
@@ -141,15 +141,7 @@ const create = asyncHandler(async (req, res) => {
     // orders) and gate on that instead. Race-free at scale would need a
     // FOR UPDATE row lock at create time; under canteen concurrency this
     // catches the common kiosk-double-tap and rapid mobile retries.
-    const reservedResult = await query(
-      `SELECT COALESCE(SUM(points_used), 0) AS reserved
-         FROM orders
-        WHERE student_id = $1
-          AND status        = 'pending'
-          AND payment_status IN ('pending', 'refunding')`,
-      [studentId]
-    );
-    const reserved  = parseInt(reservedResult.rows[0].reserved, 10) || 0;
+    const reserved  = await Order.reservedPoints(studentId);
     const available = student.points - reserved;
 
     if (available < points_to_redeem) {
@@ -256,10 +248,10 @@ const create = asyncHandler(async (req, res) => {
  * Auth: student (own only) | chef | admin
  */
 const getById = asyncHandler(async (req, res) => {
-  const orderId         = parseInt(req.params.id);
+  const orderId         = req.params.id;
   const { id: userId, role } = req.user;
 
-  if (isNaN(orderId)) {
+  if (!orderId) {
     return res.status(400).json({ success: false, message: 'Invalid order ID' });
   }
 
@@ -354,10 +346,10 @@ const getAll = asyncHandler(async (req, res) => {
  * Auth: chef | admin
  */
 const updateStatus = asyncHandler(async (req, res) => {
-  const orderId    = parseInt(req.params.id);
+  const orderId    = req.params.id;
   const { status } = req.body;
 
-  if (isNaN(orderId)) {
+  if (!orderId) {
     return res.status(400).json({ success: false, message: 'Invalid order ID' });
   }
 
@@ -452,11 +444,11 @@ const updateStatus = asyncHandler(async (req, res) => {
  * Auth: student (pending only) | admin (any non-completed/cancelled)
  */
 const cancel = asyncHandler(async (req, res) => {
-  const orderId              = parseInt(req.params.id);
+  const orderId              = req.params.id;
   const { id: userId, role } = req.user;
   const reason               = req.body.reason || 'Cancelled by user';
 
-  if (isNaN(orderId)) {
+  if (!orderId) {
     return res.status(400).json({ success: false, message: 'Invalid order ID' });
   }
 
@@ -503,14 +495,8 @@ const cancel = asyncHandler(async (req, res) => {
   // request wins; the other gets a clean 409.
   let refund = null;
   if (order.payment_status === 'paid' && order.razorpay_payment_id) {
-    const claim = await query(
-      `UPDATE orders
-          SET payment_status = 'refunding'
-        WHERE id = $1 AND payment_status = 'paid'
-        RETURNING *`,
-      [order.id]
-    );
-    if (claim.rowCount === 0) {
+    const claimed = await Order.compareAndSetPaymentStatus(order.id, 'paid', 'refunding');
+    if (!claimed) {
       return res.status(409).json({
         success: false,
         message: 'A concurrent cancel/refund is already in progress for this order.',
@@ -530,11 +516,7 @@ const cancel = asyncHandler(async (req, res) => {
       // can be retried. (If this rollback itself fails the row is stuck
       // at 'refunding' and the next attempt's claim will 409 — same
       // recovery shape Round-5 Y6's processRefund uses.)
-      await query(
-        `UPDATE orders SET payment_status = 'paid'
-          WHERE id = $1 AND payment_status = 'refunding'`,
-        [order.id]
-      );
+      await Order.compareAndSetPaymentStatus(order.id, 'refunding', 'paid');
       logger.error(`Razorpay refund failed on cancel of order #${order.order_number}`, refundErr);
       return res.status(502).json({
         success: false,
@@ -554,23 +536,20 @@ const cancel = asyncHandler(async (req, res) => {
   let finalOrder;
   let stockRestored;
   try {
-    const result = await transaction(async (client) => {
-      const restored = await Order.restoreStock(order.id, client);
-      const cancelled = await Order.cancel(order.id, client);
-      let updated = cancelled;
-      if (refund) {
-        updated = await Order.updatePayment(order.id, {
-          payment_status:      'refunded',
-          payment_method:      order.payment_method,
-          razorpay_order_id:   order.razorpay_order_id,
-          razorpay_payment_id: order.razorpay_payment_id,
-          razorpay_signature:  order.razorpay_signature
-        }, client);
-      }
-      return { finalOrder: updated, stockRestored: restored };
-    });
-    finalOrder = result.finalOrder;
-    stockRestored = result.stockRestored;
+    // Firestore has no cross-document rollback across these composed model
+    // calls, but each write is atomic on its own doc and the sequence is
+    // idempotent enough to retry. Restore stock → cancel → (mark refunded).
+    stockRestored = await Order.restoreStock(order.id);
+    finalOrder    = await Order.cancel(order.id);
+    if (refund) {
+      finalOrder = await Order.updatePayment(order.id, {
+        payment_status:      'refunded',
+        payment_method:      order.payment_method,
+        razorpay_order_id:   order.razorpay_order_id,
+        razorpay_payment_id: order.razorpay_payment_id,
+        razorpay_signature:  order.razorpay_signature
+      });
+    }
   } catch (dbErr) {
     logger.error(
       `Cancel DB updates failed AFTER successful refund for order #${order.order_number}. ` +
@@ -586,11 +565,7 @@ const cancel = asyncHandler(async (req, res) => {
     // 'refunded' so the books at least mirror the gateway.
     if (refund) {
       try {
-        await query(
-          `UPDATE orders SET payment_status = 'refunded'
-            WHERE id = $1 AND payment_status = 'refunding'`,
-          [order.id]
-        );
+        await Order.compareAndSetPaymentStatus(order.id, 'refunding', 'refunded');
       } catch (rollbackErr) {
         logger.error(
           `Even the fallback payment_status update failed. ` +
@@ -616,19 +591,10 @@ const cancel = asyncHandler(async (req, res) => {
   // there's no student_id (guest).
   if (refund && order.student_id) {
     try {
-      await transaction(async (client) => {
-        if (order.points_earned > 0) {
-          await Student.deductPoints(order.student_id, order.points_earned, client);
-        }
-        if (order.points_used > 0) {
-          await Student.addPoints(order.student_id, order.points_used, client);
-        }
-        await Student.updateStats(
-          order.student_id,
-          -parseFloat(order.total_amount), // negative delta reverses
-          client
-        );
-        await Student.updateTier(order.student_id, client);
+      await Student.applyReversal(order.student_id, {
+        pointsUsed:   order.points_used,
+        pointsEarned: order.points_earned,
+        amount:       parseFloat(order.total_amount),
       });
     } catch (pointsErr) {
       logger.error(

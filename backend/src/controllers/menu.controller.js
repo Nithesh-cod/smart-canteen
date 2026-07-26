@@ -377,21 +377,15 @@ const getCategoryStats = asyncHandler(async (req, res) => {
 // GET ACTIVE OFFERS (public — student kiosk)
 // ============================================================================
 
-const { query: dbQuery } = require('../config/database');
+const Offer = require('../models/Offer');
 
 /**
  * GET /api/menu/offers
  * Public — returns offers that are currently active and within their validity window.
  */
 const getActiveOffers = asyncHandler(async (req, res) => {
-  const result = await dbQuery(
-    `SELECT * FROM offers
-     WHERE is_active = true
-       AND valid_from  <= NOW()
-       AND valid_until >= NOW()
-     ORDER BY created_at DESC`
-  );
-  return res.json({ success: true, data: result.rows });
+  const offers = await Offer.getActive();
+  return res.json({ success: true, data: offers });
 });
 
 // ============================================================================
