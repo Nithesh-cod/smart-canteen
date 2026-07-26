@@ -61,6 +61,15 @@ export const getMe = async (): Promise<ApiResponse<MeData>> => {
 };
 
 /**
+ * Fetch a Firebase custom token (role claim) so the staff dashboards can sign
+ * into Firebase Auth for authorized client-side Firestore reads.
+ */
+export const getFirebaseToken = async (): Promise<ApiResponse<{ firebase_token: string }>> => {
+  const response = await api.get<ApiResponse<{ firebase_token: string }>>('/auth/firebase-token');
+  return response.data;
+};
+
+/**
  * Fetch the authenticated student's profile.
  */
 export const getProfile = async (): Promise<ApiResponse<Student>> => {

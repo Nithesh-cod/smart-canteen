@@ -48,6 +48,14 @@ router.get('/profile', verifyToken, authController.getProfile);
 router.get('/me', verifyToken, authController.getMe);
 
 /**
+ * @route   GET /api/auth/firebase-token
+ * @desc    Mint a Firebase custom token (role claim) for authenticated
+ *          client-side Firestore reads on the staff dashboards
+ * @access  Private (requires JWT token)
+ */
+router.get('/firebase-token', verifyToken, authController.getFirebaseToken);
+
+/**
  * @route   POST /api/auth/logout
  * @desc    Logout student (client-side token removal)
  * @access  Private (requires JWT token)

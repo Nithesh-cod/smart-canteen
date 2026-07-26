@@ -24,6 +24,12 @@ import {
   type QueryConstraint,
   type DocumentData,
 } from 'firebase/firestore';
+import {
+  getAuth,
+  signInWithCustomToken,
+  signOut,
+  type Auth,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -39,10 +45,12 @@ export const isFirebaseConfigured = Boolean(firebaseConfig.projectId);
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
+let auth: Auth | null = null;
 
 if (isFirebaseConfigured) {
   app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   db = getFirestore(app);
+  auth = getAuth(app);
 
   if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
     try {
@@ -61,7 +69,24 @@ if (isFirebaseConfigured) {
   );
 }
 
-export { db };
+export { db, auth };
+
+/**
+ * Sign into Firebase Auth with a backend-minted custom token so client-side
+ * Firestore reads (the staff dashboards' onSnapshot listeners) are authorized
+ * by Security Rules. Resolves once signed in; safe to call repeatedly.
+ */
+export async function signIntoFirebase(customToken: string): Promise<void> {
+  if (!auth) return;
+  if (auth.currentUser) return; // already signed in this session
+  await signInWithCustomToken(auth, customToken);
+}
+
+/** Sign out of Firebase Auth (called on logout / session loss). */
+export async function signOutOfFirebase(): Promise<void> {
+  if (!auth || !auth.currentUser) return;
+  try { await signOut(auth); } catch { /* ignore */ }
+}
 
 export type SnapshotHandler<T = DocumentData> = (rows: T[]) => void;
 

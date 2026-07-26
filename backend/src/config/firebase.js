@@ -16,6 +16,7 @@
 
 const { initializeApp, cert, applicationDefault, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
 function buildApp() {
   if (getApps().length) return getApps()[0];
@@ -45,13 +46,16 @@ function buildApp() {
     return initializeApp({ credential: cert(creds), projectId: projectId || creds.project_id });
   }
 
-  // 3. Path to a service-account file (read automatically by applicationDefault()).
+  // 3. Path to a service-account file. Read it and use cert() (NOT
+  //    applicationDefault) so the private key is available for LOCAL JWT signing
+  //    — createCustomToken() then works without needing the IAM Credentials API.
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    console.log(
-      `[Firebase] Initialized from GOOGLE_APPLICATION_CREDENTIALS=` +
-      `${process.env.GOOGLE_APPLICATION_CREDENTIALS}`
-    );
-    return initializeApp({ credential: applicationDefault(), projectId });
+    const fs = require('fs');
+    const path = require('path');
+    const file = path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS);
+    const creds = JSON.parse(fs.readFileSync(file, 'utf8'));
+    console.log(`[Firebase] Initialized from service-account file ${file}`);
+    return initializeApp({ credential: cert(creds), projectId: projectId || creds.project_id });
   }
 
   // 4. Ambient credentials (Cloud Run / Cloud Functions), else fail loud.
@@ -87,11 +91,22 @@ try {
  */
 const runTransaction = (fn) => db.runTransaction(fn);
 
+/**
+ * Mint a Firebase custom token so a client can sign into Firebase Auth and be
+ * authorized by Firestore Security Rules. `uid` is the student's Firestore doc
+ * id; `claims` carries the role so rules can gate reads (request.auth.token.role).
+ * @param {string} uid
+ * @param {object} claims  e.g. { role: 'chef' }
+ * @returns {Promise<string>}
+ */
+const createFirebaseToken = (uid, claims = {}) => getAuth(app).createCustomToken(String(uid), claims);
+
 module.exports = {
   db,
   FieldValue,
   Timestamp,
   runTransaction,
+  createFirebaseToken,
   collections: {
     students:  () => db.collection('students'),
     menuItems: () => db.collection('menu_items'),
