@@ -4,7 +4,7 @@ import OrderCard from './OrderCard';
 
 interface OrderQueueProps {
   orders: Order[];
-  onStatusUpdate: (orderId: number, status: OrderStatus) => void;
+  onStatusUpdate: (orderId: string, status: OrderStatus) => void;
 }
 
 const COLUMNS: Array<{ status: OrderStatus; label: string; color: string; glow: string }> = [

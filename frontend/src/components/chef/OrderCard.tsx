@@ -3,7 +3,7 @@ import type { Order, OrderStatus } from '../../types';
 
 interface OrderCardProps {
   order: Order;
-  onStatusUpdate: (orderId: number, newStatus: OrderStatus) => void;
+  onStatusUpdate: (orderId: string, newStatus: OrderStatus) => void;
 }
 
 function timeAgo(dateStr: string): { text: string; isOld: boolean } {

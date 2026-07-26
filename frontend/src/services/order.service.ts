@@ -80,7 +80,7 @@ export const track = async (orderNumber: string): Promise<ApiResponse<Order>> =>
  * Update the status of an order (chef/owner role).
  */
 export const updateStatus = async (
-  id: number,
+  id: string,
   status: OrderStatus
 ): Promise<ApiResponse<Order>> => {
   const response = await api.patch<ApiResponse<Order>>(`/orders/${id}/status`, {
