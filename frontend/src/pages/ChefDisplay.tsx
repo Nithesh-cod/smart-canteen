@@ -3,7 +3,6 @@ import * as orderService from '../services/order.service';
 import * as menuService from '../services/menu.service';
 import { subscribeToCollection } from '../services/firebase';
 import type { Order, MenuItem, OrderStatus } from '../types';
-import api from '../services/api';
 import { useToast } from '../components/common/Toast';
 
 // ─── Stats Row ────────────────────────────────────────────────────────────────
@@ -1185,15 +1184,12 @@ const ChefDisplay: React.FC = () => {
   const ttsQueueRef = useRef<SpeechSynthesisUtterance[]>([]);
   const ttsDropdownRef = useRef<HTMLDivElement | null>(null);
 
+  // Languages with a hand-written announcement template (offline — no API).
   const TTS_LANGUAGES = [
-    { code: 'en-IN', label: 'English',   flag: '🇬🇧' },
-    { code: 'hi-IN', label: 'Hindi',     flag: '🇮🇳' },
-    { code: 'ta-IN', label: 'Tamil',     flag: '🌺' },
-    { code: 'te-IN', label: 'Telugu',    flag: '🌸' },
-    { code: 'ml-IN', label: 'Malayalam', flag: '🌴' },
-    { code: 'kn-IN', label: 'Kannada',   flag: '🏔️' },
-    { code: 'bn-IN', label: 'Bengali',   flag: '🌿' },
-    { code: 'mr-IN', label: 'Marathi',   flag: '🦁' },
+    { code: 'en-IN', label: 'English', flag: '🇬🇧' },
+    { code: 'ta-IN', label: 'தமிழ் Tamil',   flag: '🌺' },
+    { code: 'hi-IN', label: 'हिन्दी Hindi',  flag: '🇮🇳' },
+    { code: 'mr-IN', label: 'मराठी Marathi', flag: '🦁' },
   ] as const;
 
   const currentLangLabel = TTS_LANGUAGES.find(l => l.code === ttsLang);
@@ -1210,78 +1206,110 @@ const ChefDisplay: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [ttsLangOpen]);
 
-  // Build a natural-language order summary in English (Claude will translate it)
-  const buildOrderSummary = useCallback((order: Order): string => {
-    const items = (order.items ?? [])
-      .map(i => `${i.quantity} ${i.item_name}`)
-      .join(', ');
-    const total = Number(order.total_amount).toFixed(0);
-    const student = order.student_name ? ` for ${order.student_name}` : '';
-    return `New order number ${order.order_number}${student}. Items: ${items}. Total: ${total} rupees.`;
+  // ── Offline multilingual announcement builder ────────────────────────────
+  // Per the product decision, the STRUCTURE is translated per language while
+  // item names stay as-is (English) and numbers stay as digits (the voice reads
+  // them in its own language). No translation API — fully offline & instant.
+  const buildAnnouncement = useCallback((order: Order, lang: string): string => {
+    const items = (order.items ?? []).map(i => `${i.quantity} ${i.item_name}`).join(', ');
+    const count = (order.items ?? []).length;
+    // "OZ000042" → "42" so the order number is spoken cleanly.
+    const digits = String(order.order_number || '').replace(/\D/g, '').replace(/^0+/, '');
+    const no = digits || String(order.order_number || '');
+
+    switch (lang) {
+      case 'ta-IN': // Tamil
+        return `புதிய ஆர்டர். ஆர்டர் எண் ${no}. ${count} பொருட்கள்: ${items}.`;
+      case 'hi-IN': // Hindi
+        return `नया ऑर्डर। ऑर्डर नंबर ${no}। ${count} आइटम: ${items}।`;
+      case 'mr-IN': // Marathi
+        return `नवीन ऑर्डर. ऑर्डर नंबर ${no}. ${count} वस्तू: ${items}.`;
+      default:      // English
+        return `New order. Order number ${no}. ${count} item${count === 1 ? '' : 's'}: ${items}.`;
+    }
   }, []);
 
-  // Core speak function: translate if needed → SpeechSynthesis
-  const speakOrder = useCallback(async (order: Order) => {
-    if (!ttsEnabled) return;
-    if (!('speechSynthesis' in window)) {
-      console.warn('[TTS] SpeechSynthesis not supported in this browser.');
-      return;
-    }
+  // Keep the selected language in a ref so the speak queue never goes stale.
+  const ttsLangRef = useRef(ttsLang);
+  useEffect(() => { ttsLangRef.current = ttsLang; }, [ttsLang]);
 
+  // Available system voices. getVoices() is often empty until 'voiceschanged'
+  // fires (Chrome), so we keep a ref + a tick to re-evaluate availability in UI.
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const [voicesTick, setVoicesTick] = useState(0);
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    const load = () => { voicesRef.current = window.speechSynthesis.getVoices(); setVoicesTick(t => t + 1); };
+    load();
+    window.speechSynthesis.addEventListener('voiceschanged', load);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
+  }, []);
+
+  const pickVoice = useCallback((lang: string): SpeechSynthesisVoice | undefined => {
+    const base = lang.split('-')[0];
+    return voicesRef.current.find(v => v.lang === lang)
+        || voicesRef.current.find(v => v.lang.startsWith(base));
+  }, []);
+
+  // Is a voice for the *currently selected* language installed on this device?
+  // (Browser TTS can only speak a language if its voice pack is present.)
+  const hasVoiceForCurrentLang = (() => {
+    void voicesTick; // re-evaluate when the voice list loads
+    return ttsLang === 'en-IN' || pickVoice(ttsLang) !== undefined;
+  })();
+
+  // ── Sequential announcement queue (rapid orders don't cut each other off) ──
+  const speakingRef = useRef(false);
+  const speakQueueRef = useRef<Order[]>([]);
+
+  const drainQueue = useCallback(() => {
+    if (speakingRef.current) return;
+    const order = speakQueueRef.current.shift();
+    if (!order) return;
+    speakingRef.current = true;
     setSpeakingOrderId(order.id);
-    window.speechSynthesis.cancel(); // stop any ongoing speech
 
-    const englishText = buildOrderSummary(order);
-    let textToSpeak = englishText;
-
-    // Translate if not English
-    if (ttsLang !== 'en-IN') {
-      try {
-        const resp = await api.post('/ai/translate', { text: englishText, targetLangCode: ttsLang });
-        if (resp.data?.success && resp.data?.data?.translatedText) {
-          textToSpeak = resp.data.data.translatedText;
-        }
-      } catch (err) {
-        console.warn('[TTS] Translation failed, falling back to English:', err);
-      }
-    }
-
-    const utter = new SpeechSynthesisUtterance(textToSpeak);
-    utter.lang = ttsLang;
-    utter.rate = 0.75;   // slower → more intelligible for kitchen staff
+    const lang = ttsLangRef.current;
+    const utter = new SpeechSynthesisUtterance(buildAnnouncement(order, lang));
+    utter.lang = lang;
+    utter.rate = 0.8;   // a touch slow → intelligible over kitchen noise
     utter.pitch = 1.0;
     utter.volume = 1.0;
+    const v = pickVoice(lang);
+    if (v) utter.voice = v;
 
-    // Async voice loading — getVoices() may return [] on first call in Chrome
-    // until the 'voiceschanged' event fires.
-    const loadVoices = (): Promise<SpeechSynthesisVoice[]> =>
-      new Promise(resolve => {
-        const v = window.speechSynthesis.getVoices();
-        if (v.length > 0) { resolve(v); return; }
-        const handler = () => resolve(window.speechSynthesis.getVoices());
-        window.speechSynthesis.addEventListener('voiceschanged', handler, { once: true });
-        // Safety timeout — resolve with whatever is available after 1 s
-        setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
-      });
-
-    const voices = await loadVoices();
-    // Pick the best matching voice for the target language.
-    // Deliberately NO English fallback — if we fall back to an English voice while
-    // the text is in Tamil/Hindi script, the TTS engine produces silence or
-    // unreadable output.  Leaving utter.voice unset lets the browser choose the
-    // best available voice for utter.lang automatically.
-    const matchedVoice =
-      voices.find(v => v.lang === ttsLang) ||
-      voices.find(v => v.lang.startsWith(ttsLang.split('-')[0]));
-    if (matchedVoice) utter.voice = matchedVoice;
-    // utter.lang is always set (above) so the browser still picks the right
-    // synthesiser even when matchedVoice is undefined.
-
-    utter.onend = () => setSpeakingOrderId(null);
-    utter.onerror = () => setSpeakingOrderId(null);
-
+    const done = () => { speakingRef.current = false; setSpeakingOrderId(null); drainQueue(); };
+    utter.onend = done;
+    utter.onerror = done;
     window.speechSynthesis.speak(utter);
-  }, [ttsEnabled, ttsLang, buildOrderSummary]);
+  }, [buildAnnouncement, pickVoice]);
+
+  // Public: enqueue an order to be announced.
+  const speakOrder = useCallback((order: Order) => {
+    if (!ttsEnabled || !('speechSynthesis' in window)) return;
+    speakQueueRef.current.push(order);
+    drainQueue();
+  }, [ttsEnabled, drainQueue]);
+
+  // Preview a language's voice with a sample order (used when picking a language).
+  const speakSample = useCallback((lang: string) => {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    speakingRef.current = false;
+    const sample = {
+      order_number: 'OZ000007',
+      items: [
+        { menu_item_id: 0, item_name: 'Masala Dosa', quantity: 2, price: 0 },
+        { menu_item_id: 0, item_name: 'Filter Coffee', quantity: 1, price: 0 },
+      ],
+    } as unknown as Order;
+    const utter = new SpeechSynthesisUtterance(buildAnnouncement(sample, lang));
+    utter.lang = lang;
+    utter.rate = 0.8;
+    const v = pickVoice(lang);
+    if (v) utter.voice = v;
+    window.speechSynthesis.speak(utter);
+  }, [buildAnnouncement, pickVoice]);
 
   // Web Audio API beep
   const playNotificationBeep = useCallback(() => {
@@ -1561,7 +1589,7 @@ const ChefDisplay: React.FC = () => {
                   {TTS_LANGUAGES.map(lang => (
                     <button
                       key={lang.code}
-                      onClick={() => { setTtsLang(lang.code); setTtsLangOpen(false); }}
+                      onClick={() => { setTtsLang(lang.code); setTtsLangOpen(false); speakSample(lang.code); }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '10px',
                         width: '100%', padding: '9px 12px',
@@ -1583,6 +1611,22 @@ const ChefDisplay: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Voice-availability hint — browser TTS needs the language's voice
+                pack installed on the OS. Warn if the selected one is missing. */}
+            {ttsEnabled && !hasVoiceForCurrentLang && (
+              <span
+                title={`No ${currentLangLabel?.label ?? ''} voice is installed on this device. Install the language's voice pack in your OS settings, or the announcement may be silent / mispronounced.`}
+                style={{
+                  fontFamily: 'Rajdhani, sans-serif', fontSize: '11px', fontWeight: 700,
+                  color: '#ff9f43', background: 'rgba(255,159,67,0.1)',
+                  border: '1px solid rgba(255,159,67,0.35)', borderRadius: '6px',
+                  padding: '4px 8px', letterSpacing: '0.3px', whiteSpace: 'nowrap',
+                }}
+              >
+                ⚠ No {currentLangLabel?.label ?? ''} voice
+              </span>
+            )}
 
             {/* ── TTS on/off toggle ─────────────────────────────────────────── */}
             <button

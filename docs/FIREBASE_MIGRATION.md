@@ -129,8 +129,9 @@ valid_from, valid_until, created_at.
 - [x] Chef panel consolidated to a SINGLE Firestore realtime source (fixes the
       "orders don't show on other chef panels" bug); order ids are now strings
 - [ ] Security rules (lock down test-mode DB) + any composite indexes
-- [ ] Multilingual chef announcer (Tamil/Hindi/Marathi/English) — new-order
-      detection is already wired to speakOrder; upgrade speakOrder for languages
+- [x] Multilingual chef announcer (English/Tamil/Hindi/Marathi) — offline
+      per-language templates, sequential queue, voice detection + "no voice"
+      warning, tap-to-preview on language select. Text verified in all 4 langs.
 - [ ] Migrate `print-agent.js` from Supabase Realtime → Firestore listener
 - [ ] Live browser test of multi-chef sync
 - [ ] End-to-end verification against the user's Firebase project
