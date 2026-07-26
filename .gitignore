@@ -9,6 +9,11 @@ node_modules/
 .env.*.local
 # Keep .env.example (it's safe — no real secrets)
 
+# Firebase service-account private keys — NEVER commit these
+serviceAccountKey.json
+**/serviceAccountKey.json
+*firebase-adminsdk*.json
+
 # ── Build output ──────────────────────────────────────────────────────────────
 dist/
 dist-chef/

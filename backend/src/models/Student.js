@@ -140,6 +140,94 @@ const updateProfile = async (id, data) => {
 };
 
 /**
+ * Strip secret columns from a student row before it leaves the API.
+ * password_hash must NEVER reach a client — not even an admin one.
+ * @param {Object|null} row
+ * @returns {Object|null}
+ */
+const toSafe = (row) => {
+  if (!row) return row;
+  const { password_hash, ...safe } = row; // eslint-disable-line no-unused-vars
+  return safe;
+};
+
+/**
+ * List accounts filtered by role — powers the admin account-management screen.
+ * @param {Object} opts
+ * @param {string} [opts.role]    'student' | 'chef' | 'admin' (omit = all)
+ * @param {number} [opts.limit=50]
+ * @param {number} [opts.offset=0]
+ * @returns {Promise<{ accounts: Array, total: number }>} sanitized rows
+ */
+const listByRole = async ({ role = null, limit = 50, offset = 0 } = {}) => {
+  const where  = ['1=1'];
+  const params = [];
+
+  if (role) {
+    params.push(role);
+    where.push(`role = $${params.length}`);
+  }
+  const whereSql = where.join(' AND ');
+
+  const countResult = await query(`SELECT COUNT(*) FROM students WHERE ${whereSql}`, params);
+
+  params.push(limit, offset);
+  const result = await query(
+    `SELECT * FROM students
+      WHERE ${whereSql}
+      ORDER BY
+        CASE role WHEN 'admin' THEN 0 WHEN 'chef' THEN 1 ELSE 2 END,
+        created_at DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+
+  return {
+    accounts: result.rows.map(toSafe),
+    total:    parseInt(countResult.rows[0].count, 10),
+  };
+};
+
+/**
+ * Admin-only privileged update: role, password, and/or active state.
+ * Only these three columns are writable here — deliberately narrow so this
+ * can never be used to overwrite arbitrary fields. Returns the sanitized row.
+ * @param {string} id
+ * @param {Object} data
+ * @param {string}  [data.role]           'student' | 'chef' | 'admin'
+ * @param {string}  [data.password_hash]  pre-hashed (never plaintext)
+ * @param {boolean} [data.is_active]
+ * @returns {Promise<Object|null>} sanitized updated row, or null if not found
+ */
+const adminUpdate = async (id, data) => {
+  const fields = [];
+  const values = [];
+  let i = 1;
+
+  if (data.role !== undefined) {
+    fields.push(`role = $${i++}`);
+    values.push(data.role);
+  }
+  if (data.password_hash !== undefined) {
+    fields.push(`password_hash = $${i++}`);
+    values.push(data.password_hash);
+  }
+  if (data.is_active !== undefined) {
+    fields.push(`is_active = $${i++}`);
+    values.push(data.is_active);
+  }
+
+  if (fields.length === 0) throw new Error('No fields to update');
+
+  values.push(id);
+  const result = await query(
+    `UPDATE students SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  );
+  return toSafe(result.rows[0] || null);
+};
+
+/**
  * Update last login timestamp
  * @param {string} id - Student ID
  * @returns {Promise<void>}
@@ -383,6 +471,9 @@ module.exports = {
   findById,
   findByIdentifier,
   create,
+  toSafe,
+  listByRole,
+  adminUpdate,
   updateProfile,
   updateLastLogin,
   addPoints,

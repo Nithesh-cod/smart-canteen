@@ -3,6 +3,7 @@ import StudentKiosk    from './pages/StudentKiosk'
 import ChefDisplay     from './pages/ChefDisplay'
 import OwnerDashboard  from './pages/OwnerDashboard'
 import OrderTracking   from './pages/OrderTracking'
+import UnifiedLogin    from './pages/UnifiedLogin'
 import AdminAuthGate   from './components/common/AdminAuthGate'
 
 function App() {
@@ -13,6 +14,9 @@ function App() {
         <Route path="/"                  element={<StudentKiosk />} />
         <Route path="/track"             element={<OrderTracking />} />
         <Route path="/track/:orderNumber" element={<OrderTracking />} />
+
+        {/* ── Unified login (all roles — routes by role after sign-in) ─ */}
+        <Route path="/login"             element={<UnifiedLogin />} />
 
         {/* ── Chef display (requires chef or admin role) ────────────── */}
         <Route

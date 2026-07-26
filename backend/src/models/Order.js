@@ -27,6 +27,15 @@ const runner = (client) =>
  */
 const create = async (orderData, items) => {
   return await transaction(async (client) => {
+    // 0. Reserve stock atomically (FIX H4).
+    // Must happen inside this transaction, BEFORE the order row exists, so a
+    // shortfall rolls everything back. The conditional UPDATE is the single
+    // authoritative stock check — the controller's pre-flight only screens
+    // out unknown/unavailable ids and is deliberately not a stock check,
+    // because a check-then-decrement pair is a TOCTOU race: two concurrent
+    // orders both read stock=1, both pass, both decrement, stock oversells.
+    const stockChanges = await reserveStock(client, items);
+
     // 1. Insert order — student_id is null for guest (no-login) checkouts
     const orderResult = await client.query(
       `INSERT INTO orders
@@ -89,8 +98,91 @@ const create = async (orderData, items) => {
        GROUP BY o.id, s.name, s.roll_number, s.phone, s.points, s.department`,
       [order.id]
     );
-    return completeResult.rows[0] || order;
+
+    // Hand the post-commit stock deltas back to the controller so it can
+    // broadcast menu:stock-updated / menu:availability-changed. Transient —
+    // never persisted, and absent when every item was unlimited.
+    const complete = completeResult.rows[0] || order;
+    complete._stockChanges = stockChanges;
+    return complete;
   });
+};
+
+/**
+ * Atomically decrement stock for every item in an order.
+ *
+ * Semantics match restoreStock(): stock_quantity = -1 means UNLIMITED and is
+ * left untouched; 0+ is tracked stock. An item that would go negative aborts
+ * the whole order with a 400.
+ *
+ * @param {import('pg').PoolClient} client - transaction client (required)
+ * @param {Array} items - [{ menu_item_id, quantity }]
+ * @returns {Promise<Array>} rows whose stock actually moved
+ * @throws {Error} err.status 400 (short) / 404 (item vanished)
+ */
+const reserveStock = async (client, items) => {
+  // Fold duplicates: the same item can appear twice in one cart, and the
+  // `stock_quantity >= $1` guard must see the TOTAL, not each line alone.
+  const wanted = new Map();
+  for (const it of items) {
+    const id  = parseInt(it.menu_item_id, 10);
+    const qty = parseInt(it.quantity, 10);
+    wanted.set(id, (wanted.get(id) || 0) + qty);
+  }
+
+  // Lock rows in a deterministic order. Two carts holding the same two items
+  // in opposite order would otherwise deadlock each other mid-transaction.
+  const ids = [...wanted.keys()].sort((a, b) => a - b);
+
+  const changed = [];
+  for (const id of ids) {
+    const qty = wanted.get(id);
+
+    // The WHERE clause IS the check — Postgres re-evaluates it against the
+    // committed row under READ COMMITTED, so a concurrent decrement makes
+    // this match zero rows instead of overselling.
+    const result = await client.query(
+      `UPDATE menu_items
+          SET stock_quantity = stock_quantity - $1,
+              is_available   = CASE
+                WHEN stock_quantity - $1 <= 0 THEN false ELSE is_available
+              END
+        WHERE id = $2
+          AND stock_quantity <> -1
+          AND stock_quantity >= $1
+        RETURNING id, name, stock_quantity, is_available`,
+      [qty, id]
+    );
+
+    if (result.rowCount > 0) {
+      changed.push(result.rows[0]);
+      continue;
+    }
+
+    // Zero rows means either "unlimited item" (fine) or "not enough left"
+    // (fatal). Re-read to tell them apart and produce an honest message.
+    const { rows } = await client.query(
+      'SELECT name, stock_quantity FROM menu_items WHERE id = $1',
+      [id]
+    );
+
+    if (!rows[0]) {
+      const err = new Error(`Menu item ${id} no longer exists`);
+      err.status = 404;
+      throw err;
+    }
+
+    if (rows[0].stock_quantity === -1) continue; // unlimited — nothing to do
+
+    const err = new Error(
+      `"${rows[0].name}" is out of stock — only ` +
+      `${Math.max(0, rows[0].stock_quantity)} left, you requested ${qty}`
+    );
+    err.status = 400;
+    throw err;
+  }
+
+  return changed;
 };
 
 // ============================================================================
@@ -131,6 +223,33 @@ const getById = async (id) => {
     [id]
   );
   return result.rows[0] || null;
+};
+
+/**
+ * Get order by Razorpay order ID.
+ *
+ * The payment.captured webhook only knows the gateway's order id, so this is
+ * the webhook's only way in. Backed by idx_orders_razorpay (migration 003) —
+ * the previous approach scanned getAll({payment_status:'pending'}) and
+ * json_agg'd every candidate on each delivery.
+ *
+ * @param {string} razorpayOrderId - Razorpay order ID (order_xxx)
+ * @returns {Promise<Object|null>} Complete order object
+ */
+const findByRazorpayOrderId = async (razorpayOrderId) => {
+  if (!razorpayOrderId) return null;
+
+  // Resolve the id off the index, then reuse getById so the webhook gets the
+  // exact same shape (items + student fields) every other caller sees.
+  const result = await query(
+    `SELECT id FROM orders
+      WHERE razorpay_order_id = $1
+      ORDER BY id DESC
+      LIMIT 1`,
+    [razorpayOrderId]
+  );
+
+  return result.rows[0] ? await getById(result.rows[0].id) : null;
 };
 
 /**
@@ -517,6 +636,7 @@ const markBillIssued = async (id, client = null) => {
 module.exports = {
   create,
   getById,
+  findByRazorpayOrderId,
   getByOrderNumber,
   getByStudent,
   getAll,
