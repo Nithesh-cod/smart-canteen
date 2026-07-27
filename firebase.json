@@ -1,0 +1,10 @@
+{
+  "emulators": {
+    "firestore": { "port": 8080 },
+    "ui": { "enabled": false },
+    "singleProjectMode": false
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

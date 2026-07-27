@@ -16,7 +16,9 @@
 
 const { initializeApp, cert, applicationDefault, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
-const { getAuth } = require('firebase-admin/auth');
+// NOTE: firebase-admin/auth is lazy-required inside createFirebaseToken (below).
+// Loading it at module top pulls in `jose` (ESM-only), which Jest can't parse —
+// and the Firestore data layer doesn't need it, so we defer it to call time.
 
 function buildApp() {
   if (getApps().length) return getApps()[0];
@@ -99,7 +101,10 @@ const runTransaction = (fn) => db.runTransaction(fn);
  * @param {object} claims  e.g. { role: 'chef' }
  * @returns {Promise<string>}
  */
-const createFirebaseToken = (uid, claims = {}) => getAuth(app).createCustomToken(String(uid), claims);
+const createFirebaseToken = (uid, claims = {}) => {
+  const { getAuth } = require('firebase-admin/auth'); // lazy — keeps `jose` out of Jest
+  return getAuth(app).createCustomToken(String(uid), claims);
+};
 
 module.exports = {
   db,
