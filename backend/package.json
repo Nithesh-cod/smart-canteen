@@ -10,6 +10,7 @@
     "migrate": "node scripts/migrate.js",
     "create-admin": "node scripts/create-admin.js",
     "seed:firebase": "node scripts/seed-firebase.js",
+    "test": "firebase emulators:exec --project demo-smart-canteen --config ../firebase.json \"jest --runInBand --forceExit\"",
     "db:setup": "psql -U postgres -d canteen_db -f ../database/schema.sql"
   },
   "keywords": [
@@ -44,7 +45,10 @@
     "socket.io": "^4.6.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "firebase-tools": "^15.24.0",
+    "jest": "^30.4.2",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.2.2"
   },
   "engines": {
     "node": ">=18.0.0",

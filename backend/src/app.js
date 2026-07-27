@@ -242,24 +242,29 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-http.listen(PORT, () => {
-  console.log('═══════════════════════════════════════════════════════');
-  console.log(`🚀 Smart Canteen Server is running!`);
-  console.log(`📍 Port: ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 API: http://localhost:${PORT}/api`);
-  console.log(`❤️  Health: http://localhost:${PORT}/health`);
-  console.log(`🔌 Socket.io: Enabled`);
-  console.log('═══════════════════════════════════════════════════════');
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  http.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
+// Only start listening when run directly (node src/app.js). When required as a
+// module — e.g. by supertest in the test suite — we export the app WITHOUT
+// binding a port or opening sockets, so tests drive it via ephemeral servers.
+if (require.main === module) {
+  http.listen(PORT, () => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log(`🚀 Smart Canteen Server is running!`);
+    console.log(`📍 Port: ${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 API: http://localhost:${PORT}/api`);
+    console.log(`❤️  Health: http://localhost:${PORT}/health`);
+    console.log(`🔌 Socket.io: Enabled`);
+    console.log('═══════════════════════════════════════════════════════');
   });
-});
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    http.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  });
+}
 
 module.exports = app;
