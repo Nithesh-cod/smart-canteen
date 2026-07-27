@@ -141,8 +141,15 @@ valid_from, valid_until, created_at.
       warning, tap-to-preview on language select. Text verified in all 4 langs.
 - [x] Live browser test: two chef panels sync via Firestore; ACCEPT on one moved
       the order to PREPARING on the other automatically. **Multi-chef bug fixed.**
-- [ ] Migrate `print-agent.js` from Supabase Realtime → Firestore listener
+- [x] Migrated `print-agent.js` from Supabase Realtime → Firestore listener
+      (Admin SDK; skips startup backlog; session dedup). Verified live: flipping
+      an order to paid triggered the print pipeline (physical printer absent here).
 - [ ] End-to-end re-verify once Firebase Authentication is enabled
+
+## Cleanup note
+`backend/.env` still has SUPABASE_URL / SUPABASE_ANON_KEY / DATABASE_URL — these
+are now UNUSED (frontend, backend, and print-agent are all off Supabase/pg).
+Safe to delete them from the env whenever convenient.
 
 ## What the user must provide (critical path — I cannot create these)
 

@@ -1,89 +1,41 @@
 // ============================================================================
-// SMART CANTEEN — LOCAL PRINT AGENT
+// SMART CANTEEN — LOCAL PRINT AGENT  (Firestore)
 // ============================================================================
 // Run this on the Windows machine where the POS printer is connected.
-// It watches Supabase Realtime for newly-paid orders and prints a receipt
-// automatically — regardless of whether payment happened on Render cloud
-// or on a local backend instance.
+// It watches Cloud Firestore for orders whose payment_status flips to 'paid'
+// and prints a receipt automatically — regardless of whether payment happened
+// on the cloud backend or a local one.
 //
 // Usage:
 //   cd backend
 //   node print-agent.js
 //
-// Required .env keys (already present in backend/.env):
-//   SUPABASE_URL, SUPABASE_ANON_KEY  — Realtime subscription
-//   DATABASE_URL                      — fetch full order + items from Postgres
+// Required backend/.env keys:
+//   GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json   (Firestore access)
+//   FIREBASE_PROJECT_ID=smart-canteen-64c7e
 //   PRINTER_TYPE=windows
 //   PRINTER_NAME=POS-58-Series (1)
 // ============================================================================
 
 require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
-const { Pool }         = require('pg');
+const { db }           = require('./src/config/firebase');
+const Order            = require('./src/models/Order');
 const printerService   = require('./src/services/printer.service');
 
-// ── Config validation ────────────────────────────────────────────────────────
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
-const DB_URL       = process.env.DATABASE_URL;
-
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('❌  Set SUPABASE_URL and SUPABASE_ANON_KEY in backend/.env');
-  process.exit(1);
-}
-if (!DB_URL) {
-  console.error('❌  Set DATABASE_URL in backend/.env');
-  process.exit(1);
-}
-
-// ── Direct Postgres pool (same connection the backend uses) ──────────────────
-const pool = new Pool({
-  connectionString: DB_URL,
-  ssl: { rejectUnauthorized: false },
-  max: 3,
-});
-
-async function fetchOrder(orderId) {
-  const result = await pool.query(
-    `SELECT
-       o.*,
-       COALESCE(s.name,        o.guest_name)  AS student_name,
-       COALESCE(s.roll_number, o.guest_roll)  AS student_roll,
-       COALESCE(s.phone,       o.guest_phone) AS student_phone,
-       COALESCE(
-         json_agg(
-           json_build_object(
-             'id',           oi.id,
-             'menu_item_id', oi.menu_item_id,
-             'item_name',    oi.item_name,
-             'quantity',     oi.quantity,
-             'price',        oi.price
-           ) ORDER BY oi.id
-         ) FILTER (WHERE oi.id IS NOT NULL),
-         '[]'::json
-       ) AS items
-     FROM orders o
-     LEFT JOIN students   s  ON o.student_id = s.id
-     LEFT JOIN order_items oi ON o.id        = oi.order_id
-     WHERE o.id = $1
-     GROUP BY o.id, s.name, s.roll_number, s.phone`,
-    [orderId]
-  );
-  return result.rows[0] || null;
-}
-
-// ── Dedup guard: prevent double-print if Realtime fires twice ────────────────
-const recentlyQueued = new Set();
+// ── Dedup guard: prevent a double-print if the listener fires twice ──────────
+const recentlyPrinted = new Set();
 
 async function handlePaidOrder(orderId) {
-  if (recentlyQueued.has(orderId)) return;
-  recentlyQueued.add(orderId);
-  setTimeout(() => recentlyQueued.delete(orderId), 120_000); // forget after 2 min
+  if (recentlyPrinted.has(orderId)) return;
+  recentlyPrinted.add(orderId);
+  setTimeout(() => recentlyPrinted.delete(orderId), 120_000); // forget after 2 min
 
   try {
-    const order = await fetchOrder(orderId);
+    // Order.getById returns the fully-enriched order (items inline + student /
+    // guest name) — the exact shape printerService.printBill expects.
+    const order = await Order.getById(orderId);
     if (!order) {
-      console.warn(`⚠️  Order ${orderId} not found in DB — skipping`);
+      console.warn(`⚠️  Order ${orderId} not found — skipping`);
       return;
     }
 
@@ -97,53 +49,57 @@ async function handlePaidOrder(orderId) {
       console.warn('   Check PRINTER_TYPE and PRINTER_NAME in .env');
     }
   } catch (err) {
-    recentlyQueued.delete(orderId); // allow retry on next event
+    recentlyPrinted.delete(orderId); // allow retry on the next event
     console.error(`❌ Print error for order ${orderId}:`, err.message);
   }
 }
 
-// ── Supabase Realtime — watch every UPDATE on the orders table ───────────────
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// ── Firestore listener — watch paid orders ───────────────────────────────────
+// We listen only to the 'paid' slice. The FIRST snapshot is the existing
+// backlog (every already-paid order) — we skip it, exactly like the old
+// Supabase Realtime agent which never replayed history. After that, each
+// docChange is a live transition, so a freshly-paid order prints once.
+let primed = false;
 
-supabase
-  .channel('print-agent')
-  .on(
-    'postgres_changes',
-    { event: 'UPDATE', schema: 'public', table: 'orders' },
-    (payload) => {
-      const row = payload.new;
-      // Trigger on the exact moment payment_status flips to 'paid'
-      if (row.payment_status === 'paid') {
-        handlePaidOrder(row.id);
+const unsubscribe = db
+  .collection('orders')
+  .where('payment_status', '==', 'paid')
+  .onSnapshot(
+    (snapshot) => {
+      if (!primed) {
+        primed = true;
+        console.log(`✅ Listening for paid orders (skipped ${snapshot.size} existing)...\n`);
+        return;
       }
+      for (const change of snapshot.docChanges()) {
+        if (change.type === 'added' || change.type === 'modified') {
+          if (change.doc.data().payment_status === 'paid') {
+            handlePaidOrder(change.doc.id);
+          }
+        }
+      }
+    },
+    (err) => {
+      console.error('❌ Firestore listener error:', err.message);
+      console.error('   Check the service-account key and network. Will keep the process alive.');
     }
-  )
-  .subscribe((status, err) => {
-    if (status === 'SUBSCRIBED') {
-      console.log('✅ Subscribed to Supabase Realtime — listening for paid orders...\n');
-    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-      console.error('❌ Realtime connection error:', err?.message || status);
-      console.error('   Will retry automatically...');
-    } else {
-      console.log(`   Realtime: ${status}`);
-    }
-  });
+  );
 
 // ── Startup banner ───────────────────────────────────────────────────────────
 console.log('');
 console.log('╔══════════════════════════════════════════╗');
 console.log('║      Smart Canteen  —  Print Agent       ║');
 console.log('╚══════════════════════════════════════════╝');
-console.log(`  Printer type : ${process.env.PRINTER_TYPE  || 'none (set PRINTER_TYPE=windows)'}`);
-console.log(`  Printer name : ${process.env.PRINTER_NAME  || '(default)'}`);
-console.log(`  Supabase     : ${SUPABASE_URL}`);
+console.log(`  Printer type : ${process.env.PRINTER_TYPE || 'none (set PRINTER_TYPE=windows)'}`);
+console.log(`  Printer name : ${process.env.PRINTER_NAME || '(default)'}`);
+console.log(`  Firestore    : ${process.env.FIREBASE_PROJECT_ID || '(from service account)'}`);
 console.log('');
 console.log('  Press Ctrl+C to stop.');
 console.log('');
 
 // ── Graceful shutdown ────────────────────────────────────────────────────────
-process.on('SIGINT', async () => {
+process.on('SIGINT', () => {
   console.log('\n🛑 Print agent stopped.');
-  await pool.end();
+  try { unsubscribe(); } catch { /* ignore */ }
   process.exit(0);
 });
