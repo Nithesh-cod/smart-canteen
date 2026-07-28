@@ -6,6 +6,10 @@ process.env.RAZORPAY_WEBHOOK_SECRET = 'test_webhook_secret';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret_key';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test_refresh_secret_key';
 process.env.PRINTER_TYPE = 'none'; // don't attempt real prints during tests
+// Dummy Razorpay keys so the SDK instantiates without a real .env (e.g. in CI).
+// Tests never call the live Razorpay API — the webhook tests verify HMAC locally.
+process.env.RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_dummy';
+process.env.RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'dummy_secret';
 
 // SAFETY: tests must run against the Firestore EMULATOR, never real Firestore.
 // `firebase emulators:exec` sets FIRESTORE_EMULATOR_HOST. If it's missing, the

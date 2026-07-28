@@ -1,5 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
+const Order = require('../src/models/Order');
 const { seed, db } = require('./helpers');
 
 // Fresh stock before every test.
@@ -54,5 +55,18 @@ describe('Orders + atomic stock reserve', () => {
   test('a missing menu item → 404', async () => {
     const res = await placeGuestOrder([{ menu_item_id: 999, quantity: 1 }]);
     expect(res.status).toBe(404);
+  });
+});
+
+describe('Bill issuance (double-receipt guard)', () => {
+  test('markBillIssued is atomic — first call claims (true), second is a no-op (false)', async () => {
+    const order = await Order.create(
+      { student_id: null, total_amount: 20, guest_name: 'G' },
+      [{ menu_item_id: 1, item_name: 'Chai', quantity: 1, price: 20 }]
+    );
+    // The receipt is printed only by whoever gets `true`. This is what stops the
+    // payment path and the "ready" path from each printing a receipt.
+    expect(await Order.markBillIssued(order.id)).toBe(true);
+    expect(await Order.markBillIssued(order.id)).toBe(false);
   });
 });
