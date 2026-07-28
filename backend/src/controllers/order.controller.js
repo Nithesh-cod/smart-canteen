@@ -414,9 +414,20 @@ const updateStatus = asyncHandler(async (req, res) => {
 
   // ── Print receipt when chef marks order as "ready" ────────────────────────
   // The physical receipt is handed to the student when they collect their food.
+  //
+  // DOUBLE-RECEIPT FIX: print ONCE. markBillIssued atomically stamps
+  // bill_issued_at and returns true only for the caller that claims it. If a
+  // bill was already issued at payment time (finalisePayment stamps it), this
+  // returns false and we skip — no second receipt. If payment never printed
+  // (e.g. webhook-only completion), we claim it here and print exactly once.
   if (status === 'ready') {
     setImmediate(async () => {
       try {
+        const claimed = await Order.markBillIssued(orderId);
+        if (!claimed) {
+          logger.info(`Receipt already issued for order #${order.order_number} — skipping duplicate print at 'ready'`);
+          return;
+        }
         const completeOrder = await Order.getById(orderId);
         const result = await printerService.printBill(completeOrder);
         if (result.printed) {
