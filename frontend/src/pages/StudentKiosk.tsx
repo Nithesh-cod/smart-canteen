@@ -20,6 +20,9 @@ import socketService from '../services/socket.service';
 import MenuGrid from '../components/student/MenuGrid';
 import Cart from '../components/student/Cart';
 import Checkout from '../components/student/Checkout';
+import LoginForm from '../components/student/LoginForm';
+import { useNavigate } from 'react-router-dom';
+import type { Student } from '../types';
 import { useToast } from '../components/common/Toast';
 import type { MenuItem, Order } from '../types';
 import api from '../services/api';
@@ -145,6 +148,7 @@ const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 640;
 
 const StudentKiosk: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { showToast } = useToast();
 
   const menuItems = useSelector((state: RootState) => state.menu.items);
@@ -154,6 +158,7 @@ const StudentKiosk: React.FC = () => {
   const { currentStudent } = useSelector((state: RootState) => state.auth);
 
   const [favorites, setFavorites] = useState<number[]>([]);
+  const [showLogin, setShowLogin] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -350,10 +355,35 @@ const StudentKiosk: React.FC = () => {
       setSelectedCategory('all');
       setSearchQuery('');
       setFavorites([]);
+      // Shared-terminal hygiene: sign the student out after their order so the
+      // next person starts anonymous. Points were already awarded server-side.
+      if (currentStudent) {
+        authService.clearAuthData();
+        dispatch(logoutAction());
+      }
       showToast('✅ Order placed! Thank you. Kiosk is ready for the next student.', 'success');
     },
-    [cartItems, dispatch, showToast]
+    [cartItems, dispatch, showToast, currentStudent]
   );
+
+  // Sign-in from the kiosk overlay. Students stay to earn/redeem points; staff
+  // who sign in here are sent to their own dashboard (they shouldn't use the kiosk).
+  const handleKioskLogin = useCallback(
+    (student: Student) => {
+      setShowLogin(false);
+      const role = student.role || 'student';
+      if (role === 'admin') { navigate('/owner'); return; }
+      if (role === 'chef')  { navigate('/chef');  return; }
+      showToast(`Welcome, ${student.name}! You'll earn points on this order.`, 'success');
+    },
+    [navigate, showToast]
+  );
+
+  const handleKioskLogout = useCallback(() => {
+    authService.clearAuthData();
+    dispatch(logoutAction());
+    showToast('Signed out', 'success');
+  }, [dispatch, showToast]);
 
   return (
     <div style={bgStyle}>
@@ -364,6 +394,41 @@ const StudentKiosk: React.FC = () => {
 
       {/* Custom HUD cursor — replaces system cursor on fine-pointer devices */}
       <HoloCursor />
+
+      {/* Sign-in / profile — top-right. Students can sign in to earn & redeem
+          points; guests can still check out without an account. */}
+      <div style={{ position: 'fixed', top: 16, right: 18, zIndex: 60, display: 'flex', alignItems: 'center', gap: 10 }}>
+        {currentStudent ? (
+          <>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px',
+              background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 30,
+              fontFamily: 'Rajdhani, sans-serif',
+            }}>
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{currentStudent.name}</span>
+              <span style={{ color: '#ffed4e', fontWeight: 700, fontSize: '0.85rem' }}>★ {currentStudent.points ?? 0}</span>
+            </div>
+            <button onClick={handleKioskLogout} style={{
+              background: 'rgba(255,51,102,0.12)', border: '1px solid rgba(255,51,102,0.35)', color: '#ff5577',
+              borderRadius: 30, padding: '8px 16px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
+              fontSize: '0.82rem', cursor: 'pointer', letterSpacing: 0.5,
+            }}>Logout</button>
+          </>
+        ) : (
+          <button onClick={() => setShowLogin(true)} style={{
+            background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.4)', color: '#00ff88',
+            borderRadius: 30, padding: '9px 20px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
+            fontSize: '0.85rem', cursor: 'pointer', letterSpacing: 0.5,
+          }}>⚡ Sign In / Sign Up</button>
+        )}
+      </div>
+
+      {/* Login overlay — LoginForm is full-screen; wrap it so it sits on top. */}
+      {showLogin && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+          <LoginForm onLoginSuccess={handleKioskLogin} onClose={() => setShowLogin(false)} />
+        </div>
+      )}
 
       {/* Cinematic hero — replaces the old sticky navbar with a massive
           kinetic-type intro + status ring + rotating tagline. */}
