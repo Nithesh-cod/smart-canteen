@@ -6,6 +6,7 @@ import SalesPanel from '../components/owner/SalesPanel';
 import OrdersPanel from '../components/owner/OrdersPanel';
 import CatalogPanel from '../components/owner/CatalogPanel';
 import RosterPanel from '../components/owner/RosterPanel';
+import AccountsPanel from '../components/owner/AccountsPanel';
 import Modal from '../components/common/Modal';
 import { useToast } from '../components/common/Toast';
 import api from '../services/api';
@@ -15,7 +16,7 @@ import type { Order, MenuItem, Student, DashboardStats, Offer } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PageId = 'dashboard' | 'sales' | 'orders' | 'menu' | 'offers' | 'students';
+type PageId = 'dashboard' | 'sales' | 'orders' | 'menu' | 'offers' | 'students' | 'accounts';
 
 const navItems: Array<{ id: PageId; label: string; icon: string }> = [
   { id: 'dashboard', label: 'Command',  icon: '◈' },
@@ -24,6 +25,7 @@ const navItems: Array<{ id: PageId; label: string; icon: string }> = [
   { id: 'menu',      label: 'Catalog',  icon: '⬡' },
   { id: 'offers',    label: 'Drops',    icon: '✦' },
   { id: 'students',  label: 'Roster',   icon: '◯' },
+  { id: 'accounts',  label: 'Staff',    icon: '⬢' },
 ];
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
@@ -1641,6 +1643,9 @@ const OwnerDashboard: React.FC = () => {
               )}
               {activePage === 'students' && (
                 <RosterPanel students={students} onRefresh={fetchStudents} />
+              )}
+              {activePage === 'accounts' && (
+                <AccountsPanel />
               )}
             </>
           )}

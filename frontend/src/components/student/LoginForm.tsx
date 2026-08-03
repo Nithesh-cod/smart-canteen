@@ -8,6 +8,8 @@ import { useToast } from '../common/Toast';
 
 interface LoginFormProps {
   onLoginSuccess: (student: Student) => void;
+  /** When provided, renders a dismiss (×) button — used when shown as an overlay. */
+  onClose?: () => void;
 }
 
 const RECENT_KEY = 'canteen_recent_students';
@@ -72,7 +74,7 @@ const gridOverlay: React.CSSProperties = {
   zIndex: 0,
 };
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
 
@@ -229,6 +231,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           zIndex: 2,
           animation: 'border-pulse 4s ease-in-out infinite',
         }}>
+
+          {/* Close (×) — only when used as a dismissible overlay */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              style={{
+                position: 'absolute', top: 14, right: 16, zIndex: 3,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.6)', borderRadius: '50%', width: 34, height: 34,
+                fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          )}
 
           {/* Corner accents */}
           {[
