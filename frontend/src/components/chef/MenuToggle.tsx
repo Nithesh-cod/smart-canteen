@@ -46,7 +46,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
           background: rgba(255,255,255,0.03);
         }
         .menu-toggle-bar::-webkit-scrollbar-thumb {
-          background: rgba(0, 255, 136,0.3);
+          background: rgba(255, 90, 95,0.3);
           border-radius: 2px;
         }
         @keyframes chipAppear {
@@ -63,8 +63,8 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
         background: 'rgba(10,10,26,0.92)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        borderTop: '1px solid rgba(0, 255, 136,0.3)',
-        boxShadow: '0 -4px 30px rgba(0, 255, 136,0.1)',
+        borderTop: '1px solid rgba(255, 90, 95,0.3)',
+        boxShadow: '0 -4px 30px rgba(255, 90, 95,0.1)',
         padding: '12px 40px',
       }}>
         <div style={{
@@ -86,18 +86,18 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
               width: '8px',
               height: '8px',
               borderRadius: '50%',
-              background: '#00ff88',
-              boxShadow: '0 0 8px #00ff88',
+              background: '#ff5a5f',
+              boxShadow: '0 0 8px #ff5a5f',
               animation: 'none',
             }} />
             <span style={{
               fontFamily: 'Orbitron, monospace',
               fontSize: '11px',
-              color: '#00ff88',
+              color: '#ff5a5f',
               letterSpacing: '2px',
               whiteSpace: 'nowrap',
               textTransform: 'uppercase',
-              textShadow: '0 0 10px rgba(0, 255, 136,0.6)',
+              textShadow: '0 0 10px rgba(255, 90, 95,0.6)',
             }}>
               Menu Availability
             </span>
@@ -107,7 +107,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
           <div style={{
             width: '1px',
             height: '32px',
-            background: 'rgba(0, 255, 136,0.2)',
+            background: 'rgba(255, 90, 95,0.2)',
             flexShrink: 0,
           }} />
 
@@ -142,16 +142,16 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
                     padding: '5px 12px',
                     borderRadius: '20px',
                     border: item.is_available
-                      ? '1px solid rgba(0,255,136,0.5)'
+                      ? '1px solid rgba(255, 90, 95,0.5)'
                       : '1px solid rgba(255,51,102,0.5)',
                     background: item.is_available
                       ? hoveredId === item.id
-                        ? 'rgba(0,255,136,0.25)'
-                        : 'rgba(0,255,136,0.12)'
+                        ? 'rgba(255, 90, 95,0.25)'
+                        : 'rgba(255, 90, 95,0.12)'
                       : hoveredId === item.id
                         ? 'rgba(255,51,102,0.25)'
                         : 'rgba(255,51,102,0.12)',
-                    color: item.is_available ? '#00ff88' : '#ff3366',
+                    color: item.is_available ? '#ff5a5f' : '#ff3366',
                     fontSize: '12px',
                     fontFamily: 'Rajdhani, sans-serif',
                     fontWeight: '600',
@@ -160,7 +160,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
                     whiteSpace: 'nowrap',
                     letterSpacing: '0.5px',
                     boxShadow: item.is_available
-                      ? hoveredId === item.id ? '0 0 12px rgba(0,255,136,0.4)' : 'none'
+                      ? hoveredId === item.id ? '0 0 12px rgba(255, 90, 95,0.4)' : 'none'
                       : hoveredId === item.id ? '0 0 12px rgba(255,51,102,0.4)' : 'none',
                     transform: hoveredId === item.id ? 'translateY(-1px)' : 'none',
                     animation: 'chipAppear 0.3s ease',
@@ -175,7 +175,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      background: '#00ff88',
+                      background: '#ff5a5f',
                       display: 'inline-block',
                       flexShrink: 0,
                     }} />

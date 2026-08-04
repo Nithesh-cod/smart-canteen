@@ -195,18 +195,18 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: 'linear-gradient(135deg, #050a0c 0%, #0a1614 50%, #07100e 100%)',
+  background: 'linear-gradient(135deg, #140a09 0%, #241512 50%, #1b0e0c 100%)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 const cardStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(0, 255, 136,0.2)',
+  border: '1px solid rgba(255, 90, 95,0.2)',
   borderRadius: 20, padding: '40px 36px', width: '100%', maxWidth: 400,
-  boxShadow: '0 0 60px rgba(0, 255, 136,0.08)',
+  boxShadow: '0 0 60px rgba(255, 90, 95,0.08)',
 };
 const headingStyle: React.CSSProperties = {
   fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 900,
-  background: 'linear-gradient(135deg, #00ff88, #00d166)',
+  background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0,
 };
 const subStyle: React.CSSProperties = {
@@ -220,14 +220,14 @@ const labelStyle: React.CSSProperties = {
 };
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '12px 16px', borderRadius: 10,
-  border: '1px solid rgba(0, 255, 136,0.25)', background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255, 90, 95,0.25)', background: 'rgba(255,255,255,0.04)',
   color: '#fff', fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem',
   outline: 'none', boxSizing: 'border-box',
 };
 const btnStyle: React.CSSProperties = {
   width: '100%', padding: '13px', borderRadius: 12, border: 'none',
-  background: 'linear-gradient(135deg, rgba(0, 255, 136,0.25), rgba(0, 209, 102,0.25))',
-  color: '#00ff88', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
+  background: 'linear-gradient(135deg, rgba(255, 90, 95,0.25), rgba(255, 158, 61,0.25))',
+  color: '#ff5a5f', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
   fontSize: '0.95rem', letterSpacing: '0.5px',
 };
 const errorStyle: React.CSSProperties = {

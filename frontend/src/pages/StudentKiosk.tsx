@@ -68,8 +68,8 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
     <div
       className="offer-banner"
       style={{
-        background: 'linear-gradient(90deg, rgba(0, 209, 102,0.12), rgba(0, 255, 136,0.12), rgba(0, 209, 102,0.12))',
-        border: '1px solid rgba(0, 209, 102,0.4)',
+        background: 'linear-gradient(90deg, rgba(255, 158, 61,0.12), rgba(255, 90, 95,0.12), rgba(255, 158, 61,0.12))',
+        border: '1px solid rgba(255, 158, 61,0.4)',
         borderRadius: 12,
         padding: '10px 18px',
         marginBottom: 18,
@@ -83,8 +83,8 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
     >
       <style>{`
         @keyframes offerPulse {
-          0%, 100% { box-shadow: 0 0 10px rgba(0, 209, 102,0.2); }
-          50% { box-shadow: 0 0 20px rgba(0, 209, 102,0.4); }
+          0%, 100% { box-shadow: 0 0 10px rgba(255, 158, 61,0.2); }
+          50% { box-shadow: 0 0 20px rgba(255, 158, 61,0.4); }
         }
       `}</style>
       <span style={{ fontSize: 'clamp(1rem, 3vw, 1.3rem)' }}>🎁</span>
@@ -93,7 +93,7 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
           fontFamily: 'Orbitron, sans-serif',
           fontWeight: 700,
           fontSize: 'clamp(0.65rem, 2vw, 0.75rem)',
-          color: '#00d166',
+          color: '#ff9e3d',
           letterSpacing: '0.08em',
         }}>
           {discount && `${discount}${minOrder} · `}{offer.title}
@@ -122,7 +122,7 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: i === idx ? '#00d166' : 'rgba(255,255,255,0.25)',
+                background: i === idx ? '#ff9e3d' : 'rgba(255,255,255,0.25)',
                 cursor: 'pointer',
                 transition: 'background 0.3s',
               }}
@@ -139,7 +139,7 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
 
 const bgStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: 'linear-gradient(135deg, #050a0c 0%, #0a1614 50%, #07100e 100%)',
+  background: 'linear-gradient(135deg, #140a09 0%, #241512 50%, #1b0e0c 100%)',
   position: 'relative',
 };
 
@@ -390,7 +390,7 @@ const StudentKiosk: React.FC = () => {
       {/* Calm GridFloor background — replaces the Orb. Tron-style perspective
           grid + cursor-following ambient glow, no chaotic swirls competing
           with content. The Orb shader was beautiful but read as noise. */}
-      <GridFloor color="#00ff88" intensity={0.13} />
+      <GridFloor color="#ff5a5f" intensity={0.13} />
 
       {/* Custom HUD cursor — replaces system cursor on fine-pointer devices */}
       <HoloCursor />
@@ -402,7 +402,7 @@ const StudentKiosk: React.FC = () => {
           <>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px',
-              background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 30,
+              background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255, 90, 95,0.3)', borderRadius: 30,
               fontFamily: 'Rajdhani, sans-serif',
             }}>
               <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{currentStudent.name}</span>
@@ -416,7 +416,7 @@ const StudentKiosk: React.FC = () => {
           </>
         ) : (
           <button onClick={() => setShowLogin(true)} style={{
-            background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.4)', color: '#00ff88',
+            background: 'rgba(255, 90, 95,0.12)', border: '1px solid rgba(255, 90, 95,0.4)', color: '#ff5a5f',
             borderRadius: 30, padding: '9px 20px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
             fontSize: '0.85rem', cursor: 'pointer', letterSpacing: 0.5,
           }}>⚡ Sign In / Sign Up</button>
@@ -473,20 +473,20 @@ const StudentKiosk: React.FC = () => {
               }
               .kiosk-title-bracket {
                 width: 28px; height: 2px;
-                background: linear-gradient(90deg, transparent, #00ff88);
+                background: linear-gradient(90deg, transparent, #ff5a5f);
                 position: relative;
                 animation: bracketPulse 2.4s ease-in-out infinite;
               }
               .kiosk-title-bracket.right {
-                background: linear-gradient(90deg, #00ff88, transparent);
+                background: linear-gradient(90deg, #ff5a5f, transparent);
               }
               .kiosk-title-bracket::before {
                 content: '';
                 position: absolute;
                 top: -3px; right: 0;
                 width: 2px; height: 8px;
-                background: #00ff88;
-                box-shadow: 0 0 8px #00ff88;
+                background: #ff5a5f;
+                box-shadow: 0 0 8px #ff5a5f;
               }
               .kiosk-title-bracket.right::before {
                 left: 0; right: auto;
@@ -500,14 +500,14 @@ const StudentKiosk: React.FC = () => {
                   fontFamily: 'Orbitron, sans-serif',
                   fontSize: '1.75rem',
                   fontWeight: 900,
-                  background: 'linear-gradient(135deg, #00ff88, #00d166)',
+                  background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   margin: 0,
                   lineHeight: 1.2,
                   whiteSpace: 'nowrap',
                   animation: 'titleGlitch 6s steps(1, end) infinite',
-                  textShadow: '0 0 22px rgba(0,255,136,0.35)',
+                  textShadow: '0 0 22px rgba(255, 90, 95,0.35)',
                 }}
               >
                 🍕 SMART CANTEEN
@@ -536,10 +536,10 @@ const StudentKiosk: React.FC = () => {
                 style={{
                   fontFamily: 'Rajdhani, sans-serif',
                   fontSize: '0.88rem',
-                  color: 'rgba(0, 255, 136,0.75)',
+                  color: 'rgba(255, 90, 95,0.75)',
                   letterSpacing: '0.5px',
-                  background: 'rgba(0, 255, 136,0.08)',
-                  border: '1px solid rgba(0, 255, 136,0.2)',
+                  background: 'rgba(255, 90, 95,0.08)',
+                  border: '1px solid rgba(255, 90, 95,0.2)',
                   borderRadius: 20,
                   padding: '4px 12px',
                 }}
@@ -614,11 +614,11 @@ const StudentKiosk: React.FC = () => {
           width: 64,
           height: 64,
           borderRadius: '50%',
-          background: 'rgba(0, 255, 136,0.12)',
+          background: 'rgba(255, 90, 95,0.12)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          border: '2px solid #00ff88',
-          boxShadow: '0 0 28px rgba(0, 255, 136,0.45)',
+          border: '2px solid #ff5a5f',
+          boxShadow: '0 0 28px rgba(255, 90, 95,0.45)',
           cursor: 'pointer',
           fontSize: '1.7rem',
           display: 'flex',
@@ -628,10 +628,10 @@ const StudentKiosk: React.FC = () => {
           transition: 'box-shadow 0.3s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = '0 0 45px rgba(0, 255, 136,0.6)';
+          e.currentTarget.style.boxShadow = '0 0 45px rgba(255, 90, 95,0.6)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 255, 136,0.4)';
+          e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 90, 95,0.4)';
         }}
       >
         🛒
@@ -651,7 +651,7 @@ const StudentKiosk: React.FC = () => {
               justifyContent: 'center',
               fontSize: '0.8rem',
               fontWeight: 700,
-              border: '2px solid #050a0c',
+              border: '2px solid #140a09',
               fontFamily: 'Orbitron, sans-serif',
               animation: cartBouncing ? 'badgePop 0.4s ease' : 'none',
             }}

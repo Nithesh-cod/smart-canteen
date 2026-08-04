@@ -81,11 +81,11 @@ export const HoloCursor: React.FC = () => {
           top: 0; left: 0;
           pointer-events: none;
           z-index: 100000;
-          border: 1.5px solid #00ff88;
+          border: 1.5px solid #ff5a5f;
           border-radius: 50%;
           transition: width 0.15s, height 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
           mix-blend-mode: difference;
-          box-shadow: 0 0 8px rgba(0,255,136,0.5);
+          box-shadow: 0 0 8px rgba(255, 90, 95,0.5);
         }
         .holo-outer.hot {
           border-color: #ffed4e;
@@ -97,10 +97,10 @@ export const HoloCursor: React.FC = () => {
           top: 0; left: 0;
           width: 6px; height: 6px;
           border-radius: 50%;
-          background: #00ff88;
+          background: #ff5a5f;
           pointer-events: none;
           z-index: 100001;
-          box-shadow: 0 0 6px #00ff88;
+          box-shadow: 0 0 6px #ff5a5f;
         }
         /* Hide on coarse pointers (touch devices) — defensive */
         @media (pointer: coarse) {

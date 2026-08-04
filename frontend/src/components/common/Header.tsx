@@ -34,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, rightContent }) => {
     fontWeight: 700,
     fontSize: '1.2rem',
     lineHeight: 1.2,
-    background: 'linear-gradient(135deg, #00ff88, #00d166)',
+    background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',

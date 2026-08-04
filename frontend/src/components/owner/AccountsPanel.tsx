@@ -28,7 +28,7 @@ interface Account {
 type RoleFilter = 'staff' | 'all' | 'student';
 const ROLES = ['student', 'chef', 'admin'] as const;
 
-const roleColor: Record<string, string> = { admin: '#ffed4e', chef: '#00ff88', student: '#66b3ff' };
+const roleColor: Record<string, string> = { admin: '#ffed4e', chef: '#ff5a5f', student: '#66b3ff' };
 
 const glassInput: React.CSSProperties = {
   width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.15)',
@@ -112,7 +112,7 @@ const AccountsPanel: React.FC = () => {
     <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 700, color: '#00ff88', margin: 0 }}>
+        <h2 style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 700, color: '#ff5a5f', margin: 0 }}>
           👥 Staff &amp; Accounts
         </h2>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -121,13 +121,13 @@ const AccountsPanel: React.FC = () => {
               <button key={f} onClick={() => setFilter(f)} style={{
                 padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
                 fontFamily: 'Rajdhani, sans-serif', fontSize: '0.8rem', fontWeight: 700, textTransform: 'capitalize',
-                background: filter === f ? 'rgba(0,255,136,0.18)' : 'transparent',
-                color: filter === f ? '#00ff88' : 'rgba(255,255,255,0.45)',
+                background: filter === f ? 'rgba(255, 90, 95,0.18)' : 'transparent',
+                color: filter === f ? '#ff5a5f' : 'rgba(255,255,255,0.45)',
               }}>{f}</button>
             ))}
           </div>
           <button onClick={() => { setForm(emptyForm()); setShowCreate(true); }} style={{
-            background: 'transparent', border: '2px solid #00ff88', color: '#00ff88', borderRadius: 12,
+            background: 'transparent', border: '2px solid #ff5a5f', color: '#ff5a5f', borderRadius: 12,
             padding: '9px 20px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
           }}>+ New Account</button>
         </div>
@@ -165,7 +165,7 @@ const AccountsPanel: React.FC = () => {
                   borderRadius: 8, padding: '7px 10px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.82rem',
                   cursor: 'pointer', textTransform: 'capitalize',
                 }}>
-                {ROLES.map((r) => <option key={r} value={r} style={{ background: '#0a1614' }}>{r}</option>)}
+                {ROLES.map((r) => <option key={r} value={r} style={{ background: '#241512' }}>{r}</option>)}
               </select>
 
               {/* Reset password */}
@@ -179,8 +179,8 @@ const AccountsPanel: React.FC = () => {
                 onClick={() => patchAccount(acc, { is_active: !acc.is_active }, `${acc.roll_number} ${acc.is_active ? 'deactivated' : 'activated'}`)}
                 disabled={busyId === acc.id}
                 style={{
-                  background: acc.is_active ? 'rgba(0,255,136,0.15)' : 'rgba(255,51,102,0.15)',
-                  border: `1px solid ${acc.is_active ? '#00ff88' : '#ff3366'}`, color: acc.is_active ? '#00ff88' : '#ff3366',
+                  background: acc.is_active ? 'rgba(255, 90, 95,0.15)' : 'rgba(255,51,102,0.15)',
+                  border: `1px solid ${acc.is_active ? '#ff5a5f' : '#ff3366'}`, color: acc.is_active ? '#ff5a5f' : '#ff3366',
                   borderRadius: 8, padding: '7px 12px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.8rem',
                   cursor: 'pointer', whiteSpace: 'nowrap',
                 }}>{busyId === acc.id ? '…' : acc.is_active ? '● Active' : '○ Inactive'}</button>
@@ -205,7 +205,7 @@ const AccountsPanel: React.FC = () => {
               <div><label style={labelStyle}>Role *</label>
                 <select style={{ ...glassInput, cursor: 'pointer', textTransform: 'capitalize' }} value={form.role}
                   onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as Account['role'] }))}>
-                  {ROLES.map((r) => <option key={r} value={r} style={{ background: '#0a1614' }}>{r}</option>)}
+                  {ROLES.map((r) => <option key={r} value={r} style={{ background: '#241512' }}>{r}</option>)}
                 </select></div>
               <div><label style={labelStyle}>Department (optional)</label>
                 <input style={glassInput} value={form.department} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))} placeholder="Kitchen" /></div>
@@ -214,8 +214,8 @@ const AccountsPanel: React.FC = () => {
               <input type="password" style={glassInput} value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder="••••••••" /></div>
             <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
               <button onClick={handleCreate} disabled={saving} style={{
-                flex: 1, background: 'linear-gradient(135deg, rgba(0,255,136,0.25), rgba(0,209,102,0.25))', border: '1px solid rgba(0,255,136,0.5)',
-                color: '#00ff88', borderRadius: 12, padding: '13px 0', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '1rem',
+                flex: 1, background: 'linear-gradient(135deg, rgba(255, 90, 95,0.25), rgba(255, 158, 61,0.25))', border: '1px solid rgba(255, 90, 95,0.5)',
+                color: '#ff5a5f', borderRadius: 12, padding: '13px 0', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '1rem',
                 cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
               }}>{saving ? 'Creating…' : 'Create Account'}</button>
               <button onClick={() => setShowCreate(false)} disabled={saving} style={{
@@ -235,8 +235,8 @@ const AccountsPanel: React.FC = () => {
               <input type="password" style={glassInput} value={newPw} autoFocus onChange={(e) => setNewPw(e.target.value)} placeholder="••••••••" /></div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={handleResetPw} disabled={busyId === pwFor.id} style={{
-                flex: 1, background: 'linear-gradient(135deg, rgba(0,255,136,0.25), rgba(0,209,102,0.25))', border: '1px solid rgba(0,255,136,0.5)',
-                color: '#00ff88', borderRadius: 12, padding: '13px 0', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
+                flex: 1, background: 'linear-gradient(135deg, rgba(255, 90, 95,0.25), rgba(255, 158, 61,0.25))', border: '1px solid rgba(255, 90, 95,0.5)',
+                color: '#ff5a5f', borderRadius: 12, padding: '13px 0', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
               }}>Set Password</button>
               <button onClick={() => setPwFor(null)} style={{
                 flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)',

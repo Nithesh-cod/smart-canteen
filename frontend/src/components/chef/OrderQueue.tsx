@@ -9,8 +9,8 @@ interface OrderQueueProps {
 
 const COLUMNS: Array<{ status: OrderStatus; label: string; color: string; glow: string }> = [
   { status: 'pending', label: 'Pending', color: '#ffed4e', glow: 'rgba(255,237,78,0.12)' },
-  { status: 'preparing', label: 'Preparing', color: '#00ff88', glow: 'rgba(0, 255, 136,0.12)' },
-  { status: 'ready', label: 'Ready', color: '#00ff88', glow: 'rgba(0,255,136,0.12)' },
+  { status: 'preparing', label: 'Preparing', color: '#ff5a5f', glow: 'rgba(255, 90, 95,0.12)' },
+  { status: 'ready', label: 'Ready', color: '#ff5a5f', glow: 'rgba(255, 90, 95,0.12)' },
 ];
 
 const OrderQueue: React.FC<OrderQueueProps> = ({ orders, onStatusUpdate }) => {

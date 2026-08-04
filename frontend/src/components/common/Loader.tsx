@@ -11,14 +11,14 @@ const Loader: React.FC<LoaderProps> = ({
   variant = 'spinner',
   size = 40,
   message,
-  color = '#00ff88',
+  color = '#ff5a5f',
 }) => {
   // ── Shared spinner element ─────────────────────────────────────────────────
   const spinnerStyle = (diameter: number): React.CSSProperties => ({
     width: `${diameter}px`,
     height: `${diameter}px`,
     borderRadius: '50%',
-    border: `${Math.max(2, Math.round(diameter / 12))}px solid rgba(0, 255, 136,0.2)`,
+    border: `${Math.max(2, Math.round(diameter / 12))}px solid rgba(255, 90, 95,0.2)`,
     borderTop: `${Math.max(2, Math.round(diameter / 12))}px solid ${color}`,
     animation: 'spin 1s linear infinite',
     flexShrink: 0,

@@ -78,12 +78,12 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
       {
         label: 'Revenue',
         data: chartPoints.map(p => p.revenue),
-        borderColor: '#00ff88',
+        borderColor: '#ff5a5f',
         backgroundColor: (ctx: any) => {
           const c = ctx.chart.ctx;
           const g = c.createLinearGradient(0, 0, 0, 280);
-          g.addColorStop(0,   'rgba(0, 255, 136, 0.55)');
-          g.addColorStop(1,   'rgba(0, 255, 136, 0)');
+          g.addColorStop(0,   'rgba(255, 90, 95, 0.55)');
+          g.addColorStop(1,   'rgba(255, 90, 95, 0)');
           return g;
         },
         borderWidth: 2.5,
@@ -91,7 +91,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
         tension: 0.35,
         pointRadius: 0,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: '#00ff88',
+        pointHoverBackgroundColor: '#ff5a5f',
         pointHoverBorderColor: '#fff',
         pointHoverBorderWidth: 2,
       },
@@ -107,9 +107,9 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
       legend: { display: false },
       tooltip: {
         backgroundColor: 'rgba(7,16,14,0.95)',
-        borderColor: 'rgba(0,255,136,0.4)',
+        borderColor: 'rgba(255, 90, 95,0.4)',
         borderWidth: 1,
-        titleColor: '#00ff88',
+        titleColor: '#ff5a5f',
         titleFont: { family: 'Orbitron, monospace', size: 11, weight: 'normal' as const },
         bodyColor: '#fff',
         bodyFont: { family: 'Rajdhani, sans-serif', size: 13, weight: 'normal' as const },
@@ -144,8 +144,8 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
           position: relative;
           padding: 26px 28px 24px;
           background:
-            linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 40%),
-            linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+            linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 40%),
+            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 18px;
           clip-path: polygon(
@@ -157,7 +157,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
           content: '';
           position: absolute;
           top: 0; left: 4%; right: 20%; height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(0,255,136,0.4), transparent);
+          background: linear-gradient(90deg, transparent, rgba(255, 90, 95,0.4), transparent);
         }
         .sales-head {
           display: flex;
@@ -174,8 +174,8 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
         .sales-glyph {
           font-family: 'Orbitron', monospace;
           font-size: 1.15rem;
-          color: #00ff88;
-          text-shadow: 0 0 10px #00ff88;
+          color: #ff5a5f;
+          text-shadow: 0 0 10px #ff5a5f;
         }
         .sales-title {
           font-family: 'Orbitron', sans-serif;
@@ -188,8 +188,8 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
           font-family: 'Orbitron', monospace;
           font-size: 2.6rem;
           font-weight: 900;
-          color: #00ff88;
-          text-shadow: 0 0 28px rgba(0,255,136,0.4);
+          color: #ff5a5f;
+          text-shadow: 0 0 28px rgba(255, 90, 95,0.4);
           letter-spacing: 0.02em;
           line-height: 1;
         }
@@ -223,9 +223,9 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
         }
         .period-chip:hover { color: #fff; }
         .period-chip.active {
-          background: rgba(0,255,136,0.15);
-          color: #00ff88;
-          box-shadow: 0 0 16px rgba(0,255,136,0.25);
+          background: rgba(255, 90, 95,0.15);
+          color: #ff5a5f;
+          box-shadow: 0 0 16px rgba(255, 90, 95,0.25);
         }
         .sales-chart-wrap {
           height: 280px;
@@ -249,11 +249,11 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
           pointer-events: none;
         }
         .sales-empty-glyph {
-          font-size: 2rem; color: rgba(0,255,136,0.4);
-          text-shadow: 0 0 12px rgba(0,255,136,0.3);
+          font-size: 2rem; color: rgba(255, 90, 95,0.4);
+          text-shadow: 0 0 12px rgba(255, 90, 95,0.3);
         }
         .sales-empty-title {
-          font-size: 0.78rem; color: rgba(0,255,136,0.75);
+          font-size: 0.78rem; color: rgba(255, 90, 95,0.75);
         }
         .sales-empty-sub {
           font-size: 0.7rem; color: rgba(255,255,255,0.32);

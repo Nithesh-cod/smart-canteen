@@ -461,7 +461,7 @@ export const initiateRazorpayPayment = async (
       contact: studentPhone,
     },
     theme: {
-      color: '#00ff88',
+      color: '#ff5a5f',
     },
     handler: async (response: any) => {
       try {

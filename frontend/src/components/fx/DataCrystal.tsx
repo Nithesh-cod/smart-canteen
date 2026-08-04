@@ -55,8 +55,8 @@ const css = `
      glow + grid floor bled through and obliterated the BEVERAGES chip on
      bright food images. Now the card is a real surface that sits on top. */
   background:
-    linear-gradient(180deg, rgba(0,255,136,0.045) 0%, transparent 35%),
-    linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+    linear-gradient(180deg, rgba(255, 90, 95,0.045) 0%, transparent 35%),
+    linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 18px;
@@ -83,22 +83,22 @@ const css = `
   position: absolute;
   top: 0; left: 8%; right: 28%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 90, 95,0.5), transparent);
   pointer-events: none;
   z-index: 2;
 }
 .crystal.hover {
-  border-color: rgba(0,255,136,0.4);
+  border-color: rgba(255, 90, 95,0.4);
   box-shadow:
-    0 28px 80px rgba(0,255,136,0.18),
+    0 28px 80px rgba(255, 90, 95,0.18),
     0 6px 18px rgba(0,0,0,0.6),
-    inset 0 0 0 1px rgba(0,255,136,0.06);
+    inset 0 0 0 1px rgba(255, 90, 95,0.06);
 }
 .crystal-img {
   position: relative;
   aspect-ratio: 16/11;
   overflow: hidden;
-  background: linear-gradient(135deg, #0a1614, #050a0c);
+  background: linear-gradient(135deg, #241512, #140a09);
 }
 .crystal-img img {
   width: 100%; height: 100%;
@@ -130,15 +130,15 @@ const css = `
   font-size: 0.6rem;
   letter-spacing: 0.2em;
   font-weight: 700;
-  color: #00ff88;
+  color: #ff5a5f;
   /* Solid dark backing so the chip reads cleanly on any image — the old
      translucent rgba was getting eaten by bright food photos. */
   background: rgba(7,16,14,0.85);
-  border: 1px solid rgba(0,255,136,0.5);
+  border: 1px solid rgba(255, 90, 95,0.5);
   border-radius: 3px;
   padding: 5px 10px;
   text-transform: uppercase;
-  text-shadow: 0 0 6px rgba(0,255,136,0.6);
+  text-shadow: 0 0 6px rgba(255, 90, 95,0.6);
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.45);
 }
@@ -157,7 +157,7 @@ const css = `
   transition: transform 0.2s, border-color 0.2s;
 }
 .crystal-fav:hover {
-  border-color: rgba(0,255,136,0.5);
+  border-color: rgba(255, 90, 95,0.5);
   transform: scale(1.1);
 }
 .crystal-veg-dot {
@@ -175,7 +175,7 @@ const css = `
   width: 8px; height: 8px;
   border-radius: 50%;
 }
-.crystal-veg-dot.veg::before     { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+.crystal-veg-dot.veg::before     { background: #ff5a5f; box-shadow: 0 0 6px #ff5a5f; }
 .crystal-veg-dot.nonveg::before  { background: #ff3366; box-shadow: 0 0 6px #ff3366; }
 
 .crystal-reticle {
@@ -257,16 +257,16 @@ const css = `
   letter-spacing: 0.18em;
   font-weight: 800;
   text-transform: uppercase;
-  background: linear-gradient(90deg, rgba(0,255,136,0.06), rgba(0,255,136,0.15), rgba(0,255,136,0.06));
+  background: linear-gradient(90deg, rgba(255, 90, 95,0.06), rgba(255, 90, 95,0.15), rgba(255, 90, 95,0.06));
   background-size: 200% 100%;
-  color: #00ff88;
-  border: 1px solid rgba(0,255,136,0.45);
+  color: #ff5a5f;
+  border: 1px solid rgba(255, 90, 95,0.45);
   transition: background-position 0.6s, box-shadow 0.25s, transform 0.15s;
-  text-shadow: 0 0 8px rgba(0,255,136,0.6);
+  text-shadow: 0 0 8px rgba(255, 90, 95,0.6);
 }
 .crystal-cta:hover {
   background-position: 100% 0;
-  box-shadow: 0 0 20px rgba(0,255,136,0.4), inset 0 0 12px rgba(0,255,136,0.18);
+  box-shadow: 0 0 20px rgba(255, 90, 95,0.4), inset 0 0 12px rgba(255, 90, 95,0.18);
 }
 .crystal-cta:active { transform: translateY(1px); }
 .crystal-cta:disabled {
@@ -282,23 +282,23 @@ const css = `
   grid-template-columns: 1fr 50px 1fr;
   align-items: stretch;
   margin-top: 12px;
-  border: 1px solid rgba(0,255,136,0.4);
+  border: 1px solid rgba(255, 90, 95,0.4);
   border-radius: 8px;
   overflow: hidden;
-  background: rgba(0,255,136,0.06);
+  background: rgba(255, 90, 95,0.06);
 }
 .crystal-step-btn {
   background: none;
   border: none;
   cursor: pointer;
-  color: #00ff88;
+  color: #ff5a5f;
   font-family: 'Orbitron', monospace;
   font-size: 1.2rem;
   font-weight: 800;
   padding: 10px 0;
   transition: background 0.15s;
 }
-.crystal-step-btn:hover         { background: rgba(0,255,136,0.16); }
+.crystal-step-btn:hover         { background: rgba(255, 90, 95,0.16); }
 .crystal-step-btn.dec:hover     { background: rgba(255,51,102,0.15); color: #ff3366; }
 .crystal-step-btn:disabled      { opacity: 0.4; cursor: not-allowed; }
 .crystal-step-count {
@@ -336,13 +336,13 @@ const css = `
 
 const Reticle: React.FC = () => (
   <svg viewBox="0 0 60 60" className="crystal-reticle">
-    <circle cx="30" cy="30" r="22" stroke="#00ff88" strokeWidth="1" fill="none" opacity="0.5" />
-    <circle cx="30" cy="30" r="14" stroke="#00ff88" strokeWidth="1.5" fill="none" />
-    <line x1="30" y1="2"  x2="30" y2="12" stroke="#00ff88" strokeWidth="1.5" />
-    <line x1="30" y1="48" x2="30" y2="58" stroke="#00ff88" strokeWidth="1.5" />
-    <line x1="2"  y1="30" x2="12" y2="30" stroke="#00ff88" strokeWidth="1.5" />
-    <line x1="48" y1="30" x2="58" y2="30" stroke="#00ff88" strokeWidth="1.5" />
-    <circle cx="30" cy="30" r="2" fill="#00ff88" />
+    <circle cx="30" cy="30" r="22" stroke="#ff5a5f" strokeWidth="1" fill="none" opacity="0.5" />
+    <circle cx="30" cy="30" r="14" stroke="#ff5a5f" strokeWidth="1.5" fill="none" />
+    <line x1="30" y1="2"  x2="30" y2="12" stroke="#ff5a5f" strokeWidth="1.5" />
+    <line x1="30" y1="48" x2="30" y2="58" stroke="#ff5a5f" strokeWidth="1.5" />
+    <line x1="2"  y1="30" x2="12" y2="30" stroke="#ff5a5f" strokeWidth="1.5" />
+    <line x1="48" y1="30" x2="58" y2="30" stroke="#ff5a5f" strokeWidth="1.5" />
+    <circle cx="30" cy="30" r="2" fill="#ff5a5f" />
   </svg>
 );
 

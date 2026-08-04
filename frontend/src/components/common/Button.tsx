@@ -21,7 +21,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<Variant, React.CSSProperties> = {
   primary: {
-    background: 'linear-gradient(135deg, #00ff88, #00d166)',
+    background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
     color: '#000',
     fontWeight: 700,
     border: 'none',
@@ -37,19 +37,19 @@ const variantStyles: Record<Variant, React.CSSProperties> = {
     color: '#ff3366',
   },
   success: {
-    background: 'rgba(0,255,136,0.15)',
-    border: '1px solid #00ff88',
-    color: '#00ff88',
+    background: 'rgba(255, 90, 95,0.15)',
+    border: '1px solid #ff5a5f',
+    color: '#ff5a5f',
   },
   'outline-cyan': {
-    background: 'rgba(0, 255, 136,0.08)',
-    border: '1px solid #00ff88',
-    color: '#00ff88',
+    background: 'rgba(255, 90, 95,0.08)',
+    border: '1px solid #ff5a5f',
+    color: '#ff5a5f',
   },
   'outline-green': {
-    background: 'rgba(0,255,136,0.08)',
-    border: '1px solid #00ff88',
-    color: '#00ff88',
+    background: 'rgba(255, 90, 95,0.08)',
+    border: '1px solid #ff5a5f',
+    color: '#ff5a5f',
   },
   'outline-red': {
     background: 'rgba(255,51,102,0.08)',

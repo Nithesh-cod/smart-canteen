@@ -32,8 +32,8 @@ const TYPE_CONFIG: Record<
 > = {
   success: {
     icon: '✅',
-    borderColor: '#00ff88',
-    iconBg: 'rgba(0,255,136,0.15)',
+    borderColor: '#ff5a5f',
+    iconBg: 'rgba(255, 90, 95,0.15)',
   },
   error: {
     icon: '❌',
@@ -47,8 +47,8 @@ const TYPE_CONFIG: Record<
   },
   info: {
     icon: 'ℹ️',
-    borderColor: '#00ff88',
-    iconBg: 'rgba(0, 255, 136,0.15)',
+    borderColor: '#ff5a5f',
+    iconBg: 'rgba(255, 90, 95,0.15)',
   },
 };
 

@@ -25,8 +25,8 @@ interface OrdersPanelProps {
 
 const STATUS_TONES: Record<string, { bg: string; fg: string; border: string }> = {
   pending:   { bg: 'rgba(255,237,78,0.08)',  fg: '#ffed4e', border: 'rgba(255,237,78,0.4)' },
-  preparing: { bg: 'rgba(0,255,136,0.08)',   fg: '#00ff88', border: 'rgba(0,255,136,0.4)' },
-  ready:     { bg: 'rgba(0,209,102,0.12)',   fg: '#00ff88', border: 'rgba(0,255,136,0.6)' },
+  preparing: { bg: 'rgba(255, 90, 95,0.08)',   fg: '#ff5a5f', border: 'rgba(255, 90, 95,0.4)' },
+  ready:     { bg: 'rgba(255, 158, 61,0.12)',   fg: '#ff5a5f', border: 'rgba(255, 90, 95,0.6)' },
   completed: { bg: 'rgba(255,255,255,0.04)', fg: 'rgba(255,255,255,0.55)', border: 'rgba(255,255,255,0.18)' },
   cancelled: { bg: 'rgba(255,51,102,0.08)',  fg: '#ff3366', border: 'rgba(255,51,102,0.45)' },
   refunded:  { bg: 'rgba(255,159,67,0.08)',  fg: '#ff9f43', border: 'rgba(255,159,67,0.5)' },
@@ -78,8 +78,8 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           position: relative;
           padding: 24px 28px 28px;
           background:
-            linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 40%),
-            linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+            linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 40%),
+            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 18px;
           clip-path: polygon(
@@ -90,7 +90,7 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           content: '';
           position: absolute;
           top: 0; left: 4%; right: 20%; height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(0,255,136,0.4), transparent);
+          background: linear-gradient(90deg, transparent, rgba(255, 90, 95,0.4), transparent);
         }
 
         .orders-head {
@@ -102,8 +102,8 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
         }
         .orders-glyph {
           font-family: 'Orbitron', monospace;
-          font-size: 1.15rem; color: #00ff88;
-          text-shadow: 0 0 10px #00ff88;
+          font-size: 1.15rem; color: #ff5a5f;
+          text-shadow: 0 0 10px #ff5a5f;
         }
         .orders-title {
           font-family: 'Orbitron', sans-serif;
@@ -131,13 +131,13 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           transition: border-color 0.2s, box-shadow 0.2s;
         }
         .orders-search input:focus {
-          border-color: rgba(0,255,136,0.5);
-          box-shadow: 0 0 14px rgba(0,255,136,0.18);
+          border-color: rgba(255, 90, 95,0.5);
+          box-shadow: 0 0 14px rgba(255, 90, 95,0.18);
         }
         .orders-search-glyph {
           position: absolute; top: 50%; left: 12px;
           transform: translateY(-50%);
-          color: #00ff88; font-family: 'Orbitron', monospace;
+          color: #ff5a5f; font-family: 'Orbitron', monospace;
           pointer-events: none;
         }
         .orders-refresh {
@@ -146,16 +146,16 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           font-size: 0.7rem;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: #00ff88;
-          background: rgba(0,255,136,0.07);
-          border: 1px solid rgba(0,255,136,0.4);
+          color: #ff5a5f;
+          background: rgba(255, 90, 95,0.07);
+          border: 1px solid rgba(255, 90, 95,0.4);
           border-radius: 8px;
           cursor: pointer;
           transition: background 0.2s, box-shadow 0.2s;
         }
         .orders-refresh:hover {
-          background: rgba(0,255,136,0.15);
-          box-shadow: 0 0 16px rgba(0,255,136,0.25);
+          background: rgba(255, 90, 95,0.15);
+          box-shadow: 0 0 16px rgba(255, 90, 95,0.25);
         }
         .orders-refresh:disabled { opacity: 0.6; cursor: progress; }
 
@@ -177,12 +177,12 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           transition: all 0.18s;
           display: flex; align-items: center; gap: 8px;
         }
-        .filter-chip:hover { color: #fff; border-color: rgba(0,255,136,0.4); }
+        .filter-chip:hover { color: #fff; border-color: rgba(255, 90, 95,0.4); }
         .filter-chip.active {
-          color: #00ff88;
-          background: rgba(0,255,136,0.1);
-          border-color: rgba(0,255,136,0.5);
-          box-shadow: 0 0 14px rgba(0,255,136,0.18);
+          color: #ff5a5f;
+          background: rgba(255, 90, 95,0.1);
+          border-color: rgba(255, 90, 95,0.5);
+          box-shadow: 0 0 14px rgba(255, 90, 95,0.18);
         }
         .filter-chip-count {
           font-size: 0.6rem;
@@ -218,13 +218,13 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           transition: background 0.15s;
         }
         .orders-table tbody tr:hover {
-          background: rgba(0,255,136,0.04);
+          background: rgba(255, 90, 95,0.04);
         }
 
         .order-num {
           font-family: 'Orbitron', monospace;
           font-size: 0.85rem;
-          color: #00ff88;
+          color: #ff5a5f;
         }
         .order-money {
           font-family: 'Orbitron', monospace;
@@ -260,14 +260,14 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
         }
         .orders-empty-glyph {
           font-size: 2.4rem;
-          color: rgba(0,255,136,0.4);
+          color: rgba(255, 90, 95,0.4);
           margin-bottom: 14px;
-          text-shadow: 0 0 14px rgba(0,255,136,0.4);
+          text-shadow: 0 0 14px rgba(255, 90, 95,0.4);
         }
         .orders-empty-title {
           font-size: 0.85rem;
           letter-spacing: 0.32em;
-          color: rgba(0,255,136,0.7);
+          color: rgba(255, 90, 95,0.7);
           text-transform: uppercase;
           margin-bottom: 6px;
         }

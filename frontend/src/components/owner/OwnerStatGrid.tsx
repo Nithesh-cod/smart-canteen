@@ -36,7 +36,7 @@ interface OwnerStatGridProps {
 }
 
 const toneMap = {
-  green: { color: '#00ff88', glow: 'rgba(0,255,136,0.35)' },
+  green: { color: '#ff5a5f', glow: 'rgba(255, 90, 95,0.35)' },
   amber: { color: '#ffed4e', glow: 'rgba(255,237,78,0.35)' },
   red:   { color: '#ff3366', glow: 'rgba(255,51,102,0.35)' },
 };
@@ -133,9 +133,9 @@ function StatTileView({ tile }: { tile: StatTile }) {
         <div
           className="stat-tile-delta"
           style={{
-            color: tile.delta >= 0 ? '#00ff88' : '#ff9f43',
-            borderColor: tile.delta >= 0 ? 'rgba(0,255,136,0.3)' : 'rgba(255,159,67,0.4)',
-            background: tile.delta >= 0 ? 'rgba(0,255,136,0.06)' : 'rgba(255,159,67,0.06)',
+            color: tile.delta >= 0 ? '#ff5a5f' : '#ff9f43',
+            borderColor: tile.delta >= 0 ? 'rgba(255, 90, 95,0.3)' : 'rgba(255,159,67,0.4)',
+            background: tile.delta >= 0 ? 'rgba(255, 90, 95,0.06)' : 'rgba(255,159,67,0.06)',
           }}
         >
           {tile.delta >= 0 ? '▲' : '▼'} {Math.abs(tile.delta).toFixed(1)}%
@@ -159,8 +159,8 @@ export const OwnerStatGrid: React.FC<OwnerStatGridProps> = ({ tiles }) => {
           position: relative;
           padding: 20px 22px 22px;
           background:
-            linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 40%),
-            linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+            linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 40%),
+            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.05);
           border-radius: 16px;
           clip-path: polygon(
@@ -173,12 +173,12 @@ export const OwnerStatGrid: React.FC<OwnerStatGridProps> = ({ tiles }) => {
           content: '';
           position: absolute;
           top: 0; left: 6%; right: 24%; height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent);
+          background: linear-gradient(90deg, transparent, rgba(255, 90, 95,0.5), transparent);
         }
         .stat-tile:hover {
-          border-color: rgba(0,255,136,0.3);
+          border-color: rgba(255, 90, 95,0.3);
           transform: translateY(-2px);
-          box-shadow: 0 14px 36px rgba(0,255,136,0.12);
+          box-shadow: 0 14px 36px rgba(255, 90, 95,0.12);
         }
         .stat-tile-head {
           display: flex; align-items: center; gap: 10px;

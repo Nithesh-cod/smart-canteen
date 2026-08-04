@@ -19,8 +19,8 @@ const medalEmoji = (rank: number): string => {
 const statusColor = (status: string): { bg: string; text: string; border: string } => {
   switch (status) {
     case 'pending':   return { bg: 'rgba(255,237,78,0.2)',   text: '#ffed4e',               border: '#ffed4e' };
-    case 'preparing': return { bg: 'rgba(0, 255, 136,0.2)',    text: '#00ff88',               border: '#00ff88' };
-    case 'ready':     return { bg: 'rgba(0,255,136,0.2)',    text: '#00ff88',               border: '#00ff88' };
+    case 'preparing': return { bg: 'rgba(255, 90, 95,0.2)',    text: '#ff5a5f',               border: '#ff5a5f' };
+    case 'ready':     return { bg: 'rgba(255, 90, 95,0.2)',    text: '#ff5a5f',               border: '#ff5a5f' };
     case 'completed': return { bg: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.5)', border: 'rgba(255,255,255,0.3)' };
     case 'cancelled': return { bg: 'rgba(255,51,102,0.2)',   text: '#ff3366',               border: '#ff3366' };
     default:          return { bg: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.5)', border: 'rgba(255,255,255,0.3)' };
@@ -112,13 +112,13 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
             key={card.label}
             style={{
               ...glassCard,
-              borderLeft: '4px solid #00ff88',
+              borderLeft: '4px solid #ff5a5f',
               transition: 'transform 0.3s, box-shadow 0.3s',
               cursor: 'default',
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-5px)';
-              (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 40px rgba(0, 255, 136,0.15)';
+              (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 40px rgba(255, 90, 95,0.15)';
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
@@ -173,7 +173,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
               fontFamily: 'Orbitron, sans-serif',
               fontSize: '1rem',
               fontWeight: 700,
-              color: '#00ff88',
+              color: '#ff5a5f',
               marginBottom: 20,
               marginTop: 0,
             }}
@@ -207,9 +207,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span
                   style={{
-                    background: 'rgba(0, 255, 136,0.12)',
-                    border: '1px solid rgba(0, 255, 136,0.3)',
-                    color: '#00ff88',
+                    background: 'rgba(255, 90, 95,0.12)',
+                    border: '1px solid rgba(255, 90, 95,0.3)',
+                    color: '#ff5a5f',
                     fontSize: '0.75rem',
                     fontWeight: 700,
                     padding: '3px 10px',
@@ -222,7 +222,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                 <span
                   style={{
                     fontSize: '0.82rem',
-                    color: '#00ff88',
+                    color: '#ff5a5f',
                     fontFamily: 'Rajdhani, sans-serif',
                     fontWeight: 700,
                   }}
@@ -253,7 +253,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
               fontFamily: 'Orbitron, sans-serif',
               fontSize: '1rem',
               fontWeight: 700,
-              color: '#00ff88',
+              color: '#ff5a5f',
               marginBottom: 20,
               marginTop: 0,
             }}
@@ -339,7 +339,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
             fontFamily: 'Orbitron, sans-serif',
             fontSize: '1rem',
             fontWeight: 700,
-            color: '#00ff88',
+            color: '#ff5a5f',
             marginBottom: 20,
             marginTop: 0,
           }}
@@ -393,7 +393,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                     <td
                       style={{
                         padding: '13px 14px',
-                        color: '#00ff88',
+                        color: '#ff5a5f',
                         fontWeight: 700,
                         fontSize: '0.9rem',
                         borderBottom: '1px solid rgba(255,255,255,0.05)',

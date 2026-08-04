@@ -62,8 +62,8 @@ export const getStatusColor = (status: string): string => {
   const map: Record<string, string> = {
     pending: '#ffed4e',
     preparing: '#ff9500',
-    ready: '#00ff88',
-    completed: '#00ff88',
+    ready: '#ff5a5f',
+    completed: '#ff5a5f',
     cancelled: '#ff3366',
   };
   return map[status] ?? '#c0c0c0';

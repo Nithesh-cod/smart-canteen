@@ -34,8 +34,8 @@ const css = `
   50%      { transform: translateX(100%); }
 }
 @keyframes search-glow {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(0,255,136,0.18), 0 0 0 0 rgba(0,255,136,0); }
-  50%      { box-shadow: 0 0 0 1px rgba(0,255,136,0.4),  0 0 18px 0 rgba(0,255,136,0.18); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 90, 95,0.18), 0 0 0 0 rgba(255, 90, 95,0); }
+  50%      { box-shadow: 0 0 0 1px rgba(255, 90, 95,0.4),  0 0 18px 0 rgba(255, 90, 95,0.18); }
 }
 
 .channels-frame {
@@ -51,7 +51,7 @@ const css = `
   padding: 14px 18px 14px 50px;
   border-radius: 12px;
   background: rgba(7,16,14,0.6);
-  border: 1px solid rgba(0,255,136,0.18);
+  border: 1px solid rgba(255, 90, 95,0.18);
   color: #fff;
   font-family: 'Rajdhani', sans-serif;
   font-size: 1rem;
@@ -65,19 +65,19 @@ const css = `
   letter-spacing: 0.1em;
 }
 .channels-search input:focus {
-  border-color: #00ff88;
+  border-color: #ff5a5f;
   animation: none;
-  box-shadow: 0 0 0 1px #00ff88, 0 0 22px rgba(0,255,136,0.3);
+  box-shadow: 0 0 0 1px #ff5a5f, 0 0 22px rgba(255, 90, 95,0.3);
 }
 .channels-search-glyph {
   position: absolute;
   top: 50%; left: 18px;
   transform: translateY(-50%);
-  color: #00ff88;
+  color: #ff5a5f;
   font-family: 'Orbitron', monospace;
   font-size: 1rem;
   pointer-events: none;
-  text-shadow: 0 0 8px #00ff88;
+  text-shadow: 0 0 8px #ff5a5f;
 }
 
 .channels-row {
@@ -108,22 +108,22 @@ const css = `
   gap: 2px;
 }
 .channel:hover {
-  border-color: rgba(0,255,136,0.4);
+  border-color: rgba(255, 90, 95,0.4);
   color: #fff;
 }
 .channel.active {
-  border-color: #00ff88;
+  border-color: #ff5a5f;
   background:
-    linear-gradient(180deg, rgba(0,255,136,0.16) 0%, rgba(0,255,136,0.04) 100%);
-  color: #00ff88;
-  box-shadow: 0 0 18px rgba(0,255,136,0.25);
+    linear-gradient(180deg, rgba(255, 90, 95,0.16) 0%, rgba(255, 90, 95,0.04) 100%);
+  color: #ff5a5f;
+  box-shadow: 0 0 18px rgba(255, 90, 95,0.25);
 }
 .channel.active::after {
   content: '';
   position: absolute;
   left: 0; right: 0; bottom: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #00ff88, transparent);
+  background: linear-gradient(90deg, transparent, #ff5a5f, transparent);
   animation: channel-scan 2.2s linear infinite;
 }
 .channel-glyph {

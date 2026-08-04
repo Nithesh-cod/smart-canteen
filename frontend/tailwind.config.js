@@ -7,7 +7,7 @@ export default {
         'cyber-cyan': '#00f5ff',
         'cyber-magenta': '#ff00ff',
         'cyber-yellow': '#ffed4e',
-        'cyber-green': '#00ff88',
+        'cyber-green': '#ff5a5f',
         'cyber-red': '#ff3366',
         'bg-primary': '#0a0a1a',
         'bg-secondary': '#1a0a2e',
@@ -67,7 +67,7 @@ export default {
       boxShadow: {
         'glow-cyan': '0 0 20px rgba(0, 245, 255, 0.5)',
         'glow-magenta': '0 0 20px rgba(255, 0, 255, 0.5)',
-        'glow-green': '0 0 20px rgba(0, 255, 136, 0.5)',
+        'glow-green': '0 0 20px rgba(255, 90, 95, 0.5)',
         'glow-red': '0 0 20px rgba(255, 51, 102, 0.5)',
         'glow-yellow': '0 0 20px rgba(255, 237, 78, 0.5)',
         'glass': '0 8px 32px rgba(0, 0, 0, 0.4)',

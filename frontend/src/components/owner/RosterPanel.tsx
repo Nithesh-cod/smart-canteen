@@ -155,8 +155,8 @@ export const RosterPanel: React.FC<RosterPanelProps> = ({ students, onRefresh })
 
                 <div className="roster-card-stats">
                   <Stat label="Spent"  value={`₹${Math.round(Number(s.total_spent) || 0).toLocaleString('en-IN')}`} tone="#ffed4e" />
-                  <Stat label="Orders" value={String(Number(s.total_orders) || 0)}                                  tone="#00ff88" />
-                  <Stat label="Points" value={String(Number(s.points) || 0)}                                       tone="#00d166" />
+                  <Stat label="Orders" value={String(Number(s.total_orders) || 0)}                                  tone="#ff5a5f" />
+                  <Stat label="Points" value={String(Number(s.points) || 0)}                                       tone="#ff9e3d" />
                 </div>
 
                 <div className="roster-card-foot">
@@ -193,7 +193,7 @@ const css = `
 .roster-title-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .roster-glyph {
   font-family: 'Orbitron', monospace; font-size: 1.15rem;
-  color: #00ff88; text-shadow: 0 0 10px #00ff88;
+  color: #ff5a5f; text-shadow: 0 0 10px #ff5a5f;
 }
 .roster-title {
   font-family: 'Orbitron', sans-serif; font-size: 0.78rem;
@@ -211,18 +211,18 @@ const css = `
   color: #fff; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px; outline: none; width: 280px; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.roster-search input:focus { border-color: rgba(0,255,136,0.5); box-shadow: 0 0 14px rgba(0,255,136,0.18); }
+.roster-search input:focus { border-color: rgba(255, 90, 95,0.5); box-shadow: 0 0 14px rgba(255, 90, 95,0.18); }
 .roster-search-glyph {
   position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
-  color: #00ff88; font-family: 'Orbitron', monospace; pointer-events: none;
+  color: #ff5a5f; font-family: 'Orbitron', monospace; pointer-events: none;
 }
 .roster-refresh {
   padding: 9px 16px; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
-  letter-spacing: 0.18em; text-transform: uppercase; color: #00ff88;
-  background: rgba(0,255,136,0.07); border: 1px solid rgba(0,255,136,0.4);
+  letter-spacing: 0.18em; text-transform: uppercase; color: #ff5a5f;
+  background: rgba(255, 90, 95,0.07); border: 1px solid rgba(255, 90, 95,0.4);
   border-radius: 8px; cursor: pointer;
 }
-.roster-refresh:hover { background: rgba(0,255,136,0.15); }
+.roster-refresh:hover { background: rgba(255, 90, 95,0.15); }
 .roster-refresh:disabled { opacity: 0.6; cursor: progress; }
 
 .roster-tier-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -233,12 +233,12 @@ const css = `
   border: 1px solid rgba(255,255,255,0.06); border-radius: 100px; cursor: pointer;
   transition: all 0.18s; display: flex; align-items: center; gap: 8px;
 }
-.tier-chip:hover { color: #fff; border-color: rgba(0,255,136,0.4); }
+.tier-chip:hover { color: #fff; border-color: rgba(255, 90, 95,0.4); }
 .tier-chip.active:not([style]) {
-  color: #00ff88;
-  background: rgba(0,255,136,0.1);
-  border-color: rgba(0,255,136,0.5);
-  box-shadow: 0 0 14px rgba(0,255,136,0.18);
+  color: #ff5a5f;
+  background: rgba(255, 90, 95,0.1);
+  border-color: rgba(255, 90, 95,0.5);
+  box-shadow: 0 0 14px rgba(255, 90, 95,0.18);
 }
 .tier-chip-count {
   font-size: 0.6rem; color: rgba(255,237,78,0.85);
@@ -252,20 +252,20 @@ const css = `
 .roster-card {
   position: relative; padding: 18px 20px 18px;
   background:
-    linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%),
-    linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+    linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%),
+    linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
   border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;
   clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .roster-card::before {
   content: ''; position: absolute; top: 0; left: 6%; right: 24%; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 90, 95,0.5), transparent);
 }
 .roster-card:hover {
-  border-color: rgba(0,255,136,0.35);
+  border-color: rgba(255, 90, 95,0.35);
   transform: translateY(-2px);
-  box-shadow: 0 14px 32px rgba(0,255,136,0.12);
+  box-shadow: 0 14px 32px rgba(255, 90, 95,0.12);
 }
 
 .roster-card-head {
@@ -319,7 +319,7 @@ const css = `
   font-family: 'Orbitron', monospace; font-size: 0.62rem;
   letter-spacing: 0.15em; text-transform: uppercase;
 }
-.roster-status.active   { color: #00ff88; }
+.roster-status.active   { color: #ff5a5f; }
 .roster-status.inactive { color: rgba(255,159,67,0.85); }
 
 .roster-empty {
@@ -327,13 +327,13 @@ const css = `
 }
 .roster-empty-glyph {
   font-family: 'Orbitron', monospace; font-size: 3rem;
-  color: rgba(0,255,136,0.4); text-shadow: 0 0 14px rgba(0,255,136,0.35);
+  color: rgba(255, 90, 95,0.4); text-shadow: 0 0 14px rgba(255, 90, 95,0.35);
   margin-bottom: 14px;
 }
 .roster-empty-title {
   font-family: 'Orbitron', sans-serif; font-size: 0.85rem;
   letter-spacing: 0.32em; text-transform: uppercase;
-  color: rgba(0,255,136,0.7); margin-bottom: 6px;
+  color: rgba(255, 90, 95,0.7); margin-bottom: 6px;
 }
 .roster-empty-sub {
   font-family: 'Rajdhani', sans-serif; font-size: 0.85rem;

@@ -31,8 +31,8 @@ function saveRecentStudent(student: Student): void {
 
 const glowKeyframes = `
 @keyframes glow-cycle {
-  0%, 100% { text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88; }
-  50% { text-shadow: 0 0 20px #00d166, 0 0 40px #00d166, 0 0 80px #00d166; }
+  0%, 100% { text-shadow: 0 0 10px #ff5a5f, 0 0 20px #ff5a5f, 0 0 40px #ff5a5f; }
+  50% { text-shadow: 0 0 20px #ff9e3d, 0 0 40px #ff9e3d, 0 0 80px #ff9e3d; }
 }
 @keyframes float-logo {
   0%, 100% { transform: translateY(0px); }
@@ -43,15 +43,15 @@ const glowKeyframes = `
   100% { top: 100vh; }
 }
 @keyframes border-pulse {
-  0%, 100% { box-shadow: 0 0 30px rgba(0, 255, 136,0.12), 0 0 60px rgba(0, 209, 102,0.06), inset 0 1px 0 rgba(255,255,255,0.1); }
-  50% { box-shadow: 0 0 50px rgba(0, 255, 136,0.22), 0 0 100px rgba(0, 209, 102,0.1), inset 0 1px 0 rgba(255,255,255,0.15); }
+  0%, 100% { box-shadow: 0 0 30px rgba(255, 90, 95,0.12), 0 0 60px rgba(255, 158, 61,0.06), inset 0 1px 0 rgba(255,255,255,0.1); }
+  50% { box-shadow: 0 0 50px rgba(255, 90, 95,0.22), 0 0 100px rgba(255, 158, 61,0.1), inset 0 1px 0 rgba(255,255,255,0.15); }
 }
 `;
 
 const cyberBg: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'linear-gradient(135deg, #050a0c, #0a1614, #07100e)',
+  background: 'linear-gradient(135deg, #140a09, #241512, #1b0e0c)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -66,8 +66,8 @@ const gridOverlay: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
   backgroundImage: `
-    linear-gradient(rgba(0, 255, 136,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 136,0.03) 1px, transparent 1px)
+    linear-gradient(rgba(255, 90, 95,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 90, 95,0.03) 1px, transparent 1px)
   `,
   backgroundSize: '50px 50px',
   pointerEvents: 'none',
@@ -160,7 +160,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
   const getInputStyle = (name: string): React.CSSProperties => ({
     width: '100%',
     background: 'rgba(255,255,255,0.05)',
-    border: `1px solid ${focusedInput === name ? '#00ff88' : 'rgba(0, 255, 136,0.25)'}`,
+    border: `1px solid ${focusedInput === name ? '#ff5a5f' : 'rgba(255, 90, 95,0.25)'}`,
     borderRadius: '10px',
     color: '#fff',
     padding: '14px 18px',
@@ -169,7 +169,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
     outline: 'none',
     transition: 'border-color 0.2s, box-shadow 0.2s',
     boxSizing: 'border-box',
-    boxShadow: focusedInput === name ? '0 0 12px rgba(0, 255, 136,0.2)' : 'none',
+    boxShadow: focusedInput === name ? '0 0 12px rgba(255, 90, 95,0.2)' : 'none',
   });
 
   const labelStyle: React.CSSProperties = {
@@ -196,7 +196,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
     fontSize: '0.85rem',
     fontWeight: 700,
     letterSpacing: '0.12em',
-    boxShadow: disabled ? 'none' : '0 0 22px rgba(0, 255, 136,0.25)',
+    boxShadow: disabled ? 'none' : '0 0 22px rgba(255, 90, 95,0.25)',
     transition: 'all 0.25s',
     opacity: disabled ? 0.6 : 1,
     textTransform: 'uppercase',
@@ -213,7 +213,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
           position: 'fixed',
           left: 0, right: 0,
           height: '2px',
-          background: 'linear-gradient(90deg, transparent, rgba(0, 255, 136,0.25), transparent)',
+          background: 'linear-gradient(90deg, transparent, rgba(255, 90, 95,0.25), transparent)',
           animation: 'scanline-move 6s linear infinite',
           pointerEvents: 'none',
           zIndex: 1,
@@ -224,7 +224,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
           maxWidth: '560px',
           background: 'rgba(255,255,255,0.03)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(0, 255, 136,0.35)',
+          border: '1px solid rgba(255, 90, 95,0.35)',
           borderRadius: '24px',
           padding: '44px 40px',
           position: 'relative',
@@ -250,10 +250,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
 
           {/* Corner accents */}
           {[
-            { top: -1, left: -1, borderTop: '2px solid #00ff88', borderLeft: '2px solid #00ff88', borderRadius: '24px 0 0 0' },
-            { top: -1, right: -1, borderTop: '2px solid #00d166', borderRight: '2px solid #00d166', borderRadius: '0 24px 0 0' },
-            { bottom: -1, left: -1, borderBottom: '2px solid #00d166', borderLeft: '2px solid #00d166', borderRadius: '0 0 0 24px' },
-            { bottom: -1, right: -1, borderBottom: '2px solid #00ff88', borderRight: '2px solid #00ff88', borderRadius: '0 0 24px 0' },
+            { top: -1, left: -1, borderTop: '2px solid #ff5a5f', borderLeft: '2px solid #ff5a5f', borderRadius: '24px 0 0 0' },
+            { top: -1, right: -1, borderTop: '2px solid #ff9e3d', borderRight: '2px solid #ff9e3d', borderRadius: '0 24px 0 0' },
+            { bottom: -1, left: -1, borderBottom: '2px solid #ff9e3d', borderLeft: '2px solid #ff9e3d', borderRadius: '0 0 0 24px' },
+            { bottom: -1, right: -1, borderBottom: '2px solid #ff5a5f', borderRight: '2px solid #ff5a5f', borderRadius: '0 0 24px 0' },
           ].map((s, i) => (
             <div key={i} style={{ position: 'absolute', width: '24px', height: '24px', ...s }} />
           ))}
@@ -267,7 +267,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
               fontFamily: "'Orbitron', sans-serif",
               fontSize: '1.9rem',
               fontWeight: 900,
-              background: 'linear-gradient(135deg, #00ff88 0%, #00d166 100%)',
+              background: 'linear-gradient(135deg, #ff5a5f 0%, #ff9e3d 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -313,10 +313,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
                   letterSpacing: '0.12em',
                   transition: 'all 0.25s',
                   background: tab === t
-                    ? 'linear-gradient(135deg, rgba(0, 255, 136,0.18), rgba(0, 209, 102,0.18))'
+                    ? 'linear-gradient(135deg, rgba(255, 90, 95,0.18), rgba(255, 158, 61,0.18))'
                     : 'transparent',
-                  color: tab === t ? '#00ff88' : 'rgba(255,255,255,0.38)',
-                  boxShadow: tab === t ? '0 0 15px rgba(0, 255, 136,0.15)' : 'none',
+                  color: tab === t ? '#ff5a5f' : 'rgba(255,255,255,0.38)',
+                  boxShadow: tab === t ? '0 0 15px rgba(255, 90, 95,0.15)' : 'none',
                   textTransform: 'uppercase',
                 }}
               >
@@ -372,7 +372,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
               <button
                 type="submit"
                 disabled={loading}
-                style={primaryBtnStyle('linear-gradient(135deg, rgba(0, 255, 136,0.85), rgba(0, 209, 102,0.85))', loading)}
+                style={primaryBtnStyle('linear-gradient(135deg, rgba(255, 90, 95,0.85), rgba(255, 158, 61,0.85))', loading)}
               >
                 {loading ? '⏳ Authenticating...' : '⚡ Login'}
               </button>
@@ -442,7 +442,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
                 <button
                   type="submit"
                   disabled={loading}
-                  style={primaryBtnStyle('linear-gradient(135deg, rgba(0,255,136,0.85), rgba(0, 255, 136,0.85))', loading)}
+                  style={primaryBtnStyle('linear-gradient(135deg, rgba(255, 90, 95,0.85), rgba(255, 90, 95,0.85))', loading)}
                 >
                   {loading ? '⏳ Creating Account...' : '✨ Create Account'}
                 </button>
@@ -494,9 +494,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(0, 255, 136,0.5)';
-                      e.currentTarget.style.background = 'rgba(0, 255, 136,0.07)';
-                      e.currentTarget.style.color = '#00ff88';
+                      e.currentTarget.style.borderColor = 'rgba(255, 90, 95,0.5)';
+                      e.currentTarget.style.background = 'rgba(255, 90, 95,0.07)';
+                      e.currentTarget.style.color = '#ff5a5f';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
@@ -507,9 +507,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
                     <span style={{
                       width: '24px', height: '24px',
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #00ff88, #00d166)',
+                      background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.65rem', fontWeight: 700, color: '#050a0c',
+                      fontSize: '0.65rem', fontWeight: 700, color: '#140a09',
                       flexShrink: 0,
                     }}>
                       {s.name.charAt(0).toUpperCase()}

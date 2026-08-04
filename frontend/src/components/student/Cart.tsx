@@ -133,7 +133,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                     </div>
                     <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
                       ₹{item.price.toFixed(2)} × {item.quantity} ={' '}
-                      <span style={{ color: '#00ff88', fontWeight: 600 }}>
+                      <span style={{ color: '#ff5a5f', fontWeight: 600 }}>
                         ₹{(item.price * item.quantity).toFixed(2)}
                       </span>
                     </span>
@@ -193,8 +193,8 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                       }}
                       onMouseEnter={(e) => {
                         if (!atStockLimit) {
-                          e.currentTarget.style.background = 'rgba(0, 255, 136,0.2)';
-                          e.currentTarget.style.borderColor = '#00ff88';
+                          e.currentTarget.style.background = 'rgba(255, 90, 95,0.2)';
+                          e.currentTarget.style.borderColor = '#ff5a5f';
                         }
                       }}
                       onMouseLeave={(e) => {
@@ -241,8 +241,8 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
         {cartItems.length > 0 && studentPoints > 0 && (
           <div style={{
             padding: '16px',
-            background: 'rgba(0,255,136,0.05)',
-            border: '1px solid rgba(0,255,136,0.2)',
+            background: 'rgba(255, 90, 95,0.05)',
+            border: '1px solid rgba(255, 90, 95,0.2)',
             borderRadius: 12,
           }}>
             <div style={{
@@ -252,12 +252,12 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
               <div>
                 <div style={{
                   fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
-                  fontSize: '0.95rem', color: '#00ff88', marginBottom: 2,
+                  fontSize: '0.95rem', color: '#ff5a5f', marginBottom: 2,
                 }}>
                   💎 Available Points: {studentPoints}
                 </div>
                 {pointsToRedeem > 0 && (
-                  <div style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', color: 'rgba(0,255,136,0.7)' }}>
+                  <div style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', color: 'rgba(255, 90, 95,0.7)' }}>
                     Redeeming {pointsToRedeem} pts → saves ₹{actualPointsSavings.toFixed(2)}
                   </div>
                 )}
@@ -284,14 +284,14 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                   onClick={handleRedeemPoints}
                   style={{
                     padding: '7px 14px', borderRadius: 8,
-                    border: '1px solid rgba(0,255,136,0.4)',
-                    background: 'rgba(0,255,136,0.1)',
-                    color: '#00ff88', fontSize: '0.85rem',
+                    border: '1px solid rgba(255, 90, 95,0.4)',
+                    background: 'rgba(255, 90, 95,0.1)',
+                    color: '#ff5a5f', fontSize: '0.85rem',
                     fontFamily: 'Rajdhani, sans-serif', fontWeight: 600,
                     cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,255,136,0.2)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,255,136,0.1)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 90, 95,0.2)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 90, 95,0.1)'; }}
                 >
                   {/* Show the actual amount that will be redeemed, capped at 50% */}
                   Use {displayPoints} pts (save ₹{displaySavings.toFixed(2)})
@@ -320,7 +320,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
               </div>
 
               {pointsToRedeem > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#00ff88', fontSize: '0.95rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ff5a5f', fontSize: '0.95rem' }}>
                   <span>Points Discount ({pointsToRedeem} pts)</span>
                   <span>−₹{actualPointsSavings.toFixed(2)}</span>
                 </div>
@@ -335,7 +335,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                 </span>
               </div>
 
-              <div style={{ textAlign: 'center', color: '#00ff88', fontSize: '0.85rem', marginTop: 4 }}>
+              <div style={{ textAlign: 'center', color: '#ff5a5f', fontSize: '0.85rem', marginTop: 4 }}>
                 You'll earn {pointsEarned} points! 💎
               </div>
             </div>
@@ -348,22 +348,22 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
           disabled={cartItems.length === 0}
           style={{
             width: '100%', padding: '15px', borderRadius: 12, border: 'none',
-            background: cartItems.length === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #00ff88, #00c870)',
-            color: cartItems.length === 0 ? 'rgba(255,255,255,0.3)' : '#050a0c',
+            background: cartItems.length === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #ff5a5f, #00c870)',
+            color: cartItems.length === 0 ? 'rgba(255,255,255,0.3)' : '#140a09',
             fontSize: '1.05rem', fontFamily: 'Rajdhani, sans-serif', fontWeight: 800,
             cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s', letterSpacing: '1px',
-            boxShadow: cartItems.length === 0 ? 'none' : '0 0 20px rgba(0,255,136,0.3)',
+            boxShadow: cartItems.length === 0 ? 'none' : '0 0 20px rgba(255, 90, 95,0.3)',
           }}
           onMouseEnter={(e) => {
             if (cartItems.length > 0) {
-              e.currentTarget.style.boxShadow = '0 0 30px rgba(0,255,136,0.5)';
+              e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 90, 95,0.5)';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }
           }}
           onMouseLeave={(e) => {
             if (cartItems.length > 0) {
-              e.currentTarget.style.boxShadow = '0 0 20px rgba(0,255,136,0.3)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 90, 95,0.3)';
               e.currentTarget.style.transform = 'translateY(0)';
             }
           }}

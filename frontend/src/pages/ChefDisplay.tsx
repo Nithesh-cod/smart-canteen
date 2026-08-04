@@ -26,8 +26,8 @@ const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: Men
     label: string; value: string; glyph: string; sub: string; tone: string; glow: string;
   }> = [
     { label: 'Pending Queue',  value: String(pending).padStart(2, '0'),   glyph: '◷', sub: 'awaiting accept', tone: '#ffed4e', glow: 'rgba(255,237,78,0.45)' },
-    { label: 'On the Line',    value: String(preparing).padStart(2, '0'), glyph: '◈', sub: 'in preparation',  tone: '#00ff88', glow: 'rgba(0,255,136,0.45)' },
-    { label: 'Ready for Pickup', value: String(ready).padStart(2, '0'),   glyph: '✦', sub: 'awaiting collect',tone: '#00ff88', glow: 'rgba(0,255,136,0.45)' },
+    { label: 'On the Line',    value: String(preparing).padStart(2, '0'), glyph: '◈', sub: 'in preparation',  tone: '#ff5a5f', glow: 'rgba(255, 90, 95,0.45)' },
+    { label: 'Ready for Pickup', value: String(ready).padStart(2, '0'),   glyph: '✦', sub: 'awaiting collect',tone: '#ff5a5f', glow: 'rgba(255, 90, 95,0.45)' },
     { label: "Today's Revenue", value: `₹${Math.round(revenue).toLocaleString('en-IN')}`, glyph: '◊', sub: 'sealed today',    tone: '#ffed4e', glow: 'rgba(255,237,78,0.45)' },
   ];
 
@@ -47,8 +47,8 @@ const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: Men
           position: relative;
           padding: 18px 22px 20px;
           background:
-            linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 40%),
-            linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+            linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 40%),
+            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 16px;
           clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
@@ -57,12 +57,12 @@ const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: Men
         }
         .chef-stat-tile::before {
           content: ''; position: absolute; top: 0; left: 6%; right: 24%; height: 1px;
-          background: linear-gradient(90deg, transparent, var(--chef-stat-glow, rgba(0,255,136,0.5)), transparent);
+          background: linear-gradient(90deg, transparent, var(--chef-stat-glow, rgba(255, 90, 95,0.5)), transparent);
         }
         .chef-stat-tile:hover {
           transform: translateY(-2px);
           border-color: rgba(255,255,255,0.12);
-          box-shadow: 0 12px 30px rgba(0,255,136,0.1);
+          box-shadow: 0 12px 30px rgba(255, 90, 95,0.1);
         }
         .chef-stat-head {
           display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
@@ -131,8 +131,8 @@ function timeAgo(dateStr: string): { text: string; isOld: boolean } {
 
 const STATUS_CONFIG: Record<string, { border: string; glow: string; label: string; glyph: string }> = {
   pending:   { border: '#ffed4e', glow: 'rgba(255,237,78,0.45)',    label: 'PENDING',   glyph: '◷' },
-  preparing: { border: '#00ff88', glow: 'rgba(0, 255, 136,0.45)',   label: 'PREPARING', glyph: '◈' },
-  ready:     { border: '#00ff88', glow: 'rgba(0,255,136,0.55)',     label: 'READY',     glyph: '✦' },
+  preparing: { border: '#ff5a5f', glow: 'rgba(255, 90, 95,0.45)',   label: 'PREPARING', glyph: '◈' },
+  ready:     { border: '#ff5a5f', glow: 'rgba(255, 90, 95,0.55)',     label: 'READY',     glyph: '✦' },
   completed: { border: 'rgba(255,255,255,0.2)', glow: 'transparent', label: 'DONE',     glyph: '✓' },
   cancelled: { border: '#ff3366', glow: 'rgba(255,51,102,0.45)',    label: 'CANCELLED', glyph: '✕' },
 };
@@ -166,8 +166,8 @@ const ChefOrderCard: React.FC<{
           50%      { opacity: 0.55; transform: scale(0.92); }
         }
         @keyframes chef-card-readyglow {
-          0%, 100% { box-shadow: 0 0 22px rgba(0,255,136,0.22), inset 0 0 0 1px rgba(0,255,136,0.18); }
-          50%      { box-shadow: 0 0 52px rgba(0,255,136,0.45), inset 0 0 0 1px rgba(0,255,136,0.45); }
+          0%, 100% { box-shadow: 0 0 22px rgba(255, 90, 95,0.22), inset 0 0 0 1px rgba(255, 90, 95,0.18); }
+          50%      { box-shadow: 0 0 52px rgba(255, 90, 95,0.45), inset 0 0 0 1px rgba(255, 90, 95,0.45); }
         }
       `}</style>
       <div style={{
@@ -175,7 +175,7 @@ const ChefOrderCard: React.FC<{
         padding: '16px 18px 18px',
         marginBottom: 14,
         background:
-          `linear-gradient(180deg, ${cfg.border}10 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #07100e 100%)`,
+          `linear-gradient(180deg, ${cfg.border}10 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%)`,
         border: `1px solid ${cfg.border}55`,
         borderRadius: 16,
         clipPath: 'polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%)',
@@ -197,7 +197,7 @@ const ChefOrderCard: React.FC<{
         {isNew && (
           <div style={{
             position: 'absolute', top: 12, right: 16,
-            background: '#ffed4e', color: '#050a0c',
+            background: '#ffed4e', color: '#140a09',
             fontSize: '0.55rem', fontFamily: 'Orbitron, monospace', fontWeight: 800,
             padding: '3px 7px', borderRadius: 3, letterSpacing: '0.2em',
             animation: 'chef-card-newpulse 1.2s ease-in-out infinite',
@@ -313,7 +313,7 @@ const ChefOrderCard: React.FC<{
           <div style={{ display: 'flex', gap: 8 }}>
             <ActionBtn
               label="⊕ Accept"
-              color="#00ff88"
+              color="#ff5a5f"
               onClick={() => onStatusUpdate(order.id, 'preparing')}
             />
             <ActionBtn
@@ -326,7 +326,7 @@ const ChefOrderCard: React.FC<{
         {order.status === 'preparing' && (
           <ActionBtn
             label="✦ Mark Ready"
-            color="#00ff88"
+            color="#ff5a5f"
             onClick={() => onStatusUpdate(order.id, 'ready')}
             fullWidth
           />
@@ -390,7 +390,7 @@ const ActionBtn: React.FC<{
   const [hover, setHover] = useState(false);
   // Round-7 palette swap collapsed the cyan vs green ternaries — both branches
   // now resolve to the same unified green RGB triplet.
-  const rgb = color === '#00ff88' ? '0,255,136' : color === '#ff3366' ? '255,51,102' : '255,255,255';
+  const rgb = color === '#ff5a5f' ? '0,255,136' : color === '#ff3366' ? '255,51,102' : '255,255,255';
   return (
     <button
       onClick={onClick}
@@ -464,9 +464,9 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
   }
 
   const summaryStats = [
-    { label: 'Total Orders',  value: todayAll.length,     color: '#00ff88', icon: '📋' },
-    { label: 'Completed',     value: completed.length,    color: '#00ff88', icon: '✅' },
-    { label: 'Items Sold',    value: totalItems,          color: '#00d166', icon: '🍽️' },
+    { label: 'Total Orders',  value: todayAll.length,     color: '#ff5a5f', icon: '📋' },
+    { label: 'Completed',     value: completed.length,    color: '#ff5a5f', icon: '✅' },
+    { label: 'Items Sold',    value: totalItems,          color: '#ff9e3d', icon: '🍽️' },
     { label: "Today's Revenue", value: `₹${totalRev.toLocaleString('en-IN')}`, color: '#ffed4e', icon: '💰' },
   ];
 
@@ -491,7 +491,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
       </div>
 
       {/* Section label */}
-      <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(0, 255, 136,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
+      <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(255, 90, 95,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
         🍽️ Items Ordered Today — sorted by popularity
       </div>
 
@@ -500,7 +500,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
         {aggItems.map((item, idx) => (
           <div key={item.name} style={{
             background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
-            border: `1px solid ${idx === 0 ? 'rgba(255,237,78,0.45)' : 'rgba(0, 255, 136,0.12)'}`,
+            border: `1px solid ${idx === 0 ? 'rgba(255,237,78,0.45)' : 'rgba(255, 90, 95,0.12)'}`,
             borderRadius: 16, overflow: 'hidden', position: 'relative',
             boxShadow: idx === 0 ? '0 0 24px rgba(255,237,78,0.12)' : '0 2px 12px rgba(0,0,0,0.3)',
             animation: `fadeInUp 0.4s ease ${Math.min(idx, 12) * 0.04}s both`,
@@ -512,7 +512,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
             {idx === 0 && (
               <div style={{
                 position: 'absolute', top: 8, right: 8, zIndex: 2,
-                background: '#ffed4e', color: '#050a0c',
+                background: '#ffed4e', color: '#140a09',
                 fontSize: 8, fontFamily: 'Orbitron, monospace', fontWeight: 700,
                 padding: '2px 7px', borderRadius: 4, letterSpacing: 1,
               }}>🏆 TOP</div>
@@ -542,9 +542,9 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
               }}>{item.name}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{
-                  background: 'rgba(0, 255, 136,0.1)', border: '1px solid rgba(0, 255, 136,0.35)',
+                  background: 'rgba(255, 90, 95,0.1)', border: '1px solid rgba(255, 90, 95,0.35)',
                   borderRadius: 20, padding: '3px 10px',
-                  fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#00ff88',
+                  fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#ff5a5f',
                 }}>×{item.quantity}</div>
                 <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#ffed4e' }}>
                   ₹{item.revenue.toFixed(0)}
@@ -558,18 +558,18 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
       {/* Completed orders list */}
       {completed.length > 0 && (
         <>
-          <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(0,255,136,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
+          <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(255, 90, 95,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
             ✅ Completed Orders Today ({completed.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[...completed].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(order => (
               <div key={order.id} style={{
-                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(0,255,136,0.15)',
-                borderLeft: '3px solid #00ff88', borderRadius: 12, padding: '12px 18px',
+                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255, 90, 95,0.15)',
+                borderLeft: '3px solid #ff5a5f', borderRadius: 12, padding: '12px 18px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'Orbitron, monospace', fontSize: 12, color: '#00ff88', fontWeight: 700 }}>
+                  <span style={{ fontFamily: 'Orbitron, monospace', fontSize: 12, color: '#ff5a5f', fontWeight: 700 }}>
                     #{order.order_number}
                   </span>
                   {order.student_name && (
@@ -597,8 +597,8 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
 
 const COLUMNS: Array<{ status: OrderStatus; label: string; color: string; glow: string }> = [
   { status: 'pending',   label: 'Pending',   color: '#ffed4e', glow: 'rgba(255,237,78,0.12)' },
-  { status: 'preparing', label: 'Preparing', color: '#00ff88', glow: 'rgba(0, 255, 136,0.12)' },
-  { status: 'ready',     label: 'Ready',     color: '#00ff88', glow: 'rgba(0,255,136,0.12)' },
+  { status: 'preparing', label: 'Preparing', color: '#ff5a5f', glow: 'rgba(255, 90, 95,0.12)' },
+  { status: 'ready',     label: 'Ready',     color: '#ff5a5f', glow: 'rgba(255, 90, 95,0.12)' },
 ];
 
 const OrdersTab: React.FC<{
@@ -829,8 +829,8 @@ const EditMenuTab: React.FC<{
         .chef-cat-card {
           position: relative;
           background:
-            linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%),
-            linear-gradient(180deg, #0a1816 0%, #07100e 100%);
+            linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%),
+            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 16px;
           clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
@@ -839,13 +839,13 @@ const EditMenuTab: React.FC<{
         }
         .chef-cat-card::before {
           content: ''; position: absolute; top: 0; left: 6%; right: 24%; height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent);
+          background: linear-gradient(90deg, transparent, rgba(255, 90, 95,0.5), transparent);
           z-index: 4;
         }
         .chef-cat-card:hover {
-          border-color: rgba(0,255,136,0.4);
+          border-color: rgba(255, 90, 95,0.4);
           transform: translateY(-2px);
-          box-shadow: 0 16px 36px rgba(0,255,136,0.12);
+          box-shadow: 0 16px 36px rgba(255, 90, 95,0.12);
         }
         .menu-edit-input {
           background: rgba(0,0,0,0.32) !important;
@@ -855,8 +855,8 @@ const EditMenuTab: React.FC<{
           transition: border-color 0.18s, box-shadow 0.18s;
         }
         .menu-edit-input:focus {
-          border-color: rgba(0,255,136,0.5) !important;
-          box-shadow: 0 0 0 2px rgba(0,255,136,0.15) !important;
+          border-color: rgba(255, 90, 95,0.5) !important;
+          box-shadow: 0 0 0 2px rgba(255, 90, 95,0.15) !important;
         }
         .chef-cat-field-label {
           font-family: 'Orbitron', sans-serif;
@@ -878,10 +878,10 @@ const EditMenuTab: React.FC<{
           background:#ff9f43; border-radius:50%; transition:.3s;
           box-shadow: 0 0 6px rgba(255,159,67,0.65);
         }
-        input:checked + .toggle-slider { background: rgba(0,255,136,0.25); border-color: rgba(0,255,136,0.6); }
+        input:checked + .toggle-slider { background: rgba(255, 90, 95,0.25); border-color: rgba(255, 90, 95,0.6); }
         input:checked + .toggle-slider:before {
-          transform:translateX(20px); background:#00ff88;
-          box-shadow: 0 0 10px #00ff88;
+          transform:translateX(20px); background:#ff5a5f;
+          box-shadow: 0 0 10px #ff5a5f;
         }
       `}</style>
 
@@ -911,7 +911,7 @@ const EditMenuTab: React.FC<{
             {/* Image — same notched language as the kiosk DataCrystal */}
             <div style={{
               height: 150, position: 'relative', overflow: 'hidden',
-              background: 'linear-gradient(135deg, #0a1614, #050a0c)',
+              background: 'linear-gradient(135deg, #241512, #140a09)',
               cursor: 'pointer',
             }} title="Update the image URL below to swap this picture">
               {item.image_url ? (
@@ -928,7 +928,7 @@ const EditMenuTab: React.FC<{
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   height: '100%', fontFamily: 'Orbitron, monospace', fontSize: '3rem',
-                  color: 'rgba(0,255,136,0.4)',
+                  color: 'rgba(255, 90, 95,0.4)',
                   opacity: item.is_available ? 1 : 0.4,
                 }}>⬡</div>
               )}
@@ -942,11 +942,11 @@ const EditMenuTab: React.FC<{
               <div style={{
                 position: 'absolute', top: 10, left: 10, zIndex: 2,
                 fontFamily: 'Orbitron, monospace', fontSize: '0.58rem',
-                letterSpacing: '0.18em', color: '#00ff88',
+                letterSpacing: '0.18em', color: '#ff5a5f',
                 background: 'rgba(7,16,14,0.85)',
-                border: '1px solid rgba(0,255,136,0.5)',
+                border: '1px solid rgba(255, 90, 95,0.5)',
                 borderRadius: 3, padding: '4px 9px', textTransform: 'uppercase',
-                textShadow: '0 0 6px rgba(0,255,136,0.6)',
+                textShadow: '0 0 6px rgba(255, 90, 95,0.6)',
                 backdropFilter: 'blur(6px)',
               }}>
                 #{item.id}
@@ -964,11 +964,11 @@ const EditMenuTab: React.FC<{
               >
                 <span style={{
                   fontFamily: 'Orbitron, sans-serif', fontSize: '0.62rem',
-                  color: '#00ff88', fontWeight: 700, letterSpacing: '0.22em',
+                  color: '#ff5a5f', fontWeight: 700, letterSpacing: '0.22em',
                   textTransform: 'uppercase',
-                  background: 'rgba(0,255,136,0.12)', padding: '6px 14px',
-                  borderRadius: 6, border: '1px solid rgba(0,255,136,0.5)',
-                  textShadow: '0 0 6px rgba(0,255,136,0.6)',
+                  background: 'rgba(255, 90, 95,0.12)', padding: '6px 14px',
+                  borderRadius: 6, border: '1px solid rgba(255, 90, 95,0.5)',
+                  textShadow: '0 0 6px rgba(255, 90, 95,0.6)',
                 }}>
                   ⌧ Swap Image
                 </span>
@@ -1040,10 +1040,10 @@ const EditMenuTab: React.FC<{
                     title="-1 means unlimited stock"
                     style={{
                       padding: '9px 12px', borderRadius: 8,
-                      color: item.editStock === '-1' ? 'rgba(255,255,255,0.4)' : '#00ff88',
+                      color: item.editStock === '-1' ? 'rgba(255,255,255,0.4)' : '#ff5a5f',
                       fontFamily: 'Orbitron, monospace', fontSize: '0.92rem',
                       fontWeight: 700, boxSizing: 'border-box',
-                      textShadow: item.editStock === '-1' ? 'none' : '0 0 8px rgba(0,255,136,0.35)',
+                      textShadow: item.editStock === '-1' ? 'none' : '0 0 8px rgba(255, 90, 95,0.35)',
                     }}
                   />
                 </div>
@@ -1088,10 +1088,10 @@ const EditMenuTab: React.FC<{
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{
                     fontFamily: 'Orbitron, monospace', fontSize: '0.62rem',
-                    color: item.is_available ? '#00ff88' : '#ff9f43',
+                    color: item.is_available ? '#ff5a5f' : '#ff9f43',
                     fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase',
                     textShadow: item.is_available
-                      ? '0 0 6px rgba(0,255,136,0.45)'
+                      ? '0 0 6px rgba(255, 90, 95,0.45)'
                       : '0 0 6px rgba(255,159,67,0.45)',
                   }}>
                     {item.is_available ? '● Online' : '○ Offline'}
@@ -1117,21 +1117,21 @@ const EditMenuTab: React.FC<{
                   data-clickable
                   style={{
                     flex: 1, padding: '10px 12px',
-                    background: 'linear-gradient(90deg, rgba(0,255,136,0.06), rgba(0,255,136,0.18), rgba(0,255,136,0.06))',
+                    background: 'linear-gradient(90deg, rgba(255, 90, 95,0.06), rgba(255, 90, 95,0.18), rgba(255, 90, 95,0.06))',
                     backgroundSize: '200% 100%',
-                    border: '1px solid rgba(0,255,136,0.45)',
-                    borderRadius: 9, color: '#00ff88',
+                    border: '1px solid rgba(255, 90, 95,0.45)',
+                    borderRadius: 9, color: '#ff5a5f',
                     fontFamily: 'Orbitron, sans-serif', fontWeight: 800, fontSize: '0.7rem',
                     cursor: item.saving ? 'not-allowed' : 'pointer',
                     letterSpacing: '0.22em', textTransform: 'uppercase',
                     opacity: item.saving ? 0.6 : 1,
                     transition: 'background-position 0.5s, box-shadow 0.2s',
-                    textShadow: '0 0 8px rgba(0,255,136,0.55)',
+                    textShadow: '0 0 8px rgba(255, 90, 95,0.55)',
                   }}
                   onMouseEnter={e => {
                     if (!item.saving) {
                       (e.currentTarget as HTMLButtonElement).style.backgroundPosition = '100% 0';
-                      (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 18px rgba(0,255,136,0.32)';
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 18px rgba(255, 90, 95,0.32)';
                     }
                   }}
                   onMouseLeave={e => {
@@ -1463,7 +1463,7 @@ const ChefDisplay: React.FC = () => {
     <>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: linear-gradient(135deg, #050a0c, #0a1614, #07100e); min-height: 100vh; font-family: 'Rajdhani', sans-serif; }
+        body { background: linear-gradient(135deg, #140a09, #241512, #1b0e0c); min-height: 100vh; font-family: 'Rajdhani', sans-serif; }
         @keyframes scanline { 0%{background-position:0 0} 100%{background-position:0 100vh} }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
         @keyframes slideInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
@@ -1474,11 +1474,11 @@ const ChefDisplay: React.FC = () => {
         /* class names — layout overridden by index.css media queries */
       `}</style>
 
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #050a0c, #0a1614, #07100e)', position: 'relative' }}>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #140a09, #241512, #1b0e0c)', position: 'relative' }}>
         {/* Grid overlay */}
         <div style={{
           position: 'fixed', inset: 0,
-          backgroundImage: 'linear-gradient(rgba(0, 255, 136,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136,0.02) 1px, transparent 1px)',
+          backgroundImage: 'linear-gradient(rgba(255, 90, 95,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 90, 95,0.02) 1px, transparent 1px)',
           backgroundSize: '40px 40px', pointerEvents: 'none', zIndex: 0,
         }} />
 
@@ -1486,34 +1486,34 @@ const ChefDisplay: React.FC = () => {
         <header className="chef-header" style={{
           position: 'sticky', top: 0, zIndex: 50, height: '84px',
           background:
-            'linear-gradient(180deg, rgba(0,255,136,0.025) 0%, transparent 100%), rgba(7,16,14,0.92)',
+            'linear-gradient(180deg, rgba(255, 90, 95,0.025) 0%, transparent 100%), rgba(7,16,14,0.92)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          borderBottom: '1px solid rgba(0, 255, 136,0.18)',
-          boxShadow: '0 4px 30px rgba(0, 255, 136,0.06)',
+          borderBottom: '1px solid rgba(255, 90, 95,0.18)',
+          boxShadow: '0 4px 30px rgba(255, 90, 95,0.06)',
           display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
           padding: '0 40px', animation: 'slideInDown 0.5s ease',
         }}>
           {/* LEFT — Kitchen Command HUD title block */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <span style={{
-              fontFamily: 'Orbitron, monospace', fontSize: '22px', color: '#00ff88',
-              textShadow: '0 0 12px #00ff88', lineHeight: 1,
+              fontFamily: 'Orbitron, monospace', fontSize: '22px', color: '#ff5a5f',
+              textShadow: '0 0 12px #ff5a5f', lineHeight: 1,
             }}>◈</span>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 22, height: 1, background: 'linear-gradient(90deg, transparent, #00ff88)' }} />
+                <span style={{ width: 22, height: 1, background: 'linear-gradient(90deg, transparent, #ff5a5f)' }} />
                 <h1 style={{
                   fontFamily: 'Orbitron, monospace', fontSize: '20px', fontWeight: 900,
-                  background: 'linear-gradient(90deg, #ffffff 0%, #00ff88 80%)',
+                  background: 'linear-gradient(90deg, #ffffff 0%, #ff5a5f 80%)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text', letterSpacing: '0.32em', lineHeight: 1, margin: 0,
-                  textShadow: '0 0 18px rgba(0,255,136,0.25)',
+                  textShadow: '0 0 18px rgba(255, 90, 95,0.25)',
                 }}>KITCHEN COMMAND</h1>
               </div>
               <div style={{
                 fontFamily: 'Orbitron, monospace', fontSize: '10px',
-                color: 'rgba(0,255,136,0.55)', letterSpacing: '0.35em',
+                color: 'rgba(255, 90, 95,0.55)', letterSpacing: '0.35em',
                 marginTop: 4, marginLeft: 32, textTransform: 'uppercase',
               }}>
                 Chef Station · Live Manifest
@@ -1647,7 +1647,7 @@ const ChefDisplay: React.FC = () => {
             <button onClick={() => setSoundEnabled(s => !s)} title={soundEnabled ? 'Disable beep' : 'Enable beep'} style={{
               background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '8px', padding: '6px 12px',
-              color: soundEnabled ? '#00ff88' : 'rgba(255,255,255,0.3)',
+              color: soundEnabled ? '#ff5a5f' : 'rgba(255,255,255,0.3)',
               cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s',
             }}>
               {soundEnabled ? '🔔' : '🔕'}
@@ -1656,11 +1656,11 @@ const ChefDisplay: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{
                 width: '10px', height: '10px', borderRadius: '50%',
-                background: connectionStatus === 'connected' ? '#00ff88' : '#ff3366',
-                boxShadow: connectionStatus === 'connected' ? '0 0 10px #00ff88' : '0 0 10px #ff3366',
+                background: connectionStatus === 'connected' ? '#ff5a5f' : '#ff3366',
+                boxShadow: connectionStatus === 'connected' ? '0 0 10px #ff5a5f' : '0 0 10px #ff3366',
                 animation: connectionStatus === 'disconnected' ? 'blink 1s ease-in-out infinite' : 'none',
               }} />
-              <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '12px', color: connectionStatus === 'connected' ? '#00ff88' : '#ff3366', letterSpacing: '1px', fontWeight: '600' }}>
+              <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '12px', color: connectionStatus === 'connected' ? '#ff5a5f' : '#ff3366', letterSpacing: '1px', fontWeight: '600' }}>
                 {connectionStatus === 'connected' ? 'LIVE' : 'OFFLINE'}
               </span>
             </div>
@@ -1679,16 +1679,16 @@ const ChefDisplay: React.FC = () => {
               }}>
                 <div style={{
                   position: 'absolute', inset: 0,
-                  border: '2px solid rgba(0,255,136,0.12)',
-                  borderTop: '2px solid #00ff88',
+                  border: '2px solid rgba(255, 90, 95,0.12)',
+                  borderTop: '2px solid #ff5a5f',
                   borderRadius: '50%',
                   animation: 'spin 1.2s linear infinite',
-                  filter: 'drop-shadow(0 0 10px rgba(0,255,136,0.45))',
+                  filter: 'drop-shadow(0 0 10px rgba(255, 90, 95,0.45))',
                 }} />
                 <div style={{
                   position: 'absolute', inset: 12,
-                  border: '2px solid rgba(0,255,136,0.18)',
-                  borderBottom: '2px solid #00ff88',
+                  border: '2px solid rgba(255, 90, 95,0.18)',
+                  borderBottom: '2px solid #ff5a5f',
                   borderRadius: '50%',
                   animation: 'spin 1.8s linear infinite reverse',
                 }} />
@@ -1696,14 +1696,14 @@ const ChefDisplay: React.FC = () => {
                   position: 'absolute', inset: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'Orbitron, monospace', fontSize: '1.1rem',
-                  color: '#00ff88', textShadow: '0 0 10px #00ff88',
+                  color: '#ff5a5f', textShadow: '0 0 10px #ff5a5f',
                 }}>◈</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{
                   fontFamily: 'Orbitron, sans-serif', fontSize: '0.85rem',
-                  color: '#00ff88', letterSpacing: '0.42em',
-                  textShadow: '0 0 12px rgba(0,255,136,0.45)',
+                  color: '#ff5a5f', letterSpacing: '0.42em',
+                  textShadow: '0 0 12px rgba(255, 90, 95,0.45)',
                 }}>SYNCING KITCHEN</div>
                 <div style={{
                   fontFamily: 'Orbitron, monospace', fontSize: '0.62rem',
@@ -1743,10 +1743,10 @@ const ChefDisplay: React.FC = () => {
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8,
                         padding: '9px 20px',
-                        background: active ? 'rgba(0,255,136,0.15)' : 'transparent',
+                        background: active ? 'rgba(255, 90, 95,0.15)' : 'transparent',
                         border: 'none',
                         borderRadius: 100,
-                        color: active ? '#00ff88' : 'rgba(255,255,255,0.5)',
+                        color: active ? '#ff5a5f' : 'rgba(255,255,255,0.5)',
                         fontFamily: 'Orbitron, sans-serif',
                         fontSize: '0.7rem',
                         fontWeight: 800,
@@ -1754,9 +1754,9 @@ const ChefDisplay: React.FC = () => {
                         letterSpacing: '0.22em',
                         textTransform: 'uppercase',
                         transition: 'background 0.2s, color 0.2s, box-shadow 0.2s',
-                        boxShadow: active ? '0 0 16px rgba(0,255,136,0.28)' : 'none',
+                        boxShadow: active ? '0 0 16px rgba(255, 90, 95,0.28)' : 'none',
                         whiteSpace: 'nowrap',
-                        textShadow: active ? '0 0 8px rgba(0,255,136,0.6)' : 'none',
+                        textShadow: active ? '0 0 8px rgba(255, 90, 95,0.6)' : 'none',
                       }}
                       onMouseEnter={(e) => {
                         if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#fff';

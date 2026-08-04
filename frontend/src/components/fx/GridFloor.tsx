@@ -30,7 +30,7 @@ interface GridFloorProps {
 }
 
 export const GridFloor: React.FC<GridFloorProps> = ({
-  color = '#00ff88',
+  color = '#ff5a5f',
   intensity = 0.18,
 }) => {
   const glowRef = useRef<HTMLDivElement>(null);
@@ -94,7 +94,7 @@ export const GridFloor: React.FC<GridFloorProps> = ({
           pointer-events: none;
           overflow: hidden;
           background:
-            radial-gradient(ellipse at top, #07100e 0%, #050a0c 60%, #020504 100%);
+            radial-gradient(ellipse at top, #1b0e0c 0%, #140a09 60%, #020504 100%);
         }
 
         .gf-grid-wrap {

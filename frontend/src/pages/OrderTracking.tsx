@@ -75,10 +75,10 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
           left: 'calc(20px + 17px)',
           width: `calc((100% - 40px - 34px) * ${fillPct / 100})`,
           height: 3,
-          background: 'linear-gradient(90deg, #00ff88, #00d166)',
+          background: 'linear-gradient(90deg, #ff5a5f, #ff9e3d)',
           borderRadius: 3,
           transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
-          boxShadow: '0 0 10px rgba(0, 255, 136,0.6)',
+          boxShadow: '0 0 10px rgba(255, 90, 95,0.6)',
         }} />
 
         {/* Step dots */}
@@ -94,25 +94,25 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
                   {isCurrent && (
                     <div style={{
                       position: 'absolute', inset: -6, borderRadius: '50%',
-                      background: 'rgba(0, 255, 136,0.2)',
+                      background: 'rgba(255, 90, 95,0.2)',
                       animation: 'pulse 1.5s ease-in-out infinite',
                     }} />
                   )}
                   <div style={{
                     width: 34, height: 34, borderRadius: '50%',
                     background: isDone
-                      ? 'linear-gradient(135deg, #00ff88, #00ff88)'
+                      ? 'linear-gradient(135deg, #ff5a5f, #ff5a5f)'
                       : isCurrent
-                      ? 'rgba(0, 255, 136,0.2)'
+                      ? 'rgba(255, 90, 95,0.2)'
                       : 'rgba(255,255,255,0.05)',
-                    border: `2px solid ${isDone ? '#00ff88' : isCurrent ? '#00ff88' : 'rgba(255,255,255,0.15)'}`,
+                    border: `2px solid ${isDone ? '#ff5a5f' : isCurrent ? '#ff5a5f' : 'rgba(255,255,255,0.15)'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: isDone ? '14px' : '0.85rem',
                     color: '#fff', fontWeight: 700,
                     boxShadow: isDone
-                      ? '0 0 16px rgba(0,255,136,0.6)'
+                      ? '0 0 16px rgba(255, 90, 95,0.6)'
                       : isCurrent
-                      ? '0 0 16px rgba(0, 255, 136,0.5)'
+                      ? '0 0 16px rgba(255, 90, 95,0.5)'
                       : 'none',
                     transition: 'all 0.5s',
                     position: 'relative', zIndex: 2,
@@ -124,11 +124,11 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
                 {/* Label */}
                 <div className="track-progress-label" style={{
                   fontSize: '0.68rem', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
-                  color: isDone ? '#00ff88' : isCurrent ? '#00ff88' : 'rgba(255,255,255,0.25)',
+                  color: isDone ? '#ff5a5f' : isCurrent ? '#ff5a5f' : 'rgba(255,255,255,0.25)',
                   textTransform: 'uppercase', letterSpacing: 0.5,
                   textAlign: 'center', whiteSpace: 'nowrap',
                   transition: 'color 0.5s',
-                  textShadow: isDone ? '0 0 8px rgba(0,255,136,0.4)' : isCurrent ? '0 0 8px rgba(0, 255, 136,0.4)' : 'none',
+                  textShadow: isDone ? '0 0 8px rgba(255, 90, 95,0.4)' : isCurrent ? '0 0 8px rgba(255, 90, 95,0.4)' : 'none',
                 }}>
                   {stepLabels[idx]}
                 </div>
@@ -145,8 +145,8 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
 
 const STATUS_COLORS: Record<string, string> = {
   pending:   '#ffed4e',
-  preparing: '#00ff88',
-  ready:     '#00ff88',
+  preparing: '#ff5a5f',
+  ready:     '#ff5a5f',
   completed: '#aaaaaa',
   cancelled: '#ff3366',
 };
@@ -170,7 +170,7 @@ const RecentOrdersList: React.FC<{
       position: 'relative',
       marginTop: 22,
       background:
-        'linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #07100e 100%)',
+        'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%)',
       border: '1px solid rgba(255,255,255,0.06)',
       borderRadius: 18,
       clipPath: 'polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%)',
@@ -180,14 +180,14 @@ const RecentOrdersList: React.FC<{
     }}>
       <div style={{
         position: 'absolute', top: 0, left: '6%', right: '24%', height: 1,
-        background: 'linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent)',
+        background: 'linear-gradient(90deg, transparent, rgba(255, 90, 95,0.5), transparent)',
       }} />
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
       }}>
         <span style={{
           fontFamily: 'Orbitron, monospace', fontSize: '0.9rem',
-          color: '#00ff88', textShadow: '0 0 8px #00ff88',
+          color: '#ff5a5f', textShadow: '0 0 8px #ff5a5f',
         }}>◐</span>
         <span style={{
           fontFamily: 'Orbitron, sans-serif', fontSize: '0.7rem', fontWeight: 700,
@@ -437,23 +437,23 @@ const OrderTracking: React.FC = () => {
         @keyframes pulse { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.4);opacity:.2} }
         @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes glowPulse {
-          0%,100% { box-shadow: 0 0 20px rgba(0, 255, 136,0.3); }
-          50%      { box-shadow: 0 0 40px rgba(0, 255, 136,0.6), 0 0 60px rgba(0, 209, 102,0.2); }
+          0%,100% { box-shadow: 0 0 20px rgba(255, 90, 95,0.3); }
+          50%      { box-shadow: 0 0 40px rgba(255, 90, 95,0.6), 0 0 60px rgba(255, 158, 61,0.2); }
         }
         .cyber-grid {
-          background-image: linear-gradient(rgba(0, 255, 136,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136,0.03) 1px, transparent 1px);
+          background-image: linear-gradient(rgba(255, 90, 95,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 90, 95,0.03) 1px, transparent 1px);
           background-size: 50px 50px;
         }
         .track-input::placeholder { color: rgba(255,255,255,0.3); }
-        .track-input:focus { outline: none; border-color: #00ff88 !important; box-shadow: 0 0 0 3px rgba(0, 255, 136,0.15) !important; }
+        .track-input:focus { outline: none; border-color: #ff5a5f !important; box-shadow: 0 0 0 3px rgba(255, 90, 95,0.15) !important; }
       `}</style>
 
       {/* NOTE: do NOT use className="cyber-grid" here — that CSS class sets
            pointer-events:none which blocks all input interaction on this page */}
       <div className="track-outer" style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #050a0c 0%, #0a1614 50%, #07100e 100%)',
-        backgroundImage: 'linear-gradient(rgba(0, 255, 136,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136,0.03) 1px, transparent 1px)',
+        background: 'linear-gradient(135deg, #140a09 0%, #241512 50%, #1b0e0c 100%)',
+        backgroundImage: 'linear-gradient(rgba(255, 90, 95,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 90, 95,0.03) 1px, transparent 1px)',
         backgroundSize: '50px 50px',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '40px 20px 80px',
@@ -464,7 +464,7 @@ const OrderTracking: React.FC = () => {
           <div className="track-card" style={{
             position: 'relative',
             background:
-              'linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #07100e 100%)',
+              'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%)',
             border: '1px solid rgba(255,255,255,0.06)',
             borderRadius: 18,
             clipPath: 'polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%)',
@@ -475,33 +475,33 @@ const OrderTracking: React.FC = () => {
             {/* Top-edge HUD highlight — same crystal language as every other card */}
             <div style={{
               position: 'absolute', top: 0, left: '6%', right: '24%', height: 1,
-              background: 'linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(255, 90, 95,0.5), transparent)',
             }} />
 
             {/* Brand brackets row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 6 }}>
               <span style={{
                 fontFamily: 'Orbitron, monospace', fontSize: '1rem',
-                color: '#00ff88', textShadow: '0 0 10px #00ff88',
+                color: '#ff5a5f', textShadow: '0 0 10px #ff5a5f',
               }}>◈</span>
               <div className="track-logo" style={{
                 fontFamily: 'Orbitron, sans-serif',
                 fontSize: 'clamp(1.3rem, 4.5vw, 2.1rem)',
                 fontWeight: 900,
-                background: 'linear-gradient(180deg, #ffffff 0%, #00ff88 70%, #00d166 100%)',
+                background: 'linear-gradient(180deg, #ffffff 0%, #ff5a5f 70%, #ff9e3d 100%)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 letterSpacing: '0.16em', whiteSpace: 'nowrap', lineHeight: 1,
-                textShadow: '0 0 28px rgba(0,255,136,0.18)',
+                textShadow: '0 0 28px rgba(255, 90, 95,0.18)',
               }}>
                 SMART CANTEEN
               </div>
               <span style={{
                 fontFamily: 'Orbitron, monospace', fontSize: '1rem',
-                color: '#00ff88', textShadow: '0 0 10px #00ff88',
+                color: '#ff5a5f', textShadow: '0 0 10px #ff5a5f',
               }}>◈</span>
             </div>
             <div style={{
-              textAlign: 'center', color: 'rgba(0,255,136,0.65)',
+              textAlign: 'center', color: 'rgba(255, 90, 95,0.65)',
               fontFamily: 'Orbitron, sans-serif', fontSize: '0.7rem',
               letterSpacing: '0.42em', textTransform: 'uppercase', marginBottom: 28,
             }}>
@@ -514,7 +514,7 @@ const OrderTracking: React.FC = () => {
                 <span style={{
                   position: 'absolute', top: '50%', left: 18, transform: 'translateY(-50%)',
                   fontFamily: 'Orbitron, monospace', fontSize: '1rem',
-                  color: '#00ff88', textShadow: '0 0 8px #00ff88', pointerEvents: 'none',
+                  color: '#ff5a5f', textShadow: '0 0 8px #ff5a5f', pointerEvents: 'none',
                 }}>⌕</span>
                 <input
                   type="text"
@@ -525,7 +525,7 @@ const OrderTracking: React.FC = () => {
                   onKeyDown={e => { if (e.key === 'Enter') handleTrack(); }}
                   style={{
                     background: 'rgba(0,0,0,0.32)',
-                    border: '1px solid rgba(0,255,136,0.18)',
+                    border: '1px solid rgba(255, 90, 95,0.18)',
                     borderRadius: 12,
                     padding: '15px 18px 15px 46px',
                     color: '#fff',
@@ -546,13 +546,13 @@ const OrderTracking: React.FC = () => {
                 data-clickable
                 style={{
                   background: loading
-                    ? 'rgba(0,255,136,0.08)'
-                    : 'linear-gradient(90deg, rgba(0,255,136,0.1), rgba(0,255,136,0.25), rgba(0,255,136,0.1))',
+                    ? 'rgba(255, 90, 95,0.08)'
+                    : 'linear-gradient(90deg, rgba(255, 90, 95,0.1), rgba(255, 90, 95,0.25), rgba(255, 90, 95,0.1))',
                   backgroundSize: '200% 100%',
-                  border: '1px solid rgba(0,255,136,0.5)',
+                  border: '1px solid rgba(255, 90, 95,0.5)',
                   borderRadius: 10,
                   padding: '15px 0',
-                  color: '#00ff88',
+                  color: '#ff5a5f',
                   fontFamily: 'Orbitron, sans-serif',
                   fontWeight: 800,
                   fontSize: '0.78rem',
@@ -562,12 +562,12 @@ const OrderTracking: React.FC = () => {
                   transition: 'background-position 0.6s, box-shadow 0.25s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
                   opacity: loading ? 0.7 : 1,
-                  textShadow: '0 0 10px rgba(0,255,136,0.55)',
+                  textShadow: '0 0 10px rgba(255, 90, 95,0.55)',
                 }}
                 onMouseEnter={e => {
                   if (!loading) {
                     (e.currentTarget as HTMLButtonElement).style.backgroundPosition = '100% 0';
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 22px rgba(0,255,136,0.35)';
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 22px rgba(255, 90, 95,0.35)';
                   }
                 }}
                 onMouseLeave={e => {
@@ -579,7 +579,7 @@ const OrderTracking: React.FC = () => {
                   <>
                     <div style={{
                       width: 16, height: 16, borderRadius: '50%',
-                      border: '2px solid rgba(0,255,136,0.25)', borderTop: '2px solid #00ff88',
+                      border: '2px solid rgba(255, 90, 95,0.25)', borderTop: '2px solid #ff5a5f',
                       animation: 'spin 0.8s linear infinite',
                     }} />
                     Scanning…
@@ -613,8 +613,8 @@ const OrderTracking: React.FC = () => {
               position: 'relative',
               marginTop: 22,
               background:
-                'linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #07100e 100%)',
-              border: `1px solid ${isCancelled ? 'rgba(255,51,102,0.35)' : 'rgba(0,255,136,0.22)'}`,
+                'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%)',
+              border: `1px solid ${isCancelled ? 'rgba(255,51,102,0.35)' : 'rgba(255, 90, 95,0.22)'}`,
               borderRadius: 18,
               clipPath: 'polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%)',
               padding: '28px 32px 30px', animation: 'fadeInUp 0.5s ease-out',
@@ -622,7 +622,7 @@ const OrderTracking: React.FC = () => {
             }}>
               <div style={{
                 position: 'absolute', top: 0, left: '5%', right: '24%', height: 1,
-                background: `linear-gradient(90deg, transparent, ${isCancelled ? 'rgba(255,51,102,0.55)' : 'rgba(0,255,136,0.55)'}, transparent)`,
+                background: `linear-gradient(90deg, transparent, ${isCancelled ? 'rgba(255,51,102,0.55)' : 'rgba(255, 90, 95,0.55)'}, transparent)`,
               }} />
               {/* Back + Header row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, flexWrap: 'wrap', gap: 10 }}>
@@ -641,7 +641,7 @@ const OrderTracking: React.FC = () => {
                     ← Back
                   </button>
                   <div>
-                    <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 900, color: '#00ff88', letterSpacing: 1 }}>
+                    <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 900, color: '#ff5a5f', letterSpacing: 1 }}>
                       {order.order_number}
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.38)', fontFamily: 'Rajdhani, sans-serif', marginTop: 3 }}>
@@ -652,13 +652,13 @@ const OrderTracking: React.FC = () => {
                 <button
                   onClick={handleRefresh}
                   style={{
-                    background: 'rgba(0, 255, 136,0.08)', border: '1px solid rgba(0, 255, 136,0.25)',
-                    color: '#00ff88', borderRadius: 10, padding: '7px 14px',
+                    background: 'rgba(255, 90, 95,0.08)', border: '1px solid rgba(255, 90, 95,0.25)',
+                    color: '#ff5a5f', borderRadius: 10, padding: '7px 14px',
                     fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.8rem',
                     cursor: 'pointer', transition: 'all 0.2s',
                   }}
-                  onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0, 255, 136,0.16)')}
-                  onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0, 255, 136,0.08)')}
+                  onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(255, 90, 95,0.16)')}
+                  onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(255, 90, 95,0.08)')}
                 >
                   🔄 Refresh
                 </button>
@@ -686,12 +686,12 @@ const OrderTracking: React.FC = () => {
                   <div style={{ textAlign: 'center', marginBottom: 28 }}>
                     <div className="track-status-label" style={{
                       fontFamily: 'Orbitron, sans-serif', fontSize: '1.4rem', fontWeight: 900,
-                      color: isCompleted ? '#00ff88' : '#00ff88', letterSpacing: 2, marginBottom: 8,
-                      textShadow: isCompleted ? '0 0 20px rgba(0,255,136,0.5)' : '0 0 20px rgba(0, 255, 136,0.5)',
+                      color: isCompleted ? '#ff5a5f' : '#ff5a5f', letterSpacing: 2, marginBottom: 8,
+                      textShadow: isCompleted ? '0 0 20px rgba(255, 90, 95,0.5)' : '0 0 20px rgba(255, 90, 95,0.5)',
                     }}>
                       {statusLabel[order.status] || order.status.toUpperCase()}
                     </div>
-                    <div style={{ color: isCompleted ? '#00ff88' : 'rgba(255,255,255,0.55)', fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem', fontWeight: 600 }}>
+                    <div style={{ color: isCompleted ? '#ff5a5f' : 'rgba(255,255,255,0.55)', fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem', fontWeight: 600 }}>
                       {getEstimatedTime(order.status)}
                     </div>
                     {/* Auto-refresh indicator */}
@@ -750,8 +750,8 @@ const OrderTracking: React.FC = () => {
                 <div>
                   {order.payment_status === 'paid' ? (
                     <span style={{
-                      background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.4)',
-                      color: '#00ff88', borderRadius: 20, padding: '6px 16px',
+                      background: 'rgba(255, 90, 95,0.15)', border: '1px solid rgba(255, 90, 95,0.4)',
+                      color: '#ff5a5f', borderRadius: 20, padding: '6px 16px',
                       fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.88rem',
                     }}>✅ Paid</span>
                   ) : (

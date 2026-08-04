@@ -80,16 +80,16 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ itemsInOrbit }) =>
           letter-spacing: 0.1em;
           white-space: nowrap;
           animation: hero-line-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
-          text-shadow: 0 0 30px rgba(0,255,136,0.12);
+          text-shadow: 0 0 30px rgba(255, 90, 95,0.12);
         }
         .hero-word-smart {
-          background: linear-gradient(180deg, #ffffff 0%, #00ff88 60%, #00d166 100%);
+          background: linear-gradient(180deg, #ffffff 0%, #ff5a5f 60%, #ff9e3d 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
         .hero-word-canteen {
           font-weight: 700;
-          background: linear-gradient(180deg, #00ff88 0%, #00d166 100%);
+          background: linear-gradient(180deg, #ff5a5f 0%, #ff9e3d 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           opacity: 0.85;
@@ -98,7 +98,7 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ itemsInOrbit }) =>
         .hero-scan {
           width: 110px;
           height: 1px;
-          background: linear-gradient(90deg, #00ff88, transparent);
+          background: linear-gradient(90deg, #ff5a5f, transparent);
           margin: 10px 0 14px;
           animation: scan-bar 3.5s ease-in-out infinite;
           transform-origin: left center;
@@ -111,7 +111,7 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ itemsInOrbit }) =>
           font-family: 'Rajdhani', sans-serif;
           font-size: clamp(0.7rem, 1.8vw, 0.88rem);
           letter-spacing: 0.45em;
-          color: rgba(0,255,136,0.85);
+          color: rgba(255, 90, 95,0.85);
           text-transform: uppercase;
           font-weight: 500;
           animation: tag-in 0.5s ease both;
@@ -148,9 +148,9 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ itemsInOrbit }) =>
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 24,
-          borderBottom: '1px solid rgba(0,255,136,0.08)',
+          borderBottom: '1px solid rgba(255, 90, 95,0.08)',
           background:
-            'linear-gradient(180deg, rgba(0,255,136,0.025) 0%, transparent 100%)',
+            'linear-gradient(180deg, rgba(255, 90, 95,0.025) 0%, transparent 100%)',
           zIndex: 5,
         }}
       >
@@ -193,24 +193,24 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ itemsInOrbit }) =>
           >
             <circle
               cx="44" cy="44" r="36"
-              stroke="rgba(0,255,136,0.18)"
+              stroke="rgba(255, 90, 95,0.18)"
               strokeWidth="1.5"
               fill="none"
             />
             <circle
               cx="44" cy="44" r="36"
-              stroke="#00ff88"
+              stroke="#ff5a5f"
               strokeWidth="2.5"
               fill="none"
               strokeDasharray="80"
               strokeLinecap="round"
               style={{ animation: 'ring-breathe 3.6s ease-in-out infinite' }}
-              filter="drop-shadow(0 0 6px #00ff88)"
+              filter="drop-shadow(0 0 6px #ff5a5f)"
             />
             <circle
               cx="44" cy="8" r="3"
-              fill="#00ff88"
-              filter="drop-shadow(0 0 6px #00ff88)"
+              fill="#ff5a5f"
+              filter="drop-shadow(0 0 6px #ff5a5f)"
             />
           </svg>
           <div
@@ -228,7 +228,7 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ itemsInOrbit }) =>
             <div style={{ fontSize: '0.62rem', letterSpacing: 2, color: 'rgba(255,255,255,0.45)' }}>
               SYS
             </div>
-            <div style={{ fontSize: '0.92rem', color: '#00ff88', fontWeight: 700, textShadow: '0 0 8px #00ff88' }}>
+            <div style={{ fontSize: '0.92rem', color: '#ff5a5f', fontWeight: 700, textShadow: '0 0 8px #ff5a5f' }}>
               ONLINE
             </div>
           </div>

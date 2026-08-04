@@ -64,7 +64,7 @@ const Bracket: React.FC<{
 export const CyberFrame: React.FC<CyberFrameProps> = ({
   children,
   active = false,
-  color = '#00ff88',
+  color = '#ff5a5f',
   size = 20,
   className,
   style,

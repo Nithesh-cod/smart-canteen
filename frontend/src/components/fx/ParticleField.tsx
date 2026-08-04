@@ -36,7 +36,7 @@ interface Particle {
 const PARTICLE_BASE_COUNT = 50;
 
 export const ParticleField: React.FC<ParticleFieldProps> = ({
-  color = '#00ff88',
+  color = '#ff5a5f',
   intensity = 0.7,
   enabled = true,
 }) => {

@@ -22,7 +22,7 @@ interface ScanLineProps {
 }
 
 export const ScanLine: React.FC<ScanLineProps> = ({
-  color = '#00ff88',
+  color = '#ff5a5f',
   period = 8,
   intensity = 0.04,
 }) => {

@@ -10,16 +10,16 @@ html, body { max-width: 100vw; overflow-x: hidden; }
  * Theme: cyber green canteen.
  * --cyan / --magenta are retained as variable NAMES for backward-compat with
  * older inline references; both now point at the unified green palette
- * (mid #00ff88 + deeper #00d166) so legacy class names like .glow-cyan keep
+ * (mid #ff5a5f + deeper #ff9e3d) so legacy class names like .glow-cyan keep
  * working without grep churn.
  */
 :root {
-  --cyan: #00ff88;
-  --magenta: #00d166;
+  --cyan: #ff5a5f;
+  --magenta: #ff9e3d;
   --yellow: #ffed4e;
-  --green: #00ff88;
-  --green-deep: #00d166;
-  --green-soft: rgba(0, 255, 136, 0.12);
+  --green: #ff5a5f;
+  --green-deep: #ff9e3d;
+  --green-soft: rgba(255, 90, 95, 0.12);
   --red: #ff3366;
   --bronze: #cd7f32;
   --silver: #c0c0c0;
@@ -27,17 +27,17 @@ html, body { max-width: 100vw; overflow-x: hidden; }
   --platinum: #e5e4e2;
   /* Background: shifted from purple-tinted to teal-tinted black so the green
      accents read as part of one palette instead of fighting the bg hue. */
-  --bg-primary: #050a0c;
-  --bg-secondary: #0a1614;
-  --bg-tertiary: #07100e;
+  --bg-primary: #140a09;
+  --bg-secondary: #241512;
+  --bg-tertiary: #1b0e0c;
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.1);
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-tertiary: rgba(255, 255, 255, 0.5);
-  --glow-cyan: 0 0 20px rgba(0, 255, 136, 0.5);
-  --glow-magenta: 0 0 20px rgba(0, 209, 102, 0.5);
-  --glow-green: 0 0 20px rgba(0, 255, 136, 0.5);
+  --text-primary: #fff7f2;
+  --text-secondary: rgba(255, 246, 240, 0.86);
+  --text-tertiary: rgba(255, 242, 235, 0.64);
+  --glow-cyan: 0 0 20px rgba(255, 90, 95, 0.5);
+  --glow-magenta: 0 0 20px rgba(255, 158, 61, 0.5);
+  --glow-green: 0 0 20px rgba(255, 90, 95, 0.5);
   --glow-yellow: 0 0 20px rgba(255, 237, 78, 0.5);
 }
 
@@ -53,29 +53,44 @@ html {
 }
 
 body {
-  background: var(--bg-primary);
+  background: #140a09;
   color: var(--text-primary);
   font-family: 'Rajdhani', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
+/* Warm-glass ambient — glowing embers behind everything (fixed, non-scrolling).
+   Frosted glass panels blur this warm glow for the futuristic-glassmorphism look. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(58vw 58vw at 84% -10%, rgba(255, 90, 95, 0.20), transparent 60%),
+    radial-gradient(52vw 52vw at -12% 112%, rgba(255, 158, 61, 0.17), transparent 60%),
+    radial-gradient(46vw 46vw at 50% 46%, rgba(255, 120, 70, 0.06), transparent 72%),
+    linear-gradient(160deg, #1e100c 0%, #150b09 55%, #100706 100%);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.03); }
-::-webkit-scrollbar-thumb { background: rgba(0, 255, 136, 0.3); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0, 255, 136, 0.6); }
+::-webkit-scrollbar-thumb { background: rgba(255, 90, 95, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 90, 95, 0.6); }
 
 /* Utility classes */
 .glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+  border: 1px solid rgba(255, 200, 180, 0.15);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #00ff88, #00d166);
+  background: linear-gradient(135deg, #ff5a5f, #ff9e3d);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -101,8 +116,8 @@ body {
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0, 255, 136, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 136, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(255, 90, 95, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 90, 95, 0.05) 1px, transparent 1px);
   background-size: 50px 50px;
   pointer-events: none;
   z-index: 0;
@@ -131,8 +146,8 @@ body {
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
-  50%       { box-shadow: 0 0 40px rgba(0, 255, 136, 0.7); }
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 90, 95, 0.3); }
+  50%       { box-shadow: 0 0 40px rgba(255, 90, 95, 0.7); }
 }
 
 @keyframes float {
@@ -328,9 +343,9 @@ body {
     border-radius: 8px !important;
   }
   .owner-nav-active {
-    border-bottom-color: #00ff88 !important;
-    background: rgba(0, 255, 136,0.1) !important;
-    color: #00ff88 !important;
+    border-bottom-color: #ff5a5f !important;
+    background: rgba(255, 90, 95,0.1) !important;
+    color: #ff5a5f !important;
   }
   .owner-sidebar-label {
     display: block !important;

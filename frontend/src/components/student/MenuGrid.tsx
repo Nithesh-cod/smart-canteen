@@ -110,7 +110,7 @@ const MenuGrid: React.FC<MenuGridProps> = ({
               key={idx}
               style={{
                 background: 'rgba(7,16,14,0.6)',
-                border: '1px solid rgba(0,255,136,0.12)',
+                border: '1px solid rgba(255, 90, 95,0.12)',
                 borderRadius: 18,
                 overflow: 'hidden',
                 height: 320,
@@ -120,7 +120,7 @@ const MenuGrid: React.FC<MenuGridProps> = ({
             >
               <div style={{
                 position: 'absolute', inset: 0,
-                background: 'linear-gradient(90deg, transparent 0%, rgba(0,255,136,0.06) 50%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 90, 95,0.06) 50%, transparent 100%)',
                 backgroundSize: '200% 100%',
                 animation: 'crystal-shimmer 1.8s infinite',
               }} />
@@ -139,17 +139,17 @@ const MenuGrid: React.FC<MenuGridProps> = ({
           <div style={{
             fontFamily: 'Orbitron, monospace',
             fontSize: '3.5rem',
-            color: '#00ff88',
+            color: '#ff5a5f',
             opacity: 0.4,
             marginBottom: 18,
-            textShadow: '0 0 24px rgba(0,255,136,0.4)',
+            textShadow: '0 0 24px rgba(255, 90, 95,0.4)',
           }}>◯</div>
           <p style={{
             fontFamily: 'Orbitron, sans-serif',
             fontSize: '0.85rem',
             letterSpacing: '0.4em',
             textTransform: 'uppercase',
-            color: 'rgba(0,255,136,0.7)',
+            color: 'rgba(255, 90, 95,0.7)',
           }}>
             NO MATCHES IN CHANNEL
           </p>
