@@ -56,7 +56,7 @@ const cyberBg: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   minHeight: '100vh',
-  fontFamily: "'Rajdhani', sans-serif",
+  fontFamily: "'Inter', sans-serif",
   overflow: 'auto',
   padding: '20px',
   zIndex: 0,
@@ -165,7 +165,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
     color: '#fff',
     padding: '14px 18px',
     fontSize: '1rem',
-    fontFamily: "'Rajdhani', sans-serif",
+    fontFamily: "'Inter', sans-serif",
     outline: 'none',
     transition: 'border-color 0.2s, box-shadow 0.2s',
     boxSizing: 'border-box',
@@ -179,7 +179,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
     marginBottom: '7px',
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
-    fontFamily: "'Orbitron', sans-serif",
+    fontFamily: "'Sora', sans-serif",
   };
 
   const primaryBtnStyle = (color: string, disabled: boolean): React.CSSProperties => ({
@@ -192,7 +192,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
       ? 'rgba(255,255,255,0.08)'
       : color,
     color: '#fff',
-    fontFamily: "'Orbitron', sans-serif",
+    fontFamily: "'Sora', sans-serif",
     fontSize: '0.85rem',
     fontWeight: 700,
     letterSpacing: '0.12em',
@@ -264,7 +264,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
               🍕
             </div>
             <h1 style={{
-              fontFamily: "'Orbitron', sans-serif",
+              fontFamily: "'Sora', sans-serif",
               fontSize: '1.9rem',
               fontWeight: 900,
               background: 'linear-gradient(135deg, #ff5a5f 0%, #ff9e3d 100%)',
@@ -282,7 +282,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
               fontSize: '0.72rem',
               letterSpacing: '0.35em',
               margin: 0,
-              fontFamily: "'Orbitron', sans-serif",
+              fontFamily: "'Sora', sans-serif",
             }}>
               CYBER FOOD ORDERING SYSTEM
             </p>
@@ -307,7 +307,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
                   borderRadius: '9px',
                   border: 'none',
                   cursor: 'pointer',
-                  fontFamily: "'Orbitron', sans-serif",
+                  fontFamily: "'Sora', sans-serif",
                   fontSize: '0.72rem',
                   fontWeight: 700,
                   letterSpacing: '0.12em',
@@ -336,7 +336,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
               fontSize: '0.88rem',
               marginBottom: '20px',
               textAlign: 'center',
-              fontFamily: "'Rajdhani', sans-serif",
+              fontFamily: "'Inter', sans-serif",
             }}>
               ⚠️ {error}
             </div>
@@ -463,7 +463,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
                   letterSpacing: '0.2em',
                   textTransform: 'uppercase',
                   margin: 0,
-                  fontFamily: "'Orbitron', sans-serif",
+                  fontFamily: "'Sora', sans-serif",
                   whiteSpace: 'nowrap',
                 }}>
                   Recent Students
@@ -489,7 +489,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
                       cursor: 'pointer',
                       color: 'rgba(255,255,255,0.65)',
                       fontSize: '0.88rem',
-                      fontFamily: "'Rajdhani', sans-serif",
+                      fontFamily: "'Inter', sans-serif",
                       fontWeight: 600,
                       transition: 'all 0.2s',
                     }}

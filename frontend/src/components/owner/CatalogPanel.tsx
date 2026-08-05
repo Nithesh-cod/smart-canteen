@@ -13,7 +13,7 @@ import { useToast } from '../common/Toast';
  *   - 3-column responsive grid of crystal cards, one per menu item
  *
  * Each card shows the item image (or a ⬡ placeholder), name, category chip,
- * price in yellow Orbitron, stock readout, and three actions:
+ * price in yellow Sora, stock readout, and three actions:
  *   - Online / Offline toggle (live status pill)
  *   - ✎ edit  — opens the same panel form prefilled
  *   - ⊖ delete — confirms then deletes
@@ -349,16 +349,16 @@ const css = `
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
 }
 .catalog-glyph {
-  font-family: 'Orbitron', monospace; font-size: 1.15rem;
+  font-family: 'Sora', monospace; font-size: 1.15rem;
   color: #ff5a5f; text-shadow: 0 0 10px #ff5a5f;
 }
 .catalog-title {
-  font-family: 'Orbitron', sans-serif; font-size: 0.78rem;
+  font-family: 'Sora', sans-serif; font-size: 0.78rem;
   letter-spacing: 0.32em; text-transform: uppercase;
   color: rgba(255,255,255,0.6);
 }
 .catalog-mini-pill {
-  font-family: 'Orbitron', monospace; font-size: 0.62rem;
+  font-family: 'Sora', monospace; font-size: 0.62rem;
   letter-spacing: 0.15em; padding: 3px 9px; border-radius: 100px;
   border: 1px solid; text-transform: uppercase;
 }
@@ -368,17 +368,17 @@ const css = `
 .catalog-actions { display: flex; align-items: center; gap: 10px; }
 .catalog-search { position: relative; }
 .catalog-search input {
-  padding: 9px 14px 9px 32px; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem;
+  padding: 9px 14px 9px 32px; font-family: 'Inter', sans-serif; font-size: 0.9rem;
   color: #fff; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px; outline: none; width: 260px; transition: border-color 0.2s, box-shadow 0.2s;
 }
 .catalog-search input:focus { border-color: rgba(255, 90, 95,0.5); box-shadow: 0 0 14px rgba(255, 90, 95,0.18); }
 .catalog-search-glyph {
   position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
-  color: #ff5a5f; font-family: 'Orbitron', monospace; pointer-events: none;
+  color: #ff5a5f; font-family: 'Sora', monospace; pointer-events: none;
 }
 .catalog-new {
-  padding: 10px 18px; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+  padding: 10px 18px; font-family: 'Sora', sans-serif; font-size: 0.7rem;
   letter-spacing: 0.18em; text-transform: uppercase; color: #ff5a5f;
   background: rgba(255, 90, 95,0.1); border: 1px solid rgba(255, 90, 95,0.5);
   border-radius: 8px; cursor: pointer; transition: background 0.2s, box-shadow 0.2s;
@@ -423,12 +423,12 @@ const css = `
 .catalog-card:hover .catalog-img img { transform: scale(1.05); }
 .catalog-img-fallback {
   display: flex; align-items: center; justify-content: center;
-  width: 100%; height: 100%; font-family: 'Orbitron', monospace;
+  width: 100%; height: 100%; font-family: 'Sora', monospace;
   font-size: 3rem; color: rgba(255, 90, 95,0.35);
 }
 .catalog-cat {
   position: absolute; top: 10px; left: 10px;
-  font-family: 'Orbitron', monospace; font-size: 0.58rem;
+  font-family: 'Sora', monospace; font-size: 0.58rem;
   letter-spacing: 0.18em; font-weight: 700; color: #ff5a5f;
   background: rgba(7,16,14,0.85); border: 1px solid rgba(255, 90, 95,0.5);
   border-radius: 3px; padding: 4px 9px; text-transform: uppercase;
@@ -446,7 +446,7 @@ const css = `
 .catalog-veg.nonveg::before { background: #ff3366; box-shadow: 0 0 5px #ff3366; }
 .catalog-offline {
   position: absolute; top: 10px; right: 10px;
-  font-family: 'Orbitron', monospace; font-size: 0.58rem;
+  font-family: 'Sora', monospace; font-size: 0.58rem;
   letter-spacing: 0.18em; color: #ff9f43;
   background: rgba(7,16,14,0.85); border: 1px solid rgba(255,159,67,0.5);
   border-radius: 3px; padding: 4px 9px; text-transform: uppercase;
@@ -454,7 +454,7 @@ const css = `
 
 .catalog-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
 .catalog-name {
-  font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem;
+  font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.05rem;
   color: #fff; line-height: 1.2; letter-spacing: 0.02em;
 }
 .catalog-meta {
@@ -462,16 +462,16 @@ const css = `
   margin-top: 4px;
 }
 .catalog-price {
-  font-family: 'Orbitron', monospace; font-size: 1.05rem; font-weight: 800;
+  font-family: 'Sora', monospace; font-size: 1.05rem; font-weight: 800;
   color: #ffed4e; text-shadow: 0 0 10px rgba(255,237,78,0.4);
 }
 .catalog-prep {
-  font-family: 'Orbitron', monospace; font-size: 0.62rem;
+  font-family: 'Sora', monospace; font-size: 0.62rem;
   letter-spacing: 0.12em; text-transform: uppercase;
   color: rgba(255,255,255,0.4);
 }
 .catalog-stock {
-  font-family: 'Orbitron', monospace; font-size: 0.65rem;
+  font-family: 'Sora', monospace; font-size: 0.65rem;
   letter-spacing: 0.12em; color: rgba(255,255,255,0.45);
   margin-top: 2px;
 }
@@ -480,7 +480,7 @@ const css = `
   margin-top: 12px;
 }
 .catalog-toggle, .catalog-edit, .catalog-delete {
-  padding: 8px 10px; font-family: 'Orbitron', sans-serif; font-size: 0.62rem;
+  padding: 8px 10px; font-family: 'Sora', sans-serif; font-size: 0.62rem;
   letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
   border-radius: 6px; cursor: pointer; transition: background 0.18s, color 0.18s;
 }
@@ -508,17 +508,17 @@ const css = `
   padding: 60px 20px; text-align: center; color: rgba(255,255,255,0.4);
 }
 .catalog-empty-glyph {
-  font-family: 'Orbitron', monospace; font-size: 3rem;
+  font-family: 'Sora', monospace; font-size: 3rem;
   color: rgba(255, 90, 95,0.4); text-shadow: 0 0 14px rgba(255, 90, 95,0.35);
   margin-bottom: 14px;
 }
 .catalog-empty-title {
-  font-family: 'Orbitron', sans-serif; font-size: 0.85rem;
+  font-family: 'Sora', sans-serif; font-size: 0.85rem;
   letter-spacing: 0.32em; text-transform: uppercase;
   color: rgba(255, 90, 95,0.7); margin-bottom: 6px;
 }
 .catalog-empty-sub {
-  font-family: 'Rajdhani', sans-serif; font-size: 0.85rem;
+  font-family: 'Inter', sans-serif; font-size: 0.85rem;
   color: rgba(255,255,255,0.4); letter-spacing: 0.06em;
 }
 
@@ -544,12 +544,12 @@ const css = `
   padding: 20px 22px; border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .catalog-form-title {
-  font-family: 'Orbitron', sans-serif; font-size: 0.78rem;
+  font-family: 'Sora', sans-serif; font-size: 0.78rem;
   letter-spacing: 0.28em; text-transform: uppercase; color: #ff5a5f;
   text-shadow: 0 0 8px rgba(255, 90, 95,0.45);
 }
 .catalog-form-close {
-  font-family: 'Orbitron', monospace; font-size: 1.1rem;
+  font-family: 'Sora', monospace; font-size: 1.1rem;
   color: rgba(255,255,255,0.5); background: transparent;
   border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
   width: 32px; height: 32px; cursor: pointer; transition: all 0.18s;
@@ -561,12 +561,12 @@ const css = `
 }
 .catalog-field { display: flex; flex-direction: column; gap: 6px; }
 .catalog-field-label {
-  font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
+  font-family: 'Sora', sans-serif; font-size: 0.6rem;
   letter-spacing: 0.2em; text-transform: uppercase;
   color: rgba(255,255,255,0.45);
 }
 .catalog-field input, .catalog-field textarea {
-  padding: 10px 12px; font-family: 'Rajdhani', sans-serif; font-size: 0.92rem;
+  padding: 10px 12px; font-family: 'Inter', sans-serif; font-size: 0.92rem;
   color: #fff; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px; outline: none; transition: border-color 0.18s, box-shadow 0.18s;
 }
@@ -582,7 +582,7 @@ const css = `
 }
 .catalog-form-veg {
   display: flex; align-items: center; gap: 10px;
-  font-family: 'Rajdhani', sans-serif; font-size: 0.9rem;
+  font-family: 'Inter', sans-serif; font-size: 0.9rem;
   color: rgba(255,255,255,0.7); cursor: pointer;
 }
 .catalog-form-save {
@@ -590,7 +590,7 @@ const css = `
   background: linear-gradient(90deg, rgba(255, 90, 95,0.1), rgba(255, 90, 95,0.25), rgba(255, 90, 95,0.1));
   background-size: 200% 100%; transition: background-position 0.5s, box-shadow 0.25s;
   border: 1px solid rgba(255, 90, 95,0.5); border-radius: 10px;
-  font-family: 'Orbitron', sans-serif; font-size: 0.78rem; letter-spacing: 0.22em;
+  font-family: 'Sora', sans-serif; font-size: 0.78rem; letter-spacing: 0.22em;
   text-transform: uppercase; font-weight: 800; color: #ff5a5f;
   text-shadow: 0 0 8px rgba(255, 90, 95,0.6);
 }

@@ -101,12 +101,12 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           display: flex; align-items: center; gap: 12px;
         }
         .orders-glyph {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 1.15rem; color: #ff5a5f;
           text-shadow: 0 0 10px #ff5a5f;
         }
         .orders-title {
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.78rem;
           letter-spacing: 0.32em;
           color: rgba(255,255,255,0.6);
@@ -120,7 +120,7 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
         }
         .orders-search input {
           padding: 9px 14px 9px 32px;
-          font-family: 'Rajdhani', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 0.9rem;
           color: #fff;
           background: rgba(0,0,0,0.3);
@@ -137,12 +137,12 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
         .orders-search-glyph {
           position: absolute; top: 50%; left: 12px;
           transform: translateY(-50%);
-          color: #ff5a5f; font-family: 'Orbitron', monospace;
+          color: #ff5a5f; font-family: 'Sora', monospace;
           pointer-events: none;
         }
         .orders-refresh {
           padding: 9px 16px;
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.7rem;
           letter-spacing: 0.18em;
           text-transform: uppercase;
@@ -165,7 +165,7 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
         }
         .filter-chip {
           padding: 7px 14px;
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.66rem;
           letter-spacing: 0.18em;
           color: rgba(255,255,255,0.5);
@@ -196,10 +196,10 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           width: 100%;
           border-collapse: separate;
           border-spacing: 0;
-          font-family: 'Rajdhani', sans-serif;
+          font-family: 'Inter', sans-serif;
         }
         .orders-table th {
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.62rem;
           letter-spacing: 0.22em;
           color: rgba(255,255,255,0.35);
@@ -222,12 +222,12 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
         }
 
         .order-num {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 0.85rem;
           color: #ff5a5f;
         }
         .order-money {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           color: #ffed4e;
           font-weight: 700;
           text-shadow: 0 0 6px rgba(255,237,78,0.35);
@@ -237,7 +237,7 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           align-items: center;
           gap: 6px;
           padding: 4px 10px;
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.6rem;
           letter-spacing: 0.18em;
           text-transform: uppercase;
@@ -256,7 +256,7 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
           padding: 50px 18px;
           text-align: center;
           color: rgba(255,255,255,0.4);
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
         }
         .orders-empty-glyph {
           font-size: 2.4rem;
@@ -372,7 +372,7 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
                         {paymentStatus}
                       </span>
                     </td>
-                    <td style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Orbitron, monospace', fontSize: '0.75rem' }}>
+                    <td style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Sora, monospace', fontSize: '0.75rem' }}>
                       {relativeTime(o.created_at)}
                     </td>
                   </tr>

@@ -8,7 +8,7 @@ import AdminAuthGate   from './components/common/AdminAuthGate'
 
 function App() {
   return (
-    <div style={{ fontFamily: "'Rajdhani', sans-serif", minHeight: '100vh' }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", minHeight: '100vh' }}>
       <Routes>
         {/* ── Student kiosk (public) ───────────────────────────────── */}
         <Route path="/"                  element={<StudentKiosk />} />

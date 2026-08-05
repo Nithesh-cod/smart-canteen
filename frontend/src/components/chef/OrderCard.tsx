@@ -107,7 +107,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
             background: '#ffed4e',
             color: '#140a09',
             fontSize: '9px',
-            fontFamily: 'Orbitron, monospace',
+            fontFamily: 'Sora, monospace',
             fontWeight: '700',
             padding: '2px 6px',
             borderRadius: '4px',
@@ -121,7 +121,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
         {/* Header row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <span style={{
-            fontFamily: 'Orbitron, monospace',
+            fontFamily: 'Sora, monospace',
             fontSize: '13px',
             fontWeight: '700',
             color: borderColor,
@@ -132,7 +132,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
           </span>
           <span style={{
             fontSize: '12px',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             color: isOld ? '#ff3366' : 'rgba(255,255,255,0.45)',
             fontWeight: isOld ? '700' : '400',
             textShadow: isOld ? '0 0 8px #ff336688' : 'none',
@@ -145,7 +145,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
         {order.student_name && (
           <div style={{
             fontSize: '14px',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             color: 'rgba(255,255,255,0.8)',
             marginBottom: '12px',
             display: 'flex',
@@ -184,19 +184,19 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
                     : 'none',
                 }}
               >
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '14px', color: 'rgba(255,255,255,0.85)' }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'rgba(255,255,255,0.85)' }}>
                   <span style={{ color: borderColor, fontWeight: '700', marginRight: '5px' }}>
                     {item.quantity}x
                   </span>
                   {item.item_name}
                 </span>
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
                   ₹{(item.price * item.quantity).toFixed(0)}
                 </span>
               </div>
             ))
           ) : (
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', fontFamily: 'Rajdhani, sans-serif' }}>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', fontFamily: 'Inter, sans-serif' }}>
               No item details
             </span>
           )}
@@ -210,11 +210,11 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
           marginBottom: '14px',
           padding: '0 2px',
         }}>
-          <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
+          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
             Total
           </span>
           <span style={{
-            fontFamily: 'Orbitron, monospace',
+            fontFamily: 'Sora, monospace',
             fontSize: '15px',
             color: '#ffed4e',
             fontWeight: '700',
@@ -243,7 +243,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
               color: actionConfig.color,
               fontSize: '14px',
               fontWeight: '700',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               cursor: 'pointer',
               letterSpacing: '1.5px',
               transition: 'all 0.2s ease',

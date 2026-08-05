@@ -18,14 +18,14 @@ interface MenuGridProps {
 }
 
 const CATEGORY_GLYPH: Record<string, string> = {
-  all:          '◯',
-  favorites:    '✦',
-  starters:     '◭',
-  mains:        '◈',
-  'main course':'◈',
-  desserts:     '✸',
-  beverages:    '☖',
-  snacks:       '✱',
+  all:          '🍽️',
+  favorites:    '❤️',
+  starters:     '🍢',
+  mains:        '🍛',
+  'main course':'🍛',
+  desserts:     '🍰',
+  beverages:    '🥤',
+  snacks:       '🍟',
   breakfast:    '✿',
   combo:        '⬡',
   specials:     '★',
@@ -65,9 +65,9 @@ const MenuGrid: React.FC<MenuGridProps> = ({
       }
     }
     return [
-      { id: 'all', label: 'All Channels', glyph: '◯', count: items.length },
+      { id: 'all', label: 'All Items', glyph: '🍽️', count: items.length },
       ...mid,
-      { id: 'favorites', label: 'Saved', glyph: '✦', count: favorites.length },
+      { id: 'favorites', label: 'Favorites', glyph: '❤️', count: favorites.length },
     ];
   }, [items, favorites]);
 
@@ -109,13 +109,12 @@ const MenuGrid: React.FC<MenuGridProps> = ({
             <div
               key={idx}
               style={{
-                background: 'rgba(7,16,14,0.6)',
-                border: '1px solid rgba(255, 90, 95,0.12)',
-                borderRadius: 18,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,200,180,0.1)',
+                borderRadius: 22,
                 overflow: 'hidden',
-                height: 320,
+                height: 300,
                 position: 'relative',
-                clipPath: 'polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%)',
               }}
             >
               <div style={{
@@ -136,31 +135,23 @@ const MenuGrid: React.FC<MenuGridProps> = ({
           padding: '80px 16px',
           color: 'rgba(255,255,255,0.4)',
         }}>
-          <div style={{
-            fontFamily: 'Orbitron, monospace',
-            fontSize: '3.5rem',
-            color: '#ff5a5f',
-            opacity: 0.4,
-            marginBottom: 18,
-            textShadow: '0 0 24px rgba(255, 90, 95,0.4)',
-          }}>◯</div>
+          <div style={{ fontSize: '3.2rem', marginBottom: 14 }}>🍽️</div>
           <p style={{
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: '0.85rem',
-            letterSpacing: '0.4em',
-            textTransform: 'uppercase',
-            color: 'rgba(255, 90, 95,0.7)',
+            fontFamily: 'Sora, sans-serif',
+            fontSize: '1.05rem',
+            fontWeight: 700,
+            color: '#fff7f2',
           }}>
-            NO MATCHES IN CHANNEL
+            No dishes found
           </p>
           {searchQuery && (
-            <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', marginTop: 8, color: 'rgba(255,255,255,0.3)' }}>
-              Refine your query
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', marginTop: 8, color: 'rgba(255,255,255,0.4)' }}>
+              Try a different search
             </p>
           )}
           {selectedCategory === 'favorites' && favorites.length === 0 && !searchQuery && (
-            <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', marginTop: 8, color: 'rgba(255,255,255,0.3)' }}>
-              Mark items with ✦ to save them here
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', marginTop: 8, color: 'rgba(255,255,255,0.4)' }}>
+              Tap the ❤️ on a dish to save it here
             </p>
           )}
         </div>

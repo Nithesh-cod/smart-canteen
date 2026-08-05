@@ -30,7 +30,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, rightContent }) => {
   };
 
   const titleStyle: React.CSSProperties = {
-    fontFamily: "'Orbitron', monospace",
+    fontFamily: "'Sora', monospace",
     fontWeight: 700,
     fontSize: '1.2rem',
     lineHeight: 1.2,
@@ -43,7 +43,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, rightContent }) => {
   };
 
   const subtitleStyle: React.CSSProperties = {
-    fontFamily: "'Rajdhani', sans-serif",
+    fontFamily: "'Inter', sans-serif",
     fontSize: '0.8rem',
     fontWeight: 500,
     color: 'rgba(255,255,255,0.6)',

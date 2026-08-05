@@ -192,32 +192,32 @@ const css = `
 }
 .roster-title-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .roster-glyph {
-  font-family: 'Orbitron', monospace; font-size: 1.15rem;
+  font-family: 'Sora', monospace; font-size: 1.15rem;
   color: #ff5a5f; text-shadow: 0 0 10px #ff5a5f;
 }
 .roster-title {
-  font-family: 'Orbitron', sans-serif; font-size: 0.78rem;
+  font-family: 'Sora', sans-serif; font-size: 0.78rem;
   letter-spacing: 0.32em; text-transform: uppercase;
   color: rgba(255,255,255,0.6);
 }
 .roster-totals {
-  font-family: 'Orbitron', monospace; font-size: 0.7rem;
+  font-family: 'Sora', monospace; font-size: 0.7rem;
   color: rgba(255,255,255,0.4); letter-spacing: 0.08em;
 }
 .roster-actions { display: flex; align-items: center; gap: 10px; }
 .roster-search { position: relative; }
 .roster-search input {
-  padding: 9px 14px 9px 32px; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem;
+  padding: 9px 14px 9px 32px; font-family: 'Inter', sans-serif; font-size: 0.9rem;
   color: #fff; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px; outline: none; width: 280px; transition: border-color 0.2s, box-shadow 0.2s;
 }
 .roster-search input:focus { border-color: rgba(255, 90, 95,0.5); box-shadow: 0 0 14px rgba(255, 90, 95,0.18); }
 .roster-search-glyph {
   position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
-  color: #ff5a5f; font-family: 'Orbitron', monospace; pointer-events: none;
+  color: #ff5a5f; font-family: 'Sora', monospace; pointer-events: none;
 }
 .roster-refresh {
-  padding: 9px 16px; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+  padding: 9px 16px; font-family: 'Sora', sans-serif; font-size: 0.7rem;
   letter-spacing: 0.18em; text-transform: uppercase; color: #ff5a5f;
   background: rgba(255, 90, 95,0.07); border: 1px solid rgba(255, 90, 95,0.4);
   border-radius: 8px; cursor: pointer;
@@ -227,7 +227,7 @@ const css = `
 
 .roster-tier-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .tier-chip {
-  padding: 7px 14px; font-family: 'Orbitron', sans-serif; font-size: 0.66rem;
+  padding: 7px 14px; font-family: 'Sora', sans-serif; font-size: 0.66rem;
   letter-spacing: 0.18em; text-transform: uppercase;
   color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.025);
   border: 1px solid rgba(255,255,255,0.06); border-radius: 100px; cursor: pointer;
@@ -275,20 +275,20 @@ const css = `
 .roster-avatar {
   width: 44px; height: 44px; border-radius: 50%;
   border: 1.5px solid; display: flex; align-items: center; justify-content: center;
-  font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 1.1rem;
+  font-family: 'Sora', sans-serif; font-weight: 800; font-size: 1.1rem;
 }
 .roster-card-id { min-width: 0; }
 .roster-name {
-  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-family: 'Inter', sans-serif; font-weight: 700;
   font-size: 1.02rem; color: #fff; line-height: 1.2;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .roster-roll {
-  font-family: 'Orbitron', monospace; font-size: 0.72rem;
+  font-family: 'Sora', monospace; font-size: 0.72rem;
   color: rgba(255,255,255,0.45); margin-top: 2px;
 }
 .roster-tier {
-  font-family: 'Orbitron', monospace; font-size: 0.6rem;
+  font-family: 'Sora', monospace; font-size: 0.6rem;
   letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700;
   padding: 4px 9px; border-radius: 100px; border: 1px solid;
 }
@@ -301,22 +301,22 @@ const css = `
 }
 .roster-stat { display: flex; flex-direction: column; gap: 4px; }
 .roster-stat-label {
-  font-family: 'Orbitron', monospace; font-size: 0.6rem;
+  font-family: 'Sora', monospace; font-size: 0.6rem;
   letter-spacing: 0.18em; text-transform: uppercase;
   color: rgba(255,255,255,0.4);
 }
 .roster-stat-value {
-  font-family: 'Orbitron', monospace; font-size: 0.95rem; font-weight: 800;
+  font-family: 'Sora', monospace; font-size: 0.95rem; font-weight: 800;
 }
 
 .roster-card-foot {
   display: flex; align-items: center; justify-content: space-between;
-  font-family: 'Rajdhani', sans-serif; font-size: 0.78rem;
+  font-family: 'Inter', sans-serif; font-size: 0.78rem;
   color: rgba(255,255,255,0.45);
 }
 .roster-phone { letter-spacing: 0.04em; }
 .roster-status {
-  font-family: 'Orbitron', monospace; font-size: 0.62rem;
+  font-family: 'Sora', monospace; font-size: 0.62rem;
   letter-spacing: 0.15em; text-transform: uppercase;
 }
 .roster-status.active   { color: #ff5a5f; }
@@ -326,17 +326,17 @@ const css = `
   padding: 60px 20px; text-align: center; color: rgba(255,255,255,0.4);
 }
 .roster-empty-glyph {
-  font-family: 'Orbitron', monospace; font-size: 3rem;
+  font-family: 'Sora', monospace; font-size: 3rem;
   color: rgba(255, 90, 95,0.4); text-shadow: 0 0 14px rgba(255, 90, 95,0.35);
   margin-bottom: 14px;
 }
 .roster-empty-title {
-  font-family: 'Orbitron', sans-serif; font-size: 0.85rem;
+  font-family: 'Sora', sans-serif; font-size: 0.85rem;
   letter-spacing: 0.32em; text-transform: uppercase;
   color: rgba(255, 90, 95,0.7); margin-bottom: 6px;
 }
 .roster-empty-sub {
-  font-family: 'Rajdhani', sans-serif; font-size: 0.85rem;
+  font-family: 'Inter', sans-serif; font-size: 0.85rem;
   color: rgba(255,255,255,0.4); letter-spacing: 0.06em;
 }
 `;

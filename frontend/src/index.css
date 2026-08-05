@@ -55,7 +55,7 @@ html {
 body {
   background: #140a09;
   color: var(--text-primary);
-  font-family: 'Rajdhani', sans-serif;
+  font-family: 'Inter', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
 }

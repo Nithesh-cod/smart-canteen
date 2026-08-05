@@ -57,7 +57,7 @@ const Loader: React.FC<LoaderProps> = ({
     };
 
     const messageStyle: React.CSSProperties = {
-      fontFamily: "'Rajdhani', sans-serif",
+      fontFamily: "'Inter', sans-serif",
       fontSize: '1rem',
       fontWeight: 600,
       color: 'rgba(255,255,255,0.7)',
@@ -87,7 +87,7 @@ const Loader: React.FC<LoaderProps> = ({
   };
 
   const messageStyle: React.CSSProperties = {
-    fontFamily: "'Rajdhani', sans-serif",
+    fontFamily: "'Inter', sans-serif",
     fontSize: '0.9rem',
     fontWeight: 600,
     color: 'rgba(255,255,255,0.6)',

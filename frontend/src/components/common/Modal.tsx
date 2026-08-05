@@ -66,7 +66,7 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   const titleStyle: React.CSSProperties = {
-    fontFamily: "'Orbitron', monospace",
+    fontFamily: "'Sora', monospace",
     fontWeight: 700,
     fontSize: '1.2rem',
     background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',

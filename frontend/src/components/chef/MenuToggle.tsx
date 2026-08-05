@@ -91,7 +91,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
               animation: 'none',
             }} />
             <span style={{
-              fontFamily: 'Orbitron, monospace',
+              fontFamily: 'Sora, monospace',
               fontSize: '11px',
               color: '#ff5a5f',
               letterSpacing: '2px',
@@ -116,7 +116,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
             <div key={category} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               {/* Category label */}
               <span style={{
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
                 fontSize: '11px',
                 color: 'rgba(255,255,255,0.4)',
                 letterSpacing: '1.5px',
@@ -153,7 +153,7 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ items, onToggle }) => {
                         : 'rgba(255,51,102,0.12)',
                     color: item.is_available ? '#ff5a5f' : '#ff3366',
                     fontSize: '12px',
-                    fontFamily: 'Rajdhani, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     fontWeight: '600',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',

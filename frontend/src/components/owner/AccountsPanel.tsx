@@ -32,11 +32,11 @@ const roleColor: Record<string, string> = { admin: '#ffed4e', chef: '#ff5a5f', s
 
 const glassInput: React.CSSProperties = {
   width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.15)',
-  borderRadius: 10, padding: '12px 16px', color: '#fff', fontFamily: 'Rajdhani, sans-serif',
+  borderRadius: 10, padding: '12px 16px', color: '#fff', fontFamily: 'Inter, sans-serif',
   fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
 };
 const labelStyle: React.CSSProperties = {
-  display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.6)', fontFamily: 'Rajdhani, sans-serif',
+  display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.6)', fontFamily: 'Inter, sans-serif',
   fontWeight: 600, fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 0.8,
 };
 
@@ -112,7 +112,7 @@ const AccountsPanel: React.FC = () => {
     <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 700, color: '#ff5a5f', margin: 0 }}>
+        <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '1.3rem', fontWeight: 700, color: '#ff5a5f', margin: 0 }}>
           👥 Staff &amp; Accounts
         </h2>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -120,7 +120,7 @@ const AccountsPanel: React.FC = () => {
             {(['staff', 'student', 'all'] as RoleFilter[]).map((f) => (
               <button key={f} onClick={() => setFilter(f)} style={{
                 padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontFamily: 'Rajdhani, sans-serif', fontSize: '0.8rem', fontWeight: 700, textTransform: 'capitalize',
+                fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', fontWeight: 700, textTransform: 'capitalize',
                 background: filter === f ? 'rgba(255, 90, 95,0.18)' : 'transparent',
                 color: filter === f ? '#ff5a5f' : 'rgba(255,255,255,0.45)',
               }}>{f}</button>
@@ -128,16 +128,16 @@ const AccountsPanel: React.FC = () => {
           </div>
           <button onClick={() => { setForm(emptyForm()); setShowCreate(true); }} style={{
             background: 'transparent', border: '2px solid #ff5a5f', color: '#ff5a5f', borderRadius: 12,
-            padding: '9px 20px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
+            padding: '9px 20px', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
           }}>+ New Account</button>
         </div>
       </div>
 
       {/* List */}
       {loading ? (
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Rajdhani, sans-serif', padding: 40, textAlign: 'center' }}>Loading…</div>
+        <div style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Inter, sans-serif', padding: 40, textAlign: 'center' }}>Loading…</div>
       ) : accounts.length === 0 ? (
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 20, padding: '50px 30px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontFamily: 'Rajdhani, sans-serif' }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 20, padding: '50px 30px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontFamily: 'Inter, sans-serif' }}>
           No accounts in this view.
         </div>
       ) : (
@@ -149,8 +149,8 @@ const AccountsPanel: React.FC = () => {
               borderRadius: 14, padding: '14px 18px', opacity: acc.is_active ? 1 : 0.6,
             }}>
               <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, color: '#fff', fontSize: '1.05rem' }}>{acc.name}</div>
-                <div style={{ fontFamily: 'Rajdhani, sans-serif', color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem' }}>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, color: '#fff', fontSize: '1.05rem' }}>{acc.name}</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem' }}>
                   {acc.roll_number} · {acc.phone}{acc.department ? ` · ${acc.department}` : ''}
                 </div>
               </div>
@@ -162,7 +162,7 @@ const AccountsPanel: React.FC = () => {
                 onChange={(e) => patchAccount(acc, { role: e.target.value }, `${acc.roll_number} → ${e.target.value}`)}
                 style={{
                   background: 'rgba(0,0,0,0.35)', color: roleColor[acc.role], border: `1px solid ${roleColor[acc.role]}55`,
-                  borderRadius: 8, padding: '7px 10px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.82rem',
+                  borderRadius: 8, padding: '7px 10px', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.82rem',
                   cursor: 'pointer', textTransform: 'capitalize',
                 }}>
                 {ROLES.map((r) => <option key={r} value={r} style={{ background: '#241512' }}>{r}</option>)}
@@ -171,7 +171,7 @@ const AccountsPanel: React.FC = () => {
               {/* Reset password */}
               <button onClick={() => { setPwFor(acc); setNewPw(''); }} disabled={busyId === acc.id} style={{
                 background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)',
-                borderRadius: 8, padding: '7px 12px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                borderRadius: 8, padding: '7px 12px', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
               }}>🔑 Reset PW</button>
 
               {/* Active toggle */}
@@ -181,7 +181,7 @@ const AccountsPanel: React.FC = () => {
                 style={{
                   background: acc.is_active ? 'rgba(255, 90, 95,0.15)' : 'rgba(255,51,102,0.15)',
                   border: `1px solid ${acc.is_active ? '#ff5a5f' : '#ff3366'}`, color: acc.is_active ? '#ff5a5f' : '#ff3366',
-                  borderRadius: 8, padding: '7px 12px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.8rem',
+                  borderRadius: 8, padding: '7px 12px', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.8rem',
                   cursor: 'pointer', whiteSpace: 'nowrap',
                 }}>{busyId === acc.id ? '…' : acc.is_active ? '● Active' : '○ Inactive'}</button>
             </div>
@@ -215,12 +215,12 @@ const AccountsPanel: React.FC = () => {
             <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
               <button onClick={handleCreate} disabled={saving} style={{
                 flex: 1, background: 'linear-gradient(135deg, rgba(255, 90, 95,0.25), rgba(255, 158, 61,0.25))', border: '1px solid rgba(255, 90, 95,0.5)',
-                color: '#ff5a5f', borderRadius: 12, padding: '13px 0', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '1rem',
+                color: '#ff5a5f', borderRadius: 12, padding: '13px 0', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '1rem',
                 cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
               }}>{saving ? 'Creating…' : 'Create Account'}</button>
               <button onClick={() => setShowCreate(false)} disabled={saving} style={{
                 flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)',
-                borderRadius: 12, padding: '13px 0', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
+                borderRadius: 12, padding: '13px 0', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
               }}>Cancel</button>
             </div>
           </div>
@@ -236,11 +236,11 @@ const AccountsPanel: React.FC = () => {
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={handleResetPw} disabled={busyId === pwFor.id} style={{
                 flex: 1, background: 'linear-gradient(135deg, rgba(255, 90, 95,0.25), rgba(255, 158, 61,0.25))', border: '1px solid rgba(255, 90, 95,0.5)',
-                color: '#ff5a5f', borderRadius: 12, padding: '13px 0', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
+                color: '#ff5a5f', borderRadius: 12, padding: '13px 0', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
               }}>Set Password</button>
               <button onClick={() => setPwFor(null)} style={{
                 flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)',
-                borderRadius: 12, padding: '13px 0', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
+                borderRadius: 12, padding: '13px 0', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
               }}>Cancel</button>
             </div>
           </div>

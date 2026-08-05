@@ -178,7 +178,7 @@ const ToastCard: React.FC<{
 
   const messageStyle: React.CSSProperties = {
     flex: 1,
-    fontFamily: "'Rajdhani', sans-serif",
+    fontFamily: "'Inter', sans-serif",
     fontSize: '0.95rem',
     fontWeight: 600,
     color: 'rgba(255,255,255,0.92)',

@@ -193,7 +193,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
               zIndex: 3,
             }}>
               <span style={{
-                fontFamily: "'Orbitron', sans-serif",
+                fontFamily: "'Sora', sans-serif",
                 fontSize: '0.75rem', fontWeight: 700,
                 color: '#ff3366', letterSpacing: '2px',
                 background: 'rgba(255,51,102,0.15)',
@@ -217,7 +217,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
               padding: '2px 8px',
               color: 'rgba(255,255,255,0.65)',
               fontSize: '0.68rem',
-              fontFamily: "'Orbitron', sans-serif",
+              fontFamily: "'Sora', sans-serif",
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
             }}>
@@ -230,7 +230,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
         <div className="menu-item-body" style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {/* Name */}
           <div className="menu-item-name" style={{
-            fontFamily: "'Rajdhani', sans-serif",
+            fontFamily: "'Inter', sans-serif",
             fontSize: '1.25rem',
             fontWeight: 700,
             color: '#fff',
@@ -248,7 +248,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                 ({Number(item.rating ?? 0).toFixed(1)})
               </span>
             </div>
-            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', fontFamily: "'Rajdhani', sans-serif" }}>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', fontFamily: "'Inter', sans-serif" }}>
               ⏱️ {item.preparation_time ?? 10} mins
             </span>
           </div>
@@ -260,7 +260,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
               fontSize: '0.82rem',
               lineHeight: 1.4,
               margin: 0,
-              fontFamily: "'Rajdhani', sans-serif",
+              fontFamily: "'Inter', sans-serif",
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
@@ -273,7 +273,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
           {/* Price */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: 'auto' }}>
             <span className="menu-item-price" style={{
-              fontFamily: "'Orbitron', sans-serif",
+              fontFamily: "'Sora', sans-serif",
               fontSize: '1.3rem',
               fontWeight: 800,
               color: '#ffed4e',
@@ -287,7 +287,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
             <div style={{
               fontSize: '0.72rem',
               color: stockQty <= 5 ? '#ff9f43' : 'rgba(255,255,255,0.4)',
-              fontFamily: "'Rajdhani', sans-serif",
+              fontFamily: "'Inter', sans-serif",
               fontWeight: 600,
             }}>
               {stockQty <= 5 ? `⚠️ Only ${stockQty} left!` : `${stockQty} available`}
@@ -318,7 +318,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                     color: '#ff5a5f',
                     fontSize: '1.1rem',
                     cursor: 'pointer',
-                    fontFamily: "'Orbitron', sans-serif",
+                    fontFamily: "'Sora', sans-serif",
                     fontWeight: 700,
                     transition: 'background 0.15s',
                   }}
@@ -329,7 +329,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                 </button>
 
                 <span style={{
-                  fontFamily: "'Orbitron', sans-serif",
+                  fontFamily: "'Sora', sans-serif",
                   fontWeight: 800,
                   color: '#fff',
                   fontSize: '1rem',
@@ -352,7 +352,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                     color: atStockLimit ? 'rgba(255,237,78,0.5)' : '#ff5a5f',
                     fontSize: '1.1rem',
                     cursor: atStockLimit ? 'not-allowed' : 'pointer',
-                    fontFamily: "'Orbitron', sans-serif",
+                    fontFamily: "'Sora', sans-serif",
                     fontWeight: 700,
                     transition: 'background 0.15s',
                     opacity: atStockLimit ? 0.5 : 1,
@@ -380,7 +380,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
                   background: isAvailable ? 'rgba(255, 90, 95,0.06)' : 'rgba(255,255,255,0.04)',
                   color: isAvailable ? '#ff5a5f' : 'rgba(255,255,255,0.3)',
                   cursor: isAvailable ? 'pointer' : 'not-allowed',
-                  fontFamily: "'Orbitron', sans-serif",
+                  fontFamily: "'Sora', sans-serif",
                   fontSize: '0.75rem',
                   fontWeight: 700,
                   letterSpacing: '0.1em',

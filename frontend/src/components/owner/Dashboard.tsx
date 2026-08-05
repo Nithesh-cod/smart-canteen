@@ -129,7 +129,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
               style={{
                 fontSize: '0.78rem',
                 color: 'rgba(255,255,255,0.55)',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
                 letterSpacing: 1,
                 textTransform: 'uppercase',
@@ -143,7 +143,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                 fontSize: '2rem',
                 fontWeight: 900,
                 color: '#ffed4e',
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: 'Sora, sans-serif',
                 lineHeight: 1,
                 marginBottom: 8,
               }}
@@ -154,7 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
               style={{
                 fontSize: '0.85rem',
                 color: 'rgba(255,255,255,0.45)',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               {card.sub}
@@ -170,7 +170,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
         <div style={{ ...glassCard, flex: 1 }}>
           <h3
             style={{
-              fontFamily: 'Orbitron, sans-serif',
+              fontFamily: 'Sora, sans-serif',
               fontSize: '1rem',
               fontWeight: 700,
               color: '#ff5a5f',
@@ -195,7 +195,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                 <span style={{ fontSize: '1.2rem', minWidth: 28 }}>{medalEmoji(idx)}</span>
                 <span
                   style={{
-                    fontFamily: 'Rajdhani, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     fontWeight: 600,
                     color: 'rgba(255,255,255,0.9)',
                     fontSize: '0.95rem',
@@ -214,7 +214,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                     fontWeight: 700,
                     padding: '3px 10px',
                     borderRadius: 20,
-                    fontFamily: 'Rajdhani, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                   }}
                 >
                   {item.order_count} orders
@@ -223,7 +223,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                   style={{
                     fontSize: '0.82rem',
                     color: '#ff5a5f',
-                    fontFamily: 'Rajdhani, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     fontWeight: 700,
                   }}
                 >
@@ -236,7 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
             <div
               style={{
                 color: 'rgba(255,255,255,0.35)',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
                 textAlign: 'center',
                 padding: '20px 0',
               }}
@@ -250,7 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
         <div style={{ ...glassCard, flex: 1 }}>
           <h3
             style={{
-              fontFamily: 'Orbitron, sans-serif',
+              fontFamily: 'Sora, sans-serif',
               fontSize: '1rem',
               fontWeight: 700,
               color: '#ff5a5f',
@@ -294,7 +294,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                   <div
                     style={{
                       fontSize: '0.68rem',
-                      fontFamily: 'Orbitron, sans-serif',
+                      fontFamily: 'Sora, sans-serif',
                       fontWeight: 700,
                       color,
                       textTransform: 'uppercase',
@@ -309,7 +309,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                       fontSize: '1.8rem',
                       fontWeight: 900,
                       color,
-                      fontFamily: 'Orbitron, sans-serif',
+                      fontFamily: 'Sora, sans-serif',
                       lineHeight: 1,
                     }}
                   >
@@ -319,7 +319,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                     style={{
                       fontSize: '0.75rem',
                       color: 'rgba(255,255,255,0.4)',
-                      fontFamily: 'Rajdhani, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                       marginTop: 4,
                     }}
                   >
@@ -336,7 +336,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
       <div style={{ ...glassCard }}>
         <h3
           style={{
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: 'Sora, sans-serif',
             fontSize: '1rem',
             fontWeight: 700,
             color: '#ff5a5f',
@@ -351,7 +351,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
             style={{
               width: '100%',
               borderCollapse: 'collapse',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
             }}
           >
             <thead>
@@ -470,7 +470,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                 textAlign: 'center',
                 padding: '30px 0',
                 color: 'rgba(255,255,255,0.35)',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               No recent orders

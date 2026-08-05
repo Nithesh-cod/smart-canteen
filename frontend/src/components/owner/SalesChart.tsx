@@ -88,7 +88,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
       x: {
         ticks: {
           color: 'rgba(255,255,255,0.6)',
-          font: { family: 'Rajdhani', size: 12 },
+          font: { family: 'Inter', size: 12 },
           maxRotation: 45,
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
@@ -97,7 +97,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
       y: {
         ticks: {
           color: 'rgba(255,255,255,0.6)',
-          font: { family: 'Rajdhani', size: 12 },
+          font: { family: 'Inter', size: 12 },
           callback: (v: any) => '₹' + Number(v).toLocaleString('en-IN'),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
@@ -139,7 +139,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
       >
         <h2
           style={{
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: 'Sora, sans-serif',
             fontSize: '1.1rem',
             fontWeight: 700,
             color: '#ff5a5f',
@@ -165,7 +165,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
                     ? 'rgba(255, 90, 95,0.2)'
                     : 'rgba(255,255,255,0.03)',
                   color: isActive ? '#ff5a5f' : 'rgba(255,255,255,0.55)',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
                   fontSize: '0.88rem',
                   cursor: 'pointer',
@@ -218,7 +218,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
             style={{
               fontSize: '0.7rem',
               color: 'rgba(255,255,255,0.45)',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: 1,
@@ -232,7 +232,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
               fontSize: '1.35rem',
               fontWeight: 900,
               color: '#ffed4e',
-              fontFamily: 'Orbitron, sans-serif',
+              fontFamily: 'Sora, sans-serif',
             }}
           >
             ₹{totalRevenue.toLocaleString('en-IN')}
@@ -250,7 +250,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
             style={{
               fontSize: '0.7rem',
               color: 'rgba(255,255,255,0.45)',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: 1,
@@ -264,7 +264,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
               fontSize: '1.35rem',
               fontWeight: 900,
               color: '#ff5a5f',
-              fontFamily: 'Orbitron, sans-serif',
+              fontFamily: 'Sora, sans-serif',
             }}
           >
             ₹{Math.round(avgRevenue).toLocaleString('en-IN')}
@@ -282,7 +282,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
             style={{
               fontSize: '0.7rem',
               color: 'rgba(255,255,255,0.45)',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: 1,
@@ -296,7 +296,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
               fontSize: '1.35rem',
               fontWeight: 900,
               color: '#ff9e3d',
-              fontFamily: 'Orbitron, sans-serif',
+              fontFamily: 'Sora, sans-serif',
             }}
           >
             {data.length}
@@ -324,7 +324,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, period, onPeriodChange })
           <div
             style={{
               color: 'rgba(255,255,255,0.35)',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontSize: '1rem',
             }}
           >

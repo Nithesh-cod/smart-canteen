@@ -1,27 +1,11 @@
 import React, { useState } from 'react';
-import { useTilt } from '../../hooks/useTilt';
 import type { MenuItem as MenuItemType } from '../../types';
 
 /**
- * DataCrystal — a menu item rendered as a clipped, layered HUD panel.
- *
- * This is the deliberate replacement for the old rectangular card. Visual
- * language:
- *   - Outer shape: clip-path polygon with a notched top-right corner so it
- *     reads as a hard-edged crystal, not a soft pill.
- *   - Image takes the upper 60% of the body, dimmed by a gradient floor so
- *     the title sits in contrast without a hard divider.
- *   - Category appears top-left as a glowing chip; veg/non-veg dot appears
- *     bottom-right of the image as a "data marker".
- *   - Price is a floating tilted token at the bottom-right that breaks the
- *     card silhouette — feels like a HUD callout, not a label.
- *   - Title + description are stacked with extreme letter-spacing to read
- *     as a system entry rather than a normal product card.
- *   - HOVER: 3D parallax tilt + animated cross-hair reticle materialises
- *     over the centre of the image.
- *
- * Pure CSS + SVG; no new dependencies. Layered z-index handles the float-
- * outside-the-card price token without breaking grid layout.
+ * DataCrystal — the kiosk menu card. Redesigned (Warm-Glass) from the old
+ * notched HUD "crystal" into a clean, modern food-app card: photo on top,
+ * soft rounded frosted-glass body, veg dot, rating, bold coral price, and an
+ * ADD button that becomes a quantity stepper. Same props as before.
  */
 interface DataCrystalProps {
   item: MenuItemType;
@@ -32,411 +16,103 @@ interface DataCrystalProps {
   cartQuantity: number;
 }
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  starters: '🍢', mains: '🍛', desserts: '🍰', beverages: '🥤', snacks: '🍟',
+};
+const emojiFor = (cat?: string) => CATEGORY_EMOJI[(cat || '').toLowerCase()] || '🍽️';
+
 const css = `
-@keyframes crystal-in {
-  from { opacity: 0; transform: translateY(20px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0)    scale(1); }
+@keyframes wg-card-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.wg-card {
+  position: relative; display: flex; flex-direction: column;
+  background: rgba(255,255,255,0.05);
+  -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255,200,180,0.14);
+  border-radius: 22px; overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.32);
+  transition: transform .28s cubic-bezier(.34,1.4,.5,1), box-shadow .28s, border-color .28s;
+  animation: wg-card-in .4s ease both;
 }
-@keyframes reticle-spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes reticle-pulse {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 0.95; }
-}
-@keyframes price-float {
-  0%, 100% { transform: translateY(0) rotate(-3deg); }
-  50%      { transform: translateY(-3px) rotate(-3deg); }
-}
-
-.crystal {
-  position: relative;
-  /* Proper solid backdrop — was too transparent so the cursor-following
-     glow + grid floor bled through and obliterated the BEVERAGES chip on
-     bright food images. Now the card is a real surface that sits on top. */
-  background:
-    linear-gradient(180deg, rgba(255, 90, 95,0.045) 0%, transparent 35%),
-    linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 18px;
-  overflow: hidden;
-  /* Notched top-right corner — this is what makes it a crystal and not a card */
-  clip-path: polygon(
-    0% 0%,
-    calc(100% - 28px) 0%,
-    100% 28px,
-    100% 100%,
-    0% 100%
-  );
-  cursor: default;
-  animation: crystal-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-  border: 1px solid rgba(255,255,255,0.06);
-  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
-  display: flex;
-  flex-direction: column;
-}
-.crystal::before {
-  /* Tiny inner highlight on the top edge — suggests the surface is
-     catching light from above, gives the crystal physical presence. */
-  content: '';
-  position: absolute;
-  top: 0; left: 8%; right: 28%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 90, 95,0.5), transparent);
-  pointer-events: none;
-  z-index: 2;
-}
-.crystal.hover {
-  border-color: rgba(255, 90, 95,0.4);
-  box-shadow:
-    0 28px 80px rgba(255, 90, 95,0.18),
-    0 6px 18px rgba(0,0,0,0.6),
-    inset 0 0 0 1px rgba(255, 90, 95,0.06);
-}
-.crystal-img {
-  position: relative;
-  aspect-ratio: 16/11;
-  overflow: hidden;
-  background: linear-gradient(135deg, #241512, #140a09);
-}
-.crystal-img img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), filter 0.35s;
-  filter: brightness(0.78) saturate(1.1);
-}
-.crystal.hover .crystal-img img {
-  transform: scale(1.06);
-  filter: brightness(0.92) saturate(1.2);
-}
-.crystal-img::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    transparent 50%,
-    rgba(7,16,14,0.55) 88%,
-    rgba(7,16,14,0.95) 100%
-  );
-  pointer-events: none;
-}
-.crystal-cat {
-  position: absolute;
-  top: 12px; left: 12px;
-  z-index: 4;
-  font-family: 'Orbitron', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
-  font-weight: 700;
-  color: #ff5a5f;
-  /* Solid dark backing so the chip reads cleanly on any image — the old
-     translucent rgba was getting eaten by bright food photos. */
-  background: rgba(7,16,14,0.85);
-  border: 1px solid rgba(255, 90, 95,0.5);
-  border-radius: 3px;
-  padding: 5px 10px;
-  text-transform: uppercase;
-  text-shadow: 0 0 6px rgba(255, 90, 95,0.6);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-}
-.crystal-fav {
-  position: absolute;
-  top: 12px; right: 38px;
-  z-index: 4;
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: transform 0.2s, border-color 0.2s;
-}
-.crystal-fav:hover {
-  border-color: rgba(255, 90, 95,0.5);
-  transform: scale(1.1);
-}
-.crystal-veg-dot {
-  position: absolute;
-  bottom: 14px; left: 14px;
-  z-index: 4;
-  width: 14px; height: 14px;
-  border-radius: 3px;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.6);
-}
-.crystal-veg-dot::before {
-  content: '';
-  display: block;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-}
-.crystal-veg-dot.veg::before     { background: #ff5a5f; box-shadow: 0 0 6px #ff5a5f; }
-.crystal-veg-dot.nonveg::before  { background: #ff3366; box-shadow: 0 0 6px #ff3366; }
-
-.crystal-reticle {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 60px; height: 60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-  z-index: 3;
-}
-.crystal.hover .crystal-reticle {
-  opacity: 1;
-  animation: reticle-spin 8s linear infinite, reticle-pulse 2s ease-in-out infinite;
-}
-
-.crystal-body {
-  padding: 14px 18px 18px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.crystal-name {
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: 0.04em;
-  color: #fff;
-  line-height: 1.15;
-  text-shadow: 0 1px 8px rgba(0,0,0,0.4);
-}
-.crystal-desc {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.78rem;
-  color: rgba(255,255,255,0.42);
-  line-height: 1.45;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.crystal-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 10px;
-  gap: 10px;
-}
-.crystal-price {
-  font-family: 'Orbitron', monospace;
-  font-size: 1.35rem;
-  font-weight: 900;
-  color: #ffed4e;
-  text-shadow: 0 0 14px rgba(255,237,78,0.45);
-  letter-spacing: 0.02em;
-  animation: price-float 4s ease-in-out infinite;
-  white-space: nowrap;
-}
-.crystal-prep {
-  font-family: 'Orbitron', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.15em;
-  color: rgba(255,255,255,0.4);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.crystal-cta {
-  margin-top: 12px;
-  padding: 11px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
-  font-weight: 800;
-  text-transform: uppercase;
-  background: linear-gradient(90deg, rgba(255, 90, 95,0.06), rgba(255, 90, 95,0.15), rgba(255, 90, 95,0.06));
-  background-size: 200% 100%;
-  color: #ff5a5f;
-  border: 1px solid rgba(255, 90, 95,0.45);
-  transition: background-position 0.6s, box-shadow 0.25s, transform 0.15s;
-  text-shadow: 0 0 8px rgba(255, 90, 95,0.6);
-}
-.crystal-cta:hover {
-  background-position: 100% 0;
-  box-shadow: 0 0 20px rgba(255, 90, 95,0.4), inset 0 0 12px rgba(255, 90, 95,0.18);
-}
-.crystal-cta:active { transform: translateY(1px); }
-.crystal-cta:disabled {
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.3);
-  border-color: rgba(255,255,255,0.1);
-  cursor: not-allowed;
-  text-shadow: none;
-}
-
-.crystal-stepper {
-  display: grid;
-  grid-template-columns: 1fr 50px 1fr;
-  align-items: stretch;
-  margin-top: 12px;
-  border: 1px solid rgba(255, 90, 95,0.4);
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(255, 90, 95,0.06);
-}
-.crystal-step-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #ff5a5f;
-  font-family: 'Orbitron', monospace;
-  font-size: 1.2rem;
-  font-weight: 800;
-  padding: 10px 0;
-  transition: background 0.15s;
-}
-.crystal-step-btn:hover         { background: rgba(255, 90, 95,0.16); }
-.crystal-step-btn.dec:hover     { background: rgba(255,51,102,0.15); color: #ff3366; }
-.crystal-step-btn:disabled      { opacity: 0.4; cursor: not-allowed; }
-.crystal-step-count {
-  align-self: center;
-  text-align: center;
-  color: #fff;
-  font-family: 'Orbitron', monospace;
-  font-weight: 800;
-  font-size: 1rem;
-}
-.crystal-stock-warn {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.7rem;
-  color: #ff9f43;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-top: 4px;
-}
-.crystal-out {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.7);
-  z-index: 5;
-  font-family: 'Orbitron', monospace;
-  color: #ff3366;
-  letter-spacing: 0.3em;
-  font-weight: 800;
-  font-size: 0.85rem;
-  text-shadow: 0 0 12px rgba(255,51,102,0.7);
-}
+.wg-card:hover { transform: translateY(-6px); border-color: rgba(255,90,95,0.4); box-shadow: 0 18px 44px rgba(255,90,95,0.18); }
+.wg-photo { position: relative; height: 140px; background-size: cover; background-position: center;
+  display: grid; place-items: center; }
+.wg-photo .fb { font-size: 54px; filter: drop-shadow(0 6px 14px rgba(0,0,0,.4)); }
+.wg-photo::after { content:''; position:absolute; inset:0; background: linear-gradient(180deg, transparent 40%, rgba(20,10,9,0.55) 100%); }
+.wg-fav { position:absolute; top:10px; right:10px; z-index:2; width:34px; height:34px; border:none;
+  border-radius:50%; background: rgba(20,10,9,0.45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  cursor:pointer; font-size:16px; display:grid; place-items:center; transition: transform .2s; }
+.wg-fav:hover { transform: scale(1.15); }
+.wg-veg { position:absolute; top:10px; left:10px; z-index:2; width:18px; height:18px; border-radius:5px;
+  background: rgba(20,10,9,0.5); border:1.5px solid; display:grid; place-items:center; }
+.wg-veg i { width:8px; height:8px; border-radius:50%; display:block; }
+.wg-body { padding: 13px 15px 15px; display:flex; flex-direction:column; gap:7px; flex:1; }
+.wg-name { font-family:'Sora',sans-serif; font-weight:700; font-size:15px; color:#fff7f2; line-height:1.2; }
+.wg-meta { display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(255,242,235,0.6); font-family:'Inter',sans-serif; }
+.wg-row { display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:4px; }
+.wg-price { font-family:'Sora',sans-serif; font-weight:800; font-size:18px; color:#ff7a5c; }
+.wg-add { border:none; cursor:pointer; font-family:'Sora',sans-serif; font-weight:700; font-size:13px; color:#fff;
+  padding:9px 18px; border-radius:12px; background: linear-gradient(135deg,#ff5a5f,#ff9e3d);
+  box-shadow: 0 6px 16px rgba(255,90,95,0.4); transition: transform .15s, box-shadow .2s; letter-spacing:.3px; }
+.wg-add:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(255,90,95,0.5); }
+.wg-step { display:flex; align-items:center; gap:2px; border-radius:12px; overflow:hidden;
+  border:1px solid rgba(255,90,95,0.5); background: rgba(255,90,95,0.12); }
+.wg-step button { border:none; background:transparent; color:#ff7a5c; font-size:17px; font-weight:800; width:34px; height:34px; cursor:pointer; }
+.wg-step span { min-width:26px; text-align:center; font-family:'Sora',sans-serif; font-weight:700; color:#fff7f2; font-size:14px; }
+.wg-sold { position:absolute; inset:0; z-index:3; display:grid; place-items:center; background:rgba(16,7,6,0.66);
+  -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); }
+.wg-sold span { font-family:'Sora',sans-serif; font-weight:800; color:#ffb4a0; letter-spacing:1px; font-size:13px;
+  border:1px solid rgba(255,180,160,0.5); padding:6px 14px; border-radius:20px; }
 `;
 
-const Reticle: React.FC = () => (
-  <svg viewBox="0 0 60 60" className="crystal-reticle">
-    <circle cx="30" cy="30" r="22" stroke="#ff5a5f" strokeWidth="1" fill="none" opacity="0.5" />
-    <circle cx="30" cy="30" r="14" stroke="#ff5a5f" strokeWidth="1.5" fill="none" />
-    <line x1="30" y1="2"  x2="30" y2="12" stroke="#ff5a5f" strokeWidth="1.5" />
-    <line x1="30" y1="48" x2="30" y2="58" stroke="#ff5a5f" strokeWidth="1.5" />
-    <line x1="2"  y1="30" x2="12" y2="30" stroke="#ff5a5f" strokeWidth="1.5" />
-    <line x1="48" y1="30" x2="58" y2="30" stroke="#ff5a5f" strokeWidth="1.5" />
-    <circle cx="30" cy="30" r="2" fill="#ff5a5f" />
-  </svg>
-);
-
-export const DataCrystal: React.FC<DataCrystalProps> = ({
-  item,
-  isFavorite,
-  onAddToCart,
-  onDecrement,
-  onToggleFavorite,
-  cartQuantity,
-}) => {
-  const [hovered, setHovered] = useState(false);
-  const tiltRef = useTilt<HTMLDivElement>(10, 1.02);
-
-  const stock = item.stock_quantity;
-  const outOfStock = stock !== null && stock !== undefined && stock !== -1 && stock === 0;
-  const isAvailable = item.is_available && !outOfStock;
-  const atStockLimit = stock !== null && stock !== undefined && stock !== -1 && cartQuantity >= stock;
-  const lowStock = stock !== null && stock !== undefined && stock !== -1 && stock > 0 && stock <= 5;
+const DataCrystal: React.FC<DataCrystalProps> = ({ item, isFavorite, onAddToCart, onDecrement, onToggleFavorite, cartQuantity }) => {
+  const [imgOk, setImgOk] = useState(true);
+  const soldOut = item.is_available === false || item.stock_quantity === 0;
+  const veg = item.is_vegetarian !== false;
+  const vegColor = veg ? '#4caf50' : '#e2483d';
 
   return (
     <>
       <style>{css}</style>
-      <div
-        ref={tiltRef}
-        className={`crystal ${hovered ? 'hover' : ''}`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        {/* Image area */}
-        <div className="crystal-img">
-          {item.category && (
-            <div className="crystal-cat">{item.category}</div>
+      <div className="wg-card">
+        {/* Photo */}
+        <div
+          className="wg-photo"
+          style={item.image_url && imgOk ? { backgroundImage: `url(${item.image_url})` } : { background: 'linear-gradient(135deg, rgba(255,90,95,0.22), rgba(255,158,61,0.22))' }}
+        >
+          {item.image_url && imgOk && (
+            <img src={item.image_url} alt="" onError={() => setImgOk(false)} style={{ display: 'none' }} />
           )}
-          <button
-            className="crystal-fav"
-            onClick={() => onToggleFavorite(item.id)}
-            title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-            aria-label="Toggle favorite"
-          >
-            {isFavorite ? '❤' : '♡'}
+          {(!item.image_url || !imgOk) && <span className="fb">{emojiFor(item.category)}</span>}
+
+          <span className="wg-veg" style={{ borderColor: vegColor }}><i style={{ background: vegColor }} /></span>
+          <button className="wg-fav" onClick={() => onToggleFavorite(item.id)} aria-label="Favorite">
+            {isFavorite ? '❤️' : '🤍'}
           </button>
-          {item.image_url ? (
-            <img src={item.image_url} alt={item.name} />
-          ) : (
-            <div style={{
-              width: '100%', height: '100%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '3rem', opacity: 0.6,
-            }}>🍽️</div>
-          )}
-          <div className={`crystal-veg-dot ${item.is_vegetarian ? 'veg' : 'nonveg'}`} />
-          <Reticle />
-          {outOfStock && <div className="crystal-out">OUT OF STOCK</div>}
+
+          {soldOut && <div className="wg-sold"><span>SOLD OUT</span></div>}
         </div>
 
         {/* Body */}
-        <div className="crystal-body">
-          <div className="crystal-name">{item.name}</div>
-          {item.description && <p className="crystal-desc">{item.description}</p>}
-          <div className="crystal-foot">
-            <div className="crystal-price">₹{item.price}</div>
-            <div className="crystal-prep">⏱ {item.preparation_time ?? 10}m</div>
+        <div className="wg-body">
+          <div className="wg-name">{item.name}</div>
+          <div className="wg-meta">
+            {item.rating != null && <span>★ {Number(item.rating).toFixed(1)}</span>}
+            {item.preparation_time != null && <span>· {item.preparation_time} min</span>}
           </div>
-          {lowStock && (
-            <div className="crystal-stock-warn">⚠ Only {stock} left</div>
-          )}
-
-          {/* CTA — either Add or stepper */}
-          {cartQuantity > 0 && isAvailable ? (
-            <div className="crystal-stepper">
-              <button
-                className="crystal-step-btn dec"
-                onClick={() => onDecrement(item.id)}
-                aria-label="Decrease"
-              >−</button>
-              <div className="crystal-step-count">{cartQuantity}</div>
-              <button
-                className="crystal-step-btn"
-                onClick={() => !atStockLimit && onAddToCart(item)}
-                disabled={atStockLimit}
-                aria-label="Increase"
-                title={atStockLimit ? `Max ${stock}` : undefined}
-              >+</button>
-            </div>
-          ) : (
-            <button
-              className="crystal-cta"
-              onClick={() => isAvailable && onAddToCart(item)}
-              disabled={!isAvailable}
-            >
-              {outOfStock ? '◯ unavailable' : isAvailable ? '⊕ Acquire' : '◯ Offline'}
-            </button>
-          )}
+          <div className="wg-row">
+            <span className="wg-price">₹{Number(item.price).toFixed(0)}</span>
+            {soldOut ? (
+              <span style={{ color: 'rgba(255,242,235,0.4)', fontSize: 13, fontFamily: 'Inter,sans-serif' }}>Unavailable</span>
+            ) : cartQuantity > 0 ? (
+              <div className="wg-step">
+                <button onClick={() => onDecrement(item.id)}>−</button>
+                <span>{cartQuantity}</span>
+                <button onClick={() => onAddToCart(item)}>+</button>
+              </div>
+            ) : (
+              <button className="wg-add" onClick={() => onAddToCart(item)}>ADD +</button>
+            )}
+          </div>
         </div>
       </div>
     </>

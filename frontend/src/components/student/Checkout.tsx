@@ -311,7 +311,7 @@ const Checkout: React.FC<CheckoutProps> = ({
       >
         <h3
           style={{
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: 'Sora, sans-serif',
             fontSize: '0.85rem',
             color: 'rgba(255,255,255,0.5)',
             letterSpacing: '2px',
@@ -329,7 +329,7 @@ const Checkout: React.FC<CheckoutProps> = ({
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
                 fontSize: '0.95rem',
                 color: 'rgba(255,255,255,0.75)',
               }}
@@ -356,7 +356,7 @@ const Checkout: React.FC<CheckoutProps> = ({
             display: 'flex',
             flexDirection: 'column',
             gap: 6,
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
           }}
         >
           <div
@@ -395,7 +395,7 @@ const Checkout: React.FC<CheckoutProps> = ({
           >
             <span
               style={{
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
                 fontWeight: 700,
                 fontSize: '1rem',
                 color: '#ffffff',
@@ -405,7 +405,7 @@ const Checkout: React.FC<CheckoutProps> = ({
             </span>
             <span
               style={{
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: 'Sora, sans-serif',
                 fontSize: '1.5rem',
                 fontWeight: 900,
                 color: '#ffed4e',
@@ -420,7 +420,7 @@ const Checkout: React.FC<CheckoutProps> = ({
               textAlign: 'center',
               color: '#ff5a5f',
               fontSize: '0.82rem',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               marginTop: 2,
             }}
           >
@@ -441,7 +441,7 @@ const Checkout: React.FC<CheckoutProps> = ({
           background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
           color: '#ffffff',
           fontSize: '1.15rem',
-          fontFamily: 'Orbitron, sans-serif',
+          fontFamily: 'Sora, sans-serif',
           fontWeight: 900,
           cursor: 'pointer',
           letterSpacing: '1px',
@@ -478,7 +478,7 @@ const Checkout: React.FC<CheckoutProps> = ({
       {renderSpinner()}
       <p
         style={{
-          fontFamily: 'Rajdhani, sans-serif',
+          fontFamily: 'Inter, sans-serif',
           fontSize: '1.1rem',
           color: 'rgba(255,255,255,0.7)',
           letterSpacing: '1px',
@@ -550,7 +550,7 @@ const Checkout: React.FC<CheckoutProps> = ({
 
       <h2
         style={{
-          fontFamily: 'Orbitron, sans-serif',
+          fontFamily: 'Sora, sans-serif',
           fontSize: '1.4rem',
           fontWeight: 900,
           color: '#ff5a5f',
@@ -564,7 +564,7 @@ const Checkout: React.FC<CheckoutProps> = ({
         <>
           <div
             style={{
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontSize: '1rem',
               color: 'rgba(255,255,255,0.7)',
               letterSpacing: '1px',
@@ -578,7 +578,7 @@ const Checkout: React.FC<CheckoutProps> = ({
 
           <div
             style={{
-              fontFamily: 'Orbitron, sans-serif',
+              fontFamily: 'Sora, sans-serif',
               fontSize: '1.3rem',
               fontWeight: 700,
               color: '#ffffff',
@@ -589,7 +589,7 @@ const Checkout: React.FC<CheckoutProps> = ({
 
           <div
             style={{
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontSize: '1.05rem',
               color: '#ffed4e',
               fontWeight: 700,
@@ -602,7 +602,7 @@ const Checkout: React.FC<CheckoutProps> = ({
           {/* Bill status */}
           <div
             style={{
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontSize: '0.9rem',
               color: billPrinted === true
                 ? '#ff5a5f'
@@ -642,7 +642,7 @@ const Checkout: React.FC<CheckoutProps> = ({
           background: 'rgba(255, 90, 95,0.1)',
           color: '#ff5a5f',
           fontSize: '1rem',
-          fontFamily: 'Rajdhani, sans-serif',
+          fontFamily: 'Inter, sans-serif',
           fontWeight: 700,
           cursor: 'pointer',
           letterSpacing: '1px',
@@ -695,7 +695,7 @@ const Checkout: React.FC<CheckoutProps> = ({
 
       <h3
         style={{
-          fontFamily: 'Orbitron, sans-serif',
+          fontFamily: 'Sora, sans-serif',
           fontSize: '1.1rem',
           color: '#ff3366',
         }}
@@ -705,7 +705,7 @@ const Checkout: React.FC<CheckoutProps> = ({
 
       <p
         style={{
-          fontFamily: 'Rajdhani, sans-serif',
+          fontFamily: 'Inter, sans-serif',
           fontSize: '0.95rem',
           color: 'rgba(255,255,255,0.6)',
           maxWidth: 360,
@@ -725,7 +725,7 @@ const Checkout: React.FC<CheckoutProps> = ({
             background: 'rgba(255, 90, 95,0.1)',
             color: '#ff5a5f',
             fontSize: '1rem',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontWeight: 700,
             cursor: 'pointer',
             transition: 'all 0.2s',
@@ -744,7 +744,7 @@ const Checkout: React.FC<CheckoutProps> = ({
             background: 'rgba(255,255,255,0.05)',
             color: 'rgba(255,255,255,0.6)',
             fontSize: '1rem',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontWeight: 700,
             cursor: 'pointer',
             transition: 'all 0.2s',
@@ -768,14 +768,14 @@ const Checkout: React.FC<CheckoutProps> = ({
       border: '1px solid rgba(255, 90, 95,0.3)',
       background: 'rgba(255,255,255,0.04)',
       color: '#fff',
-      fontFamily: 'Rajdhani, sans-serif',
+      fontFamily: 'Inter, sans-serif',
       fontSize: '1rem',
       outline: 'none',
       boxSizing: 'border-box',
       transition: 'border-color 0.2s, box-shadow 0.2s',
     };
     const labelStyle: React.CSSProperties = {
-      fontFamily: 'Rajdhani, sans-serif',
+      fontFamily: 'Inter, sans-serif',
       fontSize: '0.78rem',
       fontWeight: 700,
       color: 'rgba(255,255,255,0.5)',
@@ -788,7 +788,7 @@ const Checkout: React.FC<CheckoutProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '2rem', marginBottom: 6 }}>👤</div>
-          <p style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem', color: 'rgba(255,255,255,0.6)', margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '1rem', color: 'rgba(255,255,255,0.6)', margin: 0, lineHeight: 1.5 }}>
             Enter your name to place an order.<br />
             <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.35)' }}>Roll number and phone are optional — used on your bill.</span>
           </p>
@@ -841,7 +841,7 @@ const Checkout: React.FC<CheckoutProps> = ({
             borderRadius: 8,
             padding: '10px 14px',
             color: '#ff3366',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontSize: '0.9rem',
           }}>
             ⚠️ {error}
@@ -858,7 +858,7 @@ const Checkout: React.FC<CheckoutProps> = ({
             background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
             color: '#fff',
             fontSize: '1.05rem',
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: 'Sora, sans-serif',
             fontWeight: 900,
             cursor: 'pointer',
             letterSpacing: '1px',

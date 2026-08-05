@@ -1,17 +1,8 @@
 import React from 'react';
 
 /**
- * CategoryChannels — radio-station-style horizontal selector.
- *
- * Replaces the old pill row. Each channel is a glowing icon-chip with:
- *   - A glyph (emoji or unicode) on the left
- *   - Channel name underneath
- *   - An animated horizontal scan-line that lights up only on the active one
- *   - A subtle count badge on the right when items are present
- *
- * Active state slides under the selected channel via a positioned indicator
- * bar so transitions feel continuous rather than discrete (cf. iOS segmented
- * controls).
+ * CategoryChannels — redesigned (Warm-Glass): a clean rounded search bar plus
+ * soft pill category chips, replacing the old HUD "channels". Same props.
  */
 interface Channel {
   id: string;
@@ -29,164 +20,59 @@ interface CategoryChannelsProps {
 }
 
 const css = `
-@keyframes channel-scan {
-  0%, 100% { transform: translateX(-100%); }
-  50%      { transform: translateX(100%); }
-}
-@keyframes search-glow {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 90, 95,0.18), 0 0 0 0 rgba(255, 90, 95,0); }
-  50%      { box-shadow: 0 0 0 1px rgba(255, 90, 95,0.4),  0 0 18px 0 rgba(255, 90, 95,0.18); }
-}
-
-.channels-frame {
-  position: relative;
-  margin: 20px 0 26px;
-}
-.channels-search {
-  position: relative;
-  margin-bottom: 16px;
-}
-.channels-search input {
-  width: 100%;
-  padding: 14px 18px 14px 50px;
-  border-radius: 12px;
-  background: rgba(7,16,14,0.6);
-  border: 1px solid rgba(255, 90, 95,0.18);
-  color: #fff;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 1rem;
-  letter-spacing: 0.04em;
-  outline: none;
-  transition: border-color 0.2s;
-  animation: search-glow 4s ease-in-out infinite;
-}
-.channels-search input::placeholder {
-  color: rgba(255,255,255,0.35);
-  letter-spacing: 0.1em;
-}
-.channels-search input:focus {
-  border-color: #ff5a5f;
-  animation: none;
-  box-shadow: 0 0 0 1px #ff5a5f, 0 0 22px rgba(255, 90, 95,0.3);
-}
-.channels-search-glyph {
-  position: absolute;
-  top: 50%; left: 18px;
-  transform: translateY(-50%);
-  color: #ff5a5f;
-  font-family: 'Orbitron', monospace;
-  font-size: 1rem;
-  pointer-events: none;
-  text-shadow: 0 0 8px #ff5a5f;
-}
-
-.channels-row {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 4px 0 8px;
-}
-.channels-row::-webkit-scrollbar { display: none; }
-
-.channel {
-  position: relative;
-  flex-shrink: 0;
-  padding: 12px 18px 14px;
-  min-width: 110px;
-  background: rgba(7,16,14,0.55);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-  font-family: 'Rajdhani', sans-serif;
-  color: rgba(255,255,255,0.65);
-  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.2s;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.channel:hover {
-  border-color: rgba(255, 90, 95,0.4);
-  color: #fff;
-}
-.channel.active {
-  border-color: #ff5a5f;
-  background:
-    linear-gradient(180deg, rgba(255, 90, 95,0.16) 0%, rgba(255, 90, 95,0.04) 100%);
-  color: #ff5a5f;
-  box-shadow: 0 0 18px rgba(255, 90, 95,0.25);
-}
-.channel.active::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #ff5a5f, transparent);
-  animation: channel-scan 2.2s linear infinite;
-}
-.channel-glyph {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-.channel-label {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-.channel-count {
-  position: absolute;
-  top: 6px; right: 8px;
-  font-family: 'Orbitron', monospace;
-  font-size: 0.55rem;
-  letter-spacing: 0.12em;
-  color: #ffed4e;
-  opacity: 0.85;
-}
+.wg-cat { margin: 8px 0 24px; display: flex; flex-direction: column; gap: 14px; }
+.wg-search { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 16px;
+  background: rgba(255,255,255,0.05); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,200,180,0.14); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+.wg-search span { font-size: 17px; opacity: .7; }
+.wg-search input { flex: 1; background: transparent; border: none; outline: none; color: #fff7f2;
+  font-family: 'Inter', sans-serif; font-size: 15px; }
+.wg-search input::placeholder { color: rgba(255,242,235,0.4); }
+.wg-chips { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.wg-chips::-webkit-scrollbar { display: none; }
+.wg-chip { flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 30px;
+  cursor: pointer; font-family: 'Sora', sans-serif; font-weight: 600; font-size: 13.5px; white-space: nowrap;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,200,180,0.12); color: rgba(255,242,235,0.72);
+  transition: all .2s; }
+.wg-chip:hover { border-color: rgba(255,90,95,0.4); color: #fff7f2; }
+.wg-chip.on { background: linear-gradient(135deg,#ff5a5f,#ff9e3d); border-color: transparent; color: #fff;
+  box-shadow: 0 6px 16px rgba(255,90,95,0.38); }
+.wg-chip .ct { font-size: 11px; opacity: .85; }
 `;
 
 export const CategoryChannels: React.FC<CategoryChannelsProps> = ({
   channels, active, onChange, search, onSearchChange,
-}) => {
-  return (
-    <>
-      <style>{css}</style>
-      <div className="channels-frame">
-        {/* Search bar with HUD glyph */}
-        <div className="channels-search">
-          <span className="channels-search-glyph">⌕</span>
-          <input
-            type="text"
-            placeholder="Query the menu…"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-
-        {/* Channel row */}
-        <div className="channels-row" role="tablist" aria-label="Categories">
-          {channels.map(ch => (
-            <button
-              key={ch.id}
-              className={`channel ${active === ch.id ? 'active' : ''}`}
-              onClick={() => onChange(ch.id)}
-              role="tab"
-              aria-selected={active === ch.id}
-              data-clickable
-            >
-              <span className="channel-glyph">{ch.glyph}</span>
-              <span className="channel-label">{ch.label}</span>
-              {ch.count !== undefined && ch.count > 0 && (
-                <span className="channel-count">{String(ch.count).padStart(2, '0')}</span>
-              )}
-            </button>
-          ))}
-        </div>
+}) => (
+  <>
+    <style>{css}</style>
+    <div className="wg-cat">
+      <div className="wg-search">
+        <span>🔍</span>
+        <input
+          type="text"
+          placeholder="Search dishes…"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
       </div>
-    </>
-  );
-};
+      <div className="wg-chips" role="tablist" aria-label="Categories">
+        {channels.map((ch) => (
+          <button
+            key={ch.id}
+            className={`wg-chip ${active === ch.id ? 'on' : ''}`}
+            onClick={() => onChange(ch.id)}
+            role="tab"
+            aria-selected={active === ch.id}
+            data-clickable
+          >
+            <span>{ch.glyph}</span>
+            <span>{ch.label}</span>
+            {ch.count != null && <span className="ct">{ch.count}</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  </>
+);
 
 export default CategoryChannels;

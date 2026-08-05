@@ -67,7 +67,7 @@ const glassInput: React.CSSProperties = {
   borderRadius: 10,
   padding: '10px 14px',
   color: '#fff',
-  fontFamily: 'Rajdhani, sans-serif',
+  fontFamily: 'Inter, sans-serif',
   fontSize: '0.95rem',
   outline: 'none',
   transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -86,7 +86,7 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
   marginBottom: 5,
   color: 'rgba(255,255,255,0.55)',
-  fontFamily: 'Rajdhani, sans-serif',
+  fontFamily: 'Inter, sans-serif',
   fontWeight: 600,
   fontSize: '0.78rem',
   textTransform: 'uppercase',
@@ -138,7 +138,7 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
                   border: `1px solid ${isActive && sc ? sc.border : isActive ? '#ff5a5f' : 'rgba(255,255,255,0.15)'}`,
                   background: isActive && sc ? sc.bg : isActive ? 'rgba(255, 90, 95,0.15)' : 'rgba(255,255,255,0.03)',
                   color: isActive && sc ? sc.text : isActive ? '#ff5a5f' : 'rgba(255,255,255,0.5)',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
                   fontSize: '0.82rem',
                   cursor: 'pointer',
@@ -160,7 +160,7 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
             color: '#ff5a5f',
             borderRadius: 10,
             padding: '7px 18px',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontWeight: 700,
             fontSize: '0.85rem',
             cursor: 'pointer',
@@ -184,7 +184,7 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
             style={{
               width: '100%',
               borderCollapse: 'collapse',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
             }}
           >
             <thead>
@@ -316,7 +316,7 @@ const OrdersTable: React.FC<{ orders: Order[]; onRefresh: () => void }> = ({ ord
                 padding: '40px 20px',
                 textAlign: 'center',
                 color: 'rgba(255,255,255,0.3)',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               No {statusFilter !== 'all' ? statusFilter : ''} orders found
@@ -495,7 +495,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
             color: '#ff5a5f',
             borderRadius: 12,
             padding: '11px 22px',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontWeight: 700,
             fontSize: '0.9rem',
             cursor: 'pointer',
@@ -522,7 +522,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
             style={{
               width: '100%',
               borderCollapse: 'collapse',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
             }}
           >
             <thead>
@@ -645,7 +645,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                         padding: '4px 14px',
                         fontSize: '0.73rem',
                         fontWeight: 700,
-                        fontFamily: 'Rajdhani, sans-serif',
+                        fontFamily: 'Inter, sans-serif',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
                         opacity: togglingId === item.id ? 0.5 : 1,
@@ -666,7 +666,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                           padding: '5px 12px',
                           fontSize: '0.78rem',
                           fontWeight: 700,
-                          fontFamily: 'Rajdhani, sans-serif',
+                          fontFamily: 'Inter, sans-serif',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                         }}
@@ -692,7 +692,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                           padding: '5px 12px',
                           fontSize: '0.78rem',
                           fontWeight: 700,
-                          fontFamily: 'Rajdhani, sans-serif',
+                          fontFamily: 'Inter, sans-serif',
                           cursor: deletingId === item.id ? 'not-allowed' : 'pointer',
                           transition: 'all 0.2s',
                           opacity: deletingId === item.id ? 0.5 : 1,
@@ -721,7 +721,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                 padding: '40px 20px',
                 textAlign: 'center',
                 color: 'rgba(255,255,255,0.3)',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               {search ? 'No items match your search' : 'No menu items yet'}
@@ -860,7 +860,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                         alignItems: 'center',
                         gap: 6,
                         cursor: 'pointer',
-                        fontFamily: 'Rajdhani, sans-serif',
+                        fontFamily: 'Inter, sans-serif',
                         fontWeight: 600,
                         fontSize: '0.9rem',
                         color:
@@ -895,7 +895,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                   color: '#ff5a5f',
                   borderRadius: 12,
                   padding: '12px 0',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
                   fontSize: '1rem',
                   cursor: saving ? 'not-allowed' : 'pointer',
@@ -914,7 +914,7 @@ const MenuManagement: React.FC<{ items: MenuItem[]; onRefresh: () => void }> = (
                   color: 'rgba(255,255,255,0.6)',
                   borderRadius: 12,
                   padding: '12px 0',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
                   fontSize: '1rem',
                   cursor: saving ? 'not-allowed' : 'pointer',
@@ -975,7 +975,7 @@ const StudentsTable: React.FC<{ students: Student[]; onRefresh: () => void }> = 
             color: '#ff5a5f',
             borderRadius: 10,
             padding: '10px 18px',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontWeight: 700,
             fontSize: '0.85rem',
             cursor: 'pointer',
@@ -988,7 +988,7 @@ const StudentsTable: React.FC<{ students: Student[]; onRefresh: () => void }> = 
       {/* Summary */}
       <div
         style={{
-          fontFamily: 'Rajdhani, sans-serif',
+          fontFamily: 'Inter, sans-serif',
           fontSize: '0.85rem',
           color: 'rgba(255,255,255,0.4)',
           marginBottom: 14,
@@ -1003,7 +1003,7 @@ const StudentsTable: React.FC<{ students: Student[]; onRefresh: () => void }> = 
             style={{
               width: '100%',
               borderCollapse: 'collapse',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
             }}
           >
             <thead>
@@ -1154,7 +1154,7 @@ const StudentsTable: React.FC<{ students: Student[]; onRefresh: () => void }> = 
                 padding: '40px 20px',
                 textAlign: 'center',
                 color: 'rgba(255,255,255,0.3)',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               {search ? 'No students match your search' : 'No students found'}
@@ -1413,7 +1413,7 @@ const OwnerDashboard: React.FC = () => {
           >
             <div
               style={{
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: 'Sora, sans-serif',
                 fontSize: '1.2rem',
                 fontWeight: 900,
                 background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
@@ -1429,7 +1429,7 @@ const OwnerDashboard: React.FC = () => {
                 color: 'rgba(255,255,255,0.4)',
                 marginTop: 4,
                 letterSpacing: 2,
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               OWNER PORTAL
@@ -1454,7 +1454,7 @@ const OwnerDashboard: React.FC = () => {
                   cursor: 'pointer',
                   width: '100%',
                   textAlign: 'left',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontSize: '1rem',
                   fontWeight: 600,
                   transition: 'all 0.3s',
@@ -1502,7 +1502,7 @@ const OwnerDashboard: React.FC = () => {
               paddingTop: 16,
               fontSize: '0.72rem',
               color: 'rgba(255,255,255,0.25)',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               textAlign: 'center',
               letterSpacing: 0.5,
             }}
@@ -1537,7 +1537,7 @@ const OwnerDashboard: React.FC = () => {
           >
             <h1
               style={{
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: 'Sora, sans-serif',
                 fontSize: '2rem',
                 fontWeight: 900,
                 background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
@@ -1556,7 +1556,7 @@ const OwnerDashboard: React.FC = () => {
                 padding: '8px 20px',
                 color: '#ffd700',
                 fontWeight: 600,
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
                 fontSize: '0.9rem',
               }}
             >
@@ -1589,7 +1589,7 @@ const OwnerDashboard: React.FC = () => {
               <div
                 style={{
                   color: 'rgba(255,255,255,0.4)',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontSize: '0.9rem',
                   letterSpacing: 1,
                 }}
@@ -1616,7 +1616,7 @@ const OwnerDashboard: React.FC = () => {
                         textAlign: 'center',
                         padding: 60,
                         color: 'rgba(255,255,255,0.4)',
-                        fontFamily: 'Orbitron, sans-serif',
+                        fontFamily: 'Sora, sans-serif',
                         letterSpacing: '0.25em',
                       }}
                     >

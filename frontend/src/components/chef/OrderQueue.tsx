@@ -70,7 +70,7 @@ const OrderQueue: React.FC<OrderQueueProps> = ({ orders, onStatusUpdate }) => {
                     boxShadow: `0 0 10px ${col.color}`,
                   }} />
                   <span style={{
-                    fontFamily: 'Orbitron, monospace',
+                    fontFamily: 'Sora, monospace',
                     fontSize: '13px',
                     fontWeight: '700',
                     color: col.color,
@@ -86,7 +86,7 @@ const OrderQueue: React.FC<OrderQueueProps> = ({ orders, onStatusUpdate }) => {
                   border: `1px solid ${col.color}55`,
                   borderRadius: '20px',
                   padding: '2px 12px',
-                  fontFamily: 'Orbitron, monospace',
+                  fontFamily: 'Sora, monospace',
                   fontSize: '13px',
                   fontWeight: '700',
                   color: col.color,
@@ -136,7 +136,7 @@ const OrderQueue: React.FC<OrderQueueProps> = ({ orders, onStatusUpdate }) => {
                       {col.status === 'pending' ? '🕐' : col.status === 'preparing' ? '👨‍🍳' : '🍽️'}
                     </div>
                     <span style={{
-                      fontFamily: 'Rajdhani, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                       fontSize: '14px',
                       color: `${col.color}66`,
                       letterSpacing: '1px',

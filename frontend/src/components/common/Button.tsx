@@ -104,7 +104,7 @@ const Button: React.FC<ButtonProps> = ({
     justifyContent: 'center',
     borderRadius: '10px',
     cursor: isDisabled ? 'not-allowed' : 'pointer',
-    fontFamily: "'Rajdhani', sans-serif",
+    fontFamily: "'Inter', sans-serif",
     fontWeight: 600,
     letterSpacing: '0.05em',
     textTransform: 'uppercase',

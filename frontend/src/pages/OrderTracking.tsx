@@ -123,7 +123,7 @@ const ProgressTracker: React.FC<{ status: string }> = ({ status }) => {
                 </div>
                 {/* Label */}
                 <div className="track-progress-label" style={{
-                  fontSize: '0.68rem', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
+                  fontSize: '0.68rem', fontFamily: 'Inter, sans-serif', fontWeight: 700,
                   color: isDone ? '#ff5a5f' : isCurrent ? '#ff5a5f' : 'rgba(255,255,255,0.25)',
                   textTransform: 'uppercase', letterSpacing: 0.5,
                   textAlign: 'center', whiteSpace: 'nowrap',
@@ -158,7 +158,7 @@ const RecentOrdersList: React.FC<{
 }> = ({ recentOrders, onSelect, loadingRecent }) => {
   if (loadingRecent) {
     return (
-      <div style={{ textAlign: 'center', padding: '24px', color: 'rgba(255,255,255,0.3)', fontFamily: 'Rajdhani, sans-serif' }}>
+      <div style={{ textAlign: 'center', padding: '24px', color: 'rgba(255,255,255,0.3)', fontFamily: 'Inter, sans-serif' }}>
         Loading recent orders...
       </div>
     );
@@ -186,11 +186,11 @@ const RecentOrdersList: React.FC<{
         display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
       }}>
         <span style={{
-          fontFamily: 'Orbitron, monospace', fontSize: '0.9rem',
+          fontFamily: 'Sora, monospace', fontSize: '0.9rem',
           color: '#ff5a5f', textShadow: '0 0 8px #ff5a5f',
         }}>◐</span>
         <span style={{
-          fontFamily: 'Orbitron, sans-serif', fontSize: '0.7rem', fontWeight: 700,
+          fontFamily: 'Sora, sans-serif', fontSize: '0.7rem', fontWeight: 700,
           color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.32em',
         }}>
           Recent Transmissions
@@ -226,13 +226,13 @@ const RecentOrdersList: React.FC<{
             >
               <div>
                 <div style={{
-                  fontFamily: 'Orbitron, sans-serif', fontSize: '0.85rem', fontWeight: 700,
+                  fontFamily: 'Sora, sans-serif', fontSize: '0.85rem', fontWeight: 700,
                   color: '#fff', letterSpacing: 0.5, marginBottom: 3,
                 }}>
                   {ord.order_number}
                 </div>
                 <div style={{
-                  fontFamily: 'Rajdhani, sans-serif', fontSize: '0.75rem',
+                  fontFamily: 'Inter, sans-serif', fontSize: '0.75rem',
                   color: 'rgba(255,255,255,0.35)',
                 }}>
                   {formatDateShort(ord.created_at)}
@@ -240,7 +240,7 @@ const RecentOrdersList: React.FC<{
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{
-                  fontFamily: 'Orbitron, sans-serif', fontSize: '0.8rem', fontWeight: 700,
+                  fontFamily: 'Sora, sans-serif', fontSize: '0.8rem', fontWeight: 700,
                   color: '#ffed4e',
                 }}>
                   ₹{Number(ord.total_amount).toLocaleString('en-IN')}
@@ -251,7 +251,7 @@ const RecentOrdersList: React.FC<{
                   color: statusColor,
                   borderRadius: 20,
                   padding: '3px 10px',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
                   fontSize: '0.72rem',
                   letterSpacing: 1,
@@ -481,11 +481,11 @@ const OrderTracking: React.FC = () => {
             {/* Brand brackets row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 6 }}>
               <span style={{
-                fontFamily: 'Orbitron, monospace', fontSize: '1rem',
+                fontFamily: 'Sora, monospace', fontSize: '1rem',
                 color: '#ff5a5f', textShadow: '0 0 10px #ff5a5f',
               }}>◈</span>
               <div className="track-logo" style={{
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: 'Sora, sans-serif',
                 fontSize: 'clamp(1.3rem, 4.5vw, 2.1rem)',
                 fontWeight: 900,
                 background: 'linear-gradient(180deg, #ffffff 0%, #ff5a5f 70%, #ff9e3d 100%)',
@@ -496,13 +496,13 @@ const OrderTracking: React.FC = () => {
                 SMART CANTEEN
               </div>
               <span style={{
-                fontFamily: 'Orbitron, monospace', fontSize: '1rem',
+                fontFamily: 'Sora, monospace', fontSize: '1rem',
                 color: '#ff5a5f', textShadow: '0 0 10px #ff5a5f',
               }}>◈</span>
             </div>
             <div style={{
               textAlign: 'center', color: 'rgba(255, 90, 95,0.65)',
-              fontFamily: 'Orbitron, sans-serif', fontSize: '0.7rem',
+              fontFamily: 'Sora, sans-serif', fontSize: '0.7rem',
               letterSpacing: '0.42em', textTransform: 'uppercase', marginBottom: 28,
             }}>
               · Order Tracking ·
@@ -513,7 +513,7 @@ const OrderTracking: React.FC = () => {
               <div style={{ position: 'relative' }}>
                 <span style={{
                   position: 'absolute', top: '50%', left: 18, transform: 'translateY(-50%)',
-                  fontFamily: 'Orbitron, monospace', fontSize: '1rem',
+                  fontFamily: 'Sora, monospace', fontSize: '1rem',
                   color: '#ff5a5f', textShadow: '0 0 8px #ff5a5f', pointerEvents: 'none',
                 }}>⌕</span>
                 <input
@@ -529,7 +529,7 @@ const OrderTracking: React.FC = () => {
                     borderRadius: 12,
                     padding: '15px 18px 15px 46px',
                     color: '#fff',
-                    fontFamily: 'Orbitron, monospace',
+                    fontFamily: 'Sora, monospace',
                     fontSize: '0.95rem',
                     letterSpacing: '0.14em',
                     width: '100%',
@@ -553,7 +553,7 @@ const OrderTracking: React.FC = () => {
                   borderRadius: 10,
                   padding: '15px 0',
                   color: '#ff5a5f',
-                  fontFamily: 'Orbitron, sans-serif',
+                  fontFamily: 'Sora, sans-serif',
                   fontWeight: 800,
                   fontSize: '0.78rem',
                   cursor: loading ? 'not-allowed' : 'pointer',
@@ -597,7 +597,7 @@ const OrderTracking: React.FC = () => {
                 background: 'rgba(255,51,102,0.08)',
                 border: '1px solid rgba(255,51,102,0.4)',
                 borderRadius: 10, color: '#ff3366',
-                fontFamily: 'Orbitron, monospace', fontSize: '0.78rem',
+                fontFamily: 'Sora, monospace', fontSize: '0.78rem',
                 letterSpacing: '0.12em', textAlign: 'center',
               }}>
                 {notFound
@@ -632,7 +632,7 @@ const OrderTracking: React.FC = () => {
                     style={{
                       background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
                       color: 'rgba(255,255,255,0.5)', borderRadius: 8, padding: '6px 12px',
-                      fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.8rem',
+                      fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.8rem',
                       cursor: 'pointer', transition: 'all 0.2s', letterSpacing: 1,
                     }}
                     onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#fff'}
@@ -641,10 +641,10 @@ const OrderTracking: React.FC = () => {
                     ← Back
                   </button>
                   <div>
-                    <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 900, color: '#ff5a5f', letterSpacing: 1 }}>
+                    <div style={{ fontFamily: 'Sora, sans-serif', fontSize: '1.3rem', fontWeight: 900, color: '#ff5a5f', letterSpacing: 1 }}>
                       {order.order_number}
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.38)', fontFamily: 'Rajdhani, sans-serif', marginTop: 3 }}>
+                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.38)', fontFamily: 'Inter, sans-serif', marginTop: 3 }}>
                       {formatDate(order.created_at)}
                     </div>
                   </div>
@@ -654,7 +654,7 @@ const OrderTracking: React.FC = () => {
                   style={{
                     background: 'rgba(255, 90, 95,0.08)', border: '1px solid rgba(255, 90, 95,0.25)',
                     color: '#ff5a5f', borderRadius: 10, padding: '7px 14px',
-                    fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.8rem',
+                    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.8rem',
                     cursor: 'pointer', transition: 'all 0.2s',
                   }}
                   onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(255, 90, 95,0.16)')}
@@ -672,8 +672,8 @@ const OrderTracking: React.FC = () => {
                   borderRadius: 16, textAlign: 'center',
                 }}>
                   <div style={{ fontSize: '3rem', marginBottom: 10 }}>❌</div>
-                  <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.1rem', fontWeight: 700, color: '#ff3366', marginBottom: 6 }}>Order Cancelled</div>
-                  <div style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Rajdhani, sans-serif', fontSize: '0.9rem' }}>
+                  <div style={{ fontFamily: 'Sora, sans-serif', fontSize: '1.1rem', fontWeight: 700, color: '#ff3366', marginBottom: 6 }}>Order Cancelled</div>
+                  <div style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}>
                     This order has been cancelled. Contact the canteen for assistance.
                   </div>
                 </div>
@@ -685,18 +685,18 @@ const OrderTracking: React.FC = () => {
                   {/* Status Display */}
                   <div style={{ textAlign: 'center', marginBottom: 28 }}>
                     <div className="track-status-label" style={{
-                      fontFamily: 'Orbitron, sans-serif', fontSize: '1.4rem', fontWeight: 900,
+                      fontFamily: 'Sora, sans-serif', fontSize: '1.4rem', fontWeight: 900,
                       color: isCompleted ? '#ff5a5f' : '#ff5a5f', letterSpacing: 2, marginBottom: 8,
                       textShadow: isCompleted ? '0 0 20px rgba(255, 90, 95,0.5)' : '0 0 20px rgba(255, 90, 95,0.5)',
                     }}>
                       {statusLabel[order.status] || order.status.toUpperCase()}
                     </div>
-                    <div style={{ color: isCompleted ? '#ff5a5f' : 'rgba(255,255,255,0.55)', fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem', fontWeight: 600 }}>
+                    <div style={{ color: isCompleted ? '#ff5a5f' : 'rgba(255,255,255,0.55)', fontFamily: 'Inter, sans-serif', fontSize: '1rem', fontWeight: 600 }}>
                       {getEstimatedTime(order.status)}
                     </div>
                     {/* Auto-refresh indicator */}
                     {!isCompleted && !isCancelled && (
-                      <div style={{ marginTop: 8, color: 'rgba(255,255,255,0.2)', fontFamily: 'Rajdhani, sans-serif', fontSize: '0.72rem', letterSpacing: 1 }}>
+                      <div style={{ marginTop: 8, color: 'rgba(255,255,255,0.2)', fontFamily: 'Inter, sans-serif', fontSize: '0.72rem', letterSpacing: 1 }}>
                         Auto-refreshing every 30s
                       </div>
                     )}
@@ -710,7 +710,7 @@ const OrderTracking: React.FC = () => {
               {order.items && order.items.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
                   <div style={{
-                    fontFamily: 'Orbitron, sans-serif', fontSize: '0.75rem', fontWeight: 700,
+                    fontFamily: 'Sora, sans-serif', fontSize: '0.75rem', fontWeight: 700,
                     color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12,
                   }}>ORDER ITEMS</div>
                   <div style={{
@@ -721,7 +721,7 @@ const OrderTracking: React.FC = () => {
                     {order.items.map((item, idx) => (
                       <div key={idx} style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        fontFamily: 'Rajdhani, sans-serif', fontSize: '0.95rem',
+                        fontFamily: 'Inter, sans-serif', fontSize: '0.95rem',
                         borderBottom: idx < order.items!.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                         paddingBottom: idx < order.items!.length - 1 ? 10 : 0,
                       }}>
@@ -744,7 +744,7 @@ const OrderTracking: React.FC = () => {
                 background: 'rgba(255,237,78,0.05)', border: '1px solid rgba(255,237,78,0.2)',
                 borderRadius: 14, flexWrap: 'wrap', gap: 12,
               }}>
-                <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '1.1rem', fontWeight: 900, color: '#ffed4e' }}>
+                <div style={{ fontFamily: 'Sora, sans-serif', fontSize: '1.1rem', fontWeight: 900, color: '#ffed4e' }}>
                   Total: ₹{Number(order.total_amount).toLocaleString('en-IN')}
                 </div>
                 <div>
@@ -752,13 +752,13 @@ const OrderTracking: React.FC = () => {
                     <span style={{
                       background: 'rgba(255, 90, 95,0.15)', border: '1px solid rgba(255, 90, 95,0.4)',
                       color: '#ff5a5f', borderRadius: 20, padding: '6px 16px',
-                      fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.88rem',
+                      fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.88rem',
                     }}>✅ Paid</span>
                   ) : (
                     <span style={{
                       background: 'rgba(255,237,78,0.12)', border: '1px solid rgba(255,237,78,0.3)',
                       color: '#ffed4e', borderRadius: 20, padding: '6px 16px',
-                      fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.88rem',
+                      fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.88rem',
                     }}>⏳ Payment Pending</span>
                   )}
                 </div>
@@ -768,7 +768,7 @@ const OrderTracking: React.FC = () => {
               {(order.student_name || order.student_roll) && (
                 <div style={{
                   marginTop: 14, fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)',
-                  fontFamily: 'Rajdhani, sans-serif', display: 'flex', gap: 16, flexWrap: 'wrap',
+                  fontFamily: 'Inter, sans-serif', display: 'flex', gap: 16, flexWrap: 'wrap',
                 }}>
                   {order.student_name && <span>👤 {order.student_name}</span>}
                   {order.student_roll && <span>🎓 {order.student_roll}</span>}
@@ -790,7 +790,7 @@ const OrderTracking: React.FC = () => {
           {!order && !loading && recentOrders.length === 0 && (
             <div style={{
               textAlign: 'center', marginTop: 30,
-              color: 'rgba(255,255,255,0.2)', fontFamily: 'Rajdhani, sans-serif',
+              color: 'rgba(255,255,255,0.2)', fontFamily: 'Inter, sans-serif',
               fontSize: '0.82rem', letterSpacing: 0.5,
             }}>
               Real-time order tracking powered by Smart Canteen

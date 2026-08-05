@@ -87,7 +87,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
           <div style={{
             textAlign: 'center', padding: '48px 20px',
             color: 'rgba(255,255,255,0.6)',
-            fontFamily: 'Rajdhani, sans-serif', fontSize: '1.1rem',
+            fontFamily: 'Inter, sans-serif', fontSize: '1.1rem',
           }}>
             Your cart is empty! 🛒
           </div>
@@ -124,21 +124,21 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                       {item.is_vegetarian && <span style={{ fontSize: '0.8rem' }}>🟢</span>}
                       <span style={{
-                        fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
+                        fontFamily: 'Inter, sans-serif', fontWeight: 700,
                         fontSize: '1rem', color: '#ffffff',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                         {item.name}
                       </span>
                     </div>
-                    <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
                       ₹{item.price.toFixed(2)} × {item.quantity} ={' '}
                       <span style={{ color: '#ff5a5f', fontWeight: 600 }}>
                         ₹{(item.price * item.quantity).toFixed(2)}
                       </span>
                     </span>
                     {atStockLimit && (
-                      <div style={{ fontSize: '0.72rem', color: '#ffed4e', fontFamily: 'Rajdhani, sans-serif', marginTop: 2 }}>
+                      <div style={{ fontSize: '0.72rem', color: '#ffed4e', fontFamily: 'Inter, sans-serif', marginTop: 2 }}>
                         ⚠️ Max {stock} available
                       </div>
                     )}
@@ -169,7 +169,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                     </button>
 
                     <span style={{
-                      fontFamily: 'Orbitron, sans-serif', fontSize: '0.9rem',
+                      fontFamily: 'Sora, sans-serif', fontSize: '0.9rem',
                       fontWeight: 700, color: '#ffffff', minWidth: 20, textAlign: 'center',
                     }}>
                       {item.quantity}
@@ -251,13 +251,13 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
             }}>
               <div>
                 <div style={{
-                  fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif', fontWeight: 700,
                   fontSize: '0.95rem', color: '#ff5a5f', marginBottom: 2,
                 }}>
                   💎 Available Points: {studentPoints}
                 </div>
                 {pointsToRedeem > 0 && (
-                  <div style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.85rem', color: 'rgba(255, 90, 95,0.7)' }}>
+                  <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'rgba(255, 90, 95,0.7)' }}>
                     Redeeming {pointsToRedeem} pts → saves ₹{actualPointsSavings.toFixed(2)}
                   </div>
                 )}
@@ -271,7 +271,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                     border: '1px solid rgba(255,51,102,0.4)',
                     background: 'rgba(255,51,102,0.1)',
                     color: '#ff3366', fontSize: '0.85rem',
-                    fontFamily: 'Rajdhani, sans-serif', fontWeight: 600,
+                    fontFamily: 'Inter, sans-serif', fontWeight: 600,
                     cursor: 'pointer', transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,51,102,0.2)'; }}
@@ -287,7 +287,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                     border: '1px solid rgba(255, 90, 95,0.4)',
                     background: 'rgba(255, 90, 95,0.1)',
                     color: '#ff5a5f', fontSize: '0.85rem',
-                    fontFamily: 'Rajdhani, sans-serif', fontWeight: 600,
+                    fontFamily: 'Inter, sans-serif', fontWeight: 600,
                     cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 90, 95,0.2)'; }}
@@ -297,7 +297,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
                   Use {displayPoints} pts (save ₹{displaySavings.toFixed(2)})
                 </button>
               ) : (
-                <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
                   Need 10+ points to redeem
                 </span>
               )}
@@ -313,7 +313,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
             border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: 12,
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'Rajdhani, sans-serif' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'Inter, sans-serif' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}>
                 <span>Subtotal</span>
                 <span>₹{cartTotal.toFixed(2)}</span>
@@ -330,7 +330,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff' }}>Total</span>
-                <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ffed4e', fontFamily: 'Orbitron, sans-serif' }}>
+                <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ffed4e', fontFamily: 'Sora, sans-serif' }}>
                   ₹{finalTotal.toFixed(2)}
                 </span>
               </div>
@@ -350,7 +350,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
             width: '100%', padding: '15px', borderRadius: 12, border: 'none',
             background: cartItems.length === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #ff5a5f, #00c870)',
             color: cartItems.length === 0 ? 'rgba(255,255,255,0.3)' : '#140a09',
-            fontSize: '1.05rem', fontFamily: 'Rajdhani, sans-serif', fontWeight: 800,
+            fontSize: '1.05rem', fontFamily: 'Inter, sans-serif', fontWeight: 800,
             cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s', letterSpacing: '1px',
             boxShadow: cartItems.length === 0 ? 'none' : '0 0 20px rgba(255, 90, 95,0.3)',

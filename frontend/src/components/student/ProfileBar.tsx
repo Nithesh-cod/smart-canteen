@@ -75,7 +75,7 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
     color: 'rgba(255,255,255,0.65)',
     cursor: 'pointer',
     fontSize: '0.8rem',
-    fontFamily: "'Orbitron', sans-serif",
+    fontFamily: "'Sora', sans-serif",
     fontWeight: 600,
     letterSpacing: '0.06em',
     transition: 'all 0.2s',
@@ -107,7 +107,7 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
             background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '1.1rem', fontWeight: 800, color: '#140a09',
-            fontFamily: "'Orbitron', sans-serif",
+            fontFamily: "'Sora', sans-serif",
             flexShrink: 0,
             animation: 'avatar-glow 3s ease-in-out infinite',
           }}>
@@ -116,7 +116,7 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
 
           <div>
             <div style={{
-              fontFamily: "'Orbitron', sans-serif",
+              fontFamily: "'Sora', sans-serif",
               fontSize: '1rem',
               fontWeight: 700,
               color: '#fff',
@@ -131,7 +131,7 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
                 padding: '3px 10px',
                 borderRadius: '50px',
                 fontSize: '0.72rem',
-                fontFamily: "'Orbitron', sans-serif",
+                fontFamily: "'Sora', sans-serif",
                 fontWeight: 700,
                 letterSpacing: '0.08em',
               }}>
@@ -141,7 +141,7 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
                 <span style={{
                   color: 'rgba(255,255,255,0.4)',
                   fontSize: '0.78rem',
-                  fontFamily: "'Rajdhani', sans-serif",
+                  fontFamily: "'Inter', sans-serif",
                 }}>
                   {student.roll_number}
                 </span>
@@ -164,7 +164,7 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
           <span style={{ fontSize: '1.3rem' }}>💎</span>
           <div>
             <div style={{
-              fontFamily: "'Orbitron', sans-serif",
+              fontFamily: "'Sora', sans-serif",
               fontSize: '1.3rem',
               fontWeight: 800,
               color: '#ff5a5f',
@@ -177,7 +177,7 @@ export const ProfileBar: React.FC<ProfileBarProps> = ({ student, onSwitch, onLog
               fontSize: '0.68rem',
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
-              fontFamily: "'Orbitron', sans-serif",
+              fontFamily: "'Sora', sans-serif",
             }}>
               Points
             </div>

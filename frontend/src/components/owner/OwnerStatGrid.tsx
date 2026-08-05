@@ -185,11 +185,11 @@ export const OwnerStatGrid: React.FC<OwnerStatGridProps> = ({ tiles }) => {
           margin-bottom: 14px;
         }
         .stat-tile-glyph {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 1rem;
         }
         .stat-tile-label {
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.66rem;
           letter-spacing: 0.22em;
           color: rgba(255,255,255,0.5);
@@ -202,7 +202,7 @@ export const OwnerStatGrid: React.FC<OwnerStatGridProps> = ({ tiles }) => {
           gap: 12px;
         }
         .stat-tile-value {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 1.85rem;
           font-weight: 800;
           letter-spacing: 0.02em;
@@ -212,7 +212,7 @@ export const OwnerStatGrid: React.FC<OwnerStatGridProps> = ({ tiles }) => {
         .stat-tile-delta {
           position: absolute;
           top: 16px; right: 38px;
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 0.62rem;
           letter-spacing: 0.12em;
           padding: 3px 8px;

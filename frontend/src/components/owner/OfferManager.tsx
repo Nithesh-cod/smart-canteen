@@ -61,7 +61,7 @@ const glassInput: React.CSSProperties = {
   borderRadius: 10,
   padding: '12px 16px',
   color: '#fff',
-  fontFamily: 'Rajdhani, sans-serif',
+  fontFamily: 'Inter, sans-serif',
   fontSize: '0.95rem',
   outline: 'none',
   boxSizing: 'border-box',
@@ -72,7 +72,7 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
   marginBottom: 6,
   color: 'rgba(255,255,255,0.6)',
-  fontFamily: 'Rajdhani, sans-serif',
+  fontFamily: 'Inter, sans-serif',
   fontWeight: 600,
   fontSize: '0.82rem',
   textTransform: 'uppercase',
@@ -230,7 +230,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
       >
         <h2
           style={{
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: 'Sora, sans-serif',
             fontSize: '1.3rem',
             fontWeight: 700,
             color: '#ff5a5f',
@@ -247,7 +247,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
             color: '#ff5a5f',
             borderRadius: 12,
             padding: '10px 22px',
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontWeight: 700,
             fontSize: '0.9rem',
             cursor: 'pointer',
@@ -280,7 +280,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
           <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎁</div>
           <div
             style={{
-              fontFamily: 'Orbitron, sans-serif',
+              fontFamily: 'Sora, sans-serif',
               fontSize: '1rem',
               color: 'rgba(255,255,255,0.45)',
               marginBottom: 8,
@@ -290,7 +290,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
           </div>
           <div
             style={{
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               color: 'rgba(255,255,255,0.3)',
               fontSize: '0.9rem',
             }}
@@ -340,7 +340,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
               >
                 <div
                   style={{
-                    fontFamily: 'Rajdhani, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     fontSize: '1.1rem',
                     fontWeight: 700,
                     color: '#fff',
@@ -362,7 +362,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                     padding: '4px 14px',
                     fontSize: '0.72rem',
                     fontWeight: 700,
-                    fontFamily: 'Rajdhani, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     cursor: 'pointer',
                     letterSpacing: 0.5,
                     whiteSpace: 'nowrap',
@@ -377,7 +377,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
               {/* Description */}
               <div
                 style={{
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontSize: '0.88rem',
                   color: 'rgba(255,255,255,0.55)',
                   marginBottom: 14,
@@ -399,7 +399,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                       padding: '4px 12px',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      fontFamily: 'Rajdhani, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                     }}
                   >
                     {offer.discount_percentage}% off
@@ -415,7 +415,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                       padding: '4px 12px',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      fontFamily: 'Rajdhani, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                     }}
                   >
                     ₹{offer.discount_amount} off
@@ -430,7 +430,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                       borderRadius: 8,
                       padding: '4px 12px',
                       fontSize: '0.8rem',
-                      fontFamily: 'Rajdhani, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                     }}
                   >
                     Min ₹{offer.min_order_amount}
@@ -443,7 +443,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                 style={{
                   fontSize: '0.8rem',
                   color: 'rgba(255,255,255,0.38)',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   marginBottom: 16,
                 }}
               >
@@ -461,7 +461,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                     color: '#ff5a5f',
                     borderRadius: 9,
                     padding: '8px 0',
-                    fontFamily: 'Rajdhani, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     fontWeight: 700,
                     fontSize: '0.85rem',
                     cursor: 'pointer',
@@ -488,7 +488,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                     color: '#ff3366',
                     borderRadius: 9,
                     padding: '8px 0',
-                    fontFamily: 'Rajdhani, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     fontWeight: 700,
                     fontSize: '0.85rem',
                     cursor: deletingId === offer.id ? 'not-allowed' : 'pointer',
@@ -564,7 +564,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                       alignItems: 'center',
                       gap: 8,
                       cursor: 'pointer',
-                      fontFamily: 'Rajdhani, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                       fontWeight: 600,
                       color:
                         formData.discountType === dt
@@ -714,7 +714,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
               </div>
               <span
                 style={{
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontWeight: 600,
                   color: formData.is_active ? '#ff5a5f' : 'rgba(255,255,255,0.45)',
                   fontSize: '0.9rem',
@@ -738,7 +738,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                   color: '#ff5a5f',
                   borderRadius: 12,
                   padding: '13px 0',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
                   fontSize: '1rem',
                   cursor: saving ? 'not-allowed' : 'pointer',
@@ -759,7 +759,7 @@ const OfferManager: React.FC<OfferManagerProps> = ({ offers, onRefresh }) => {
                   color: 'rgba(255,255,255,0.6)',
                   borderRadius: 12,
                   padding: '13px 0',
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
                   fontSize: '1rem',
                   cursor: saving ? 'not-allowed' : 'pointer',

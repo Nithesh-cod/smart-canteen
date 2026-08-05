@@ -90,7 +90,7 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
       <span style={{ fontSize: 'clamp(1rem, 3vw, 1.3rem)' }}>🎁</span>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <div style={{
-          fontFamily: 'Orbitron, sans-serif',
+          fontFamily: 'Sora, sans-serif',
           fontWeight: 700,
           fontSize: 'clamp(0.65rem, 2vw, 0.75rem)',
           color: '#ff9e3d',
@@ -100,7 +100,7 @@ const OfferBanner: React.FC<{ offers: ActiveOffer[] }> = ({ offers }) => {
         </div>
         {offer.description && (
           <div style={{
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontSize: 'clamp(0.7rem, 2vw, 0.78rem)',
             color: 'rgba(255,255,255,0.55)',
             marginTop: 2,
@@ -403,21 +403,21 @@ const StudentKiosk: React.FC = () => {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px',
               background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255, 90, 95,0.3)', borderRadius: 30,
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
             }}>
               <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{currentStudent.name}</span>
               <span style={{ color: '#ffed4e', fontWeight: 700, fontSize: '0.85rem' }}>★ {currentStudent.points ?? 0}</span>
             </div>
             <button onClick={handleKioskLogout} style={{
               background: 'rgba(255,51,102,0.12)', border: '1px solid rgba(255,51,102,0.35)', color: '#ff5577',
-              borderRadius: 30, padding: '8px 16px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
+              borderRadius: 30, padding: '8px 16px', fontFamily: 'Inter, sans-serif', fontWeight: 700,
               fontSize: '0.82rem', cursor: 'pointer', letterSpacing: 0.5,
             }}>Logout</button>
           </>
         ) : (
           <button onClick={() => setShowLogin(true)} style={{
             background: 'rgba(255, 90, 95,0.12)', border: '1px solid rgba(255, 90, 95,0.4)', color: '#ff5a5f',
-            borderRadius: 30, padding: '9px 20px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
+            borderRadius: 30, padding: '9px 20px', fontFamily: 'Inter, sans-serif', fontWeight: 700,
             fontSize: '0.85rem', cursor: 'pointer', letterSpacing: 0.5,
           }}>⚡ Sign In / Sign Up</button>
         )}
@@ -497,7 +497,7 @@ const StudentKiosk: React.FC = () => {
               <h1
                 className="kiosk-title"
                 style={{
-                  fontFamily: 'Orbitron, sans-serif',
+                  fontFamily: 'Sora, sans-serif',
                   fontSize: '1.75rem',
                   fontWeight: 900,
                   background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
@@ -520,7 +520,7 @@ const StudentKiosk: React.FC = () => {
                 fontSize: '0.7rem',
                 letterSpacing: '2.5px',
                 color: 'rgba(255,255,255,0.45)',
-                fontFamily: 'Rajdhani, sans-serif',
+                fontFamily: 'Inter, sans-serif',
                 margin: '3px 0 0 0',
               }}
             >
@@ -534,7 +534,7 @@ const StudentKiosk: React.FC = () => {
               <div
                 className="kiosk-cart-hint"
                 style={{
-                  fontFamily: 'Rajdhani, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                   fontSize: '0.88rem',
                   color: 'rgba(255, 90, 95,0.75)',
                   letterSpacing: '0.5px',
@@ -652,7 +652,7 @@ const StudentKiosk: React.FC = () => {
               fontSize: '0.8rem',
               fontWeight: 700,
               border: '2px solid #140a09',
-              fontFamily: 'Orbitron, sans-serif',
+              fontFamily: 'Sora, sans-serif',
               animation: cartBouncing ? 'badgePop 0.4s ease' : 'none',
             }}
           >

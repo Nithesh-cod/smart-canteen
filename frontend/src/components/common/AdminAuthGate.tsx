@@ -121,7 +121,7 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
   if (status === 'checking') {
     return (
       <div style={pageStyle}>
-        <div style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem' }}>
+        <div style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Inter, sans-serif', fontSize: '1rem' }}>
           Loading…
         </div>
       </div>
@@ -205,35 +205,35 @@ const cardStyle: React.CSSProperties = {
   boxShadow: '0 0 60px rgba(255, 90, 95,0.08)',
 };
 const headingStyle: React.CSSProperties = {
-  fontFamily: 'Orbitron, sans-serif', fontSize: '1.3rem', fontWeight: 900,
+  fontFamily: 'Sora, sans-serif', fontSize: '1.3rem', fontWeight: 900,
   background: 'linear-gradient(135deg, #ff5a5f, #ff9e3d)',
   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0,
 };
 const subStyle: React.CSSProperties = {
-  fontFamily: 'Rajdhani, sans-serif', fontSize: '0.9rem',
+  fontFamily: 'Inter, sans-serif', fontSize: '0.9rem',
   color: 'rgba(255,255,255,0.45)', marginTop: 6,
 };
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontFamily: 'Rajdhani, sans-serif', fontSize: '0.75rem',
+  display: 'block', fontFamily: 'Inter, sans-serif', fontSize: '0.75rem',
   fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '1.5px',
   textTransform: 'uppercase', marginBottom: 6,
 };
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '12px 16px', borderRadius: 10,
   border: '1px solid rgba(255, 90, 95,0.25)', background: 'rgba(255,255,255,0.04)',
-  color: '#fff', fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem',
+  color: '#fff', fontFamily: 'Inter, sans-serif', fontSize: '1rem',
   outline: 'none', boxSizing: 'border-box',
 };
 const btnStyle: React.CSSProperties = {
   width: '100%', padding: '13px', borderRadius: 12, border: 'none',
   background: 'linear-gradient(135deg, rgba(255, 90, 95,0.25), rgba(255, 158, 61,0.25))',
-  color: '#ff5a5f', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
+  color: '#ff5a5f', fontFamily: 'Sora, sans-serif', fontWeight: 700,
   fontSize: '0.95rem', letterSpacing: '0.5px',
 };
 const errorStyle: React.CSSProperties = {
   background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.35)',
   borderRadius: 8, padding: '10px 14px', color: '#ff3366',
-  fontFamily: 'Rajdhani, sans-serif', fontSize: '0.88rem',
+  fontFamily: 'Inter, sans-serif', fontSize: '0.88rem',
 };
 
 export default AdminAuthGate;

@@ -110,9 +110,9 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
         borderColor: 'rgba(255, 90, 95,0.4)',
         borderWidth: 1,
         titleColor: '#ff5a5f',
-        titleFont: { family: 'Orbitron, monospace', size: 11, weight: 'normal' as const },
+        titleFont: { family: 'Sora, monospace', size: 11, weight: 'normal' as const },
         bodyColor: '#fff',
-        bodyFont: { family: 'Rajdhani, sans-serif', size: 13, weight: 'normal' as const },
+        bodyFont: { family: 'Inter, sans-serif', size: 13, weight: 'normal' as const },
         padding: 10,
         cornerRadius: 8,
         displayColors: false,
@@ -124,13 +124,13 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
     scales: {
       x: {
         grid: { display: false, drawBorder: false },
-        ticks: { color: 'rgba(255,255,255,0.45)', font: { family: 'Orbitron, monospace', size: 11 } },
+        ticks: { color: 'rgba(255,255,255,0.45)', font: { family: 'Sora, monospace', size: 11 } },
       },
       y: {
         grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
         ticks: {
           color: 'rgba(255,255,255,0.45)',
-          font: { family: 'Orbitron, monospace', size: 11 },
+          font: { family: 'Sora, monospace', size: 11 },
           callback: (v: any) => `₹${Math.round(Number(v) || 0).toLocaleString('en-IN')}`,
         },
       },
@@ -172,20 +172,20 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
           margin-bottom: 8px;
         }
         .sales-glyph {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 1.15rem;
           color: #ff5a5f;
           text-shadow: 0 0 10px #ff5a5f;
         }
         .sales-title {
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.78rem;
           letter-spacing: 0.32em;
           color: rgba(255,255,255,0.6);
           text-transform: uppercase;
         }
         .sales-big {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 2.6rem;
           font-weight: 900;
           color: #ff5a5f;
@@ -195,7 +195,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
         }
         .sales-sub {
           margin-top: 8px;
-          font-family: 'Rajdhani', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 0.85rem;
           color: rgba(255,255,255,0.5);
           letter-spacing: 0.08em;
@@ -210,7 +210,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
         }
         .period-chip {
           padding: 8px 18px;
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.7rem;
           letter-spacing: 0.18em;
           color: rgba(255,255,255,0.5);
@@ -242,7 +242,7 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
           background: linear-gradient(180deg,
             rgba(7,16,14,0.4) 0%,
             rgba(7,16,14,0.85) 100%);
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           letter-spacing: 0.25em;
           text-transform: uppercase;
           gap: 6px;
@@ -270,14 +270,14 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
           display: flex; flex-direction: column; gap: 2px;
         }
         .sales-foot-label {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 0.6rem;
           letter-spacing: 0.18em;
           text-transform: uppercase;
           color: rgba(255,255,255,0.4);
         }
         .sales-foot-value {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 1rem;
           color: #fff;
           font-weight: 700;

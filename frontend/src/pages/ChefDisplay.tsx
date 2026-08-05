@@ -19,7 +19,7 @@ const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: Men
     .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
   // Crystal-language stat tiles — same notched-polygon shape as OwnerStatGrid.
-  // Numerical glyphs render as Orbitron monospace with the value padded to
+  // Numerical glyphs render as Sora monospace with the value padded to
   // 2 digits so single-digit counts don't make the layout dance, and the
   // big number gets a colour-matched glow that matches the tile tone.
   const stats: Array<{
@@ -68,25 +68,25 @@ const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: Men
           display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
         }
         .chef-stat-glyph {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 0.95rem; line-height: 1;
         }
         .chef-stat-label {
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.6rem;
           letter-spacing: 0.22em;
           color: rgba(255,255,255,0.5);
           text-transform: uppercase;
         }
         .chef-stat-value {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 1.9rem;
           font-weight: 900;
           line-height: 1;
           letter-spacing: 0.02em;
         }
         .chef-stat-sub {
-          font-family: 'Orbitron', monospace;
+          font-family: 'Sora', monospace;
           font-size: 0.6rem;
           letter-spacing: 0.18em;
           text-transform: uppercase;
@@ -198,7 +198,7 @@ const ChefOrderCard: React.FC<{
           <div style={{
             position: 'absolute', top: 12, right: 16,
             background: '#ffed4e', color: '#140a09',
-            fontSize: '0.55rem', fontFamily: 'Orbitron, monospace', fontWeight: 800,
+            fontSize: '0.55rem', fontFamily: 'Sora, monospace', fontWeight: 800,
             padding: '3px 7px', borderRadius: 3, letterSpacing: '0.2em',
             animation: 'chef-card-newpulse 1.2s ease-in-out infinite',
             textShadow: 'none',
@@ -212,7 +212,7 @@ const ChefOrderCard: React.FC<{
         }}>
           <span style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            fontFamily: 'Orbitron, monospace', fontSize: '0.78rem', fontWeight: 700,
+            fontFamily: 'Sora, monospace', fontSize: '0.78rem', fontWeight: 700,
             color: cfg.border, letterSpacing: '0.15em',
             textShadow: `0 0 10px ${cfg.border}88`,
           }}>
@@ -220,7 +220,7 @@ const ChefOrderCard: React.FC<{
             #{order.order_number}
           </span>
           <span style={{
-            fontFamily: 'Orbitron, monospace', fontSize: '0.65rem',
+            fontFamily: 'Sora, monospace', fontSize: '0.65rem',
             color: isOld ? '#ff3366' : 'rgba(255,255,255,0.45)',
             fontWeight: isOld ? 700 : 500,
             letterSpacing: '0.12em',
@@ -232,17 +232,17 @@ const ChefOrderCard: React.FC<{
         {/* Student info */}
         {(order.student_name || order.student_roll) && (
           <div style={{
-            fontFamily: 'Rajdhani, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             color: 'rgba(255,255,255,0.78)',
             marginBottom: 12,
             display: 'flex', alignItems: 'center', gap: 8,
             fontSize: '0.92rem',
           }}>
-            <span style={{ color: cfg.border, fontFamily: 'Orbitron, monospace', fontSize: '0.85rem' }}>◯</span>
+            <span style={{ color: cfg.border, fontFamily: 'Sora, monospace', fontSize: '0.85rem' }}>◯</span>
             <span style={{ fontWeight: 600 }}>{order.student_name}</span>
             {order.student_roll && (
               <span style={{
-                fontFamily: 'Orbitron, monospace',
+                fontFamily: 'Sora, monospace',
                 color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem',
                 letterSpacing: '0.06em',
               }}>· {order.student_roll}</span>
@@ -265,11 +265,11 @@ const ChefOrderCard: React.FC<{
               borderBottom: idx < (order.items?.length ?? 0) - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
             }}>
               <span style={{
-                fontFamily: 'Rajdhani, sans-serif', fontSize: '0.92rem',
+                fontFamily: 'Inter, sans-serif', fontSize: '0.92rem',
                 color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: 7,
               }}>
                 <span style={{
-                  color: cfg.border, fontWeight: 800, fontFamily: 'Orbitron, monospace',
+                  color: cfg.border, fontWeight: 800, fontFamily: 'Sora, monospace',
                   fontSize: '0.78rem', textShadow: `0 0 8px ${cfg.border}66`,
                   background: `${cfg.border}14`,
                   padding: '2px 6px', borderRadius: 4, minWidth: 26, textAlign: 'center',
@@ -277,14 +277,14 @@ const ChefOrderCard: React.FC<{
                 {item.item_name}
               </span>
               <span style={{
-                fontFamily: 'Orbitron, monospace', fontSize: '0.72rem',
+                fontFamily: 'Sora, monospace', fontSize: '0.72rem',
                 color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em',
               }}>
                 ₹{(item.price * item.quantity).toFixed(0)}
               </span>
             </div>
           )) : (
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'Rajdhani, sans-serif' }}>No item details</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'Inter, sans-serif' }}>No item details</span>
           )}
         </div>
 
@@ -294,11 +294,11 @@ const ChefOrderCard: React.FC<{
           marginBottom: 14, paddingTop: 4,
         }}>
           <span style={{
-            fontFamily: 'Orbitron, monospace', fontSize: '0.6rem',
+            fontFamily: 'Sora, monospace', fontSize: '0.6rem',
             color: 'rgba(255,255,255,0.4)', letterSpacing: '0.22em', textTransform: 'uppercase',
           }}>Total Due</span>
           <span style={{
-            fontFamily: 'Orbitron, monospace', fontSize: '1rem',
+            fontFamily: 'Sora, monospace', fontSize: '1rem',
             color: '#ffed4e', fontWeight: 800,
             textShadow: '0 0 14px rgba(255,237,78,0.5)',
             letterSpacing: '0.02em',
@@ -307,7 +307,7 @@ const ChefOrderCard: React.FC<{
           </span>
         </div>
 
-        {/* Action buttons per status — Orbitron caps + glyphs to match the
+        {/* Action buttons per status — Sora caps + glyphs to match the
             crystal language used everywhere else. */}
         {order.status === 'pending' && (
           <div style={{ display: 'flex', gap: 8 }}>
@@ -355,7 +355,7 @@ const ChefOrderCard: React.FC<{
               borderRadius: '9px',
               color: isSpeaking ? '#ffa500' : '#ffed4e',
               fontSize: '12px',
-              fontFamily: 'Rajdhani, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontWeight: '700',
               letterSpacing: '1px',
               cursor: isSpeaking ? 'not-allowed' : 'pointer',
@@ -406,7 +406,7 @@ const ActionBtn: React.FC<{
         color,
         fontSize: '13px',
         fontWeight: '700',
-        fontFamily: 'Rajdhani, sans-serif',
+        fontFamily: 'Inter, sans-serif',
         cursor: 'pointer',
         letterSpacing: '1px',
         transition: 'all 0.2s ease',
@@ -458,7 +458,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
     return (
       <div style={{ textAlign: 'center', padding: '80px 20px', color: 'rgba(255,255,255,0.3)' }}>
         <div style={{ fontSize: '4rem', marginBottom: 16 }}>🍽️</div>
-        <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 13, letterSpacing: 3, color: 'rgba(255,255,255,0.25)' }}>NO ORDERS YET TODAY</div>
+        <div style={{ fontFamily: 'Sora, monospace', fontSize: 13, letterSpacing: 3, color: 'rgba(255,255,255,0.25)' }}>NO ORDERS YET TODAY</div>
       </div>
     );
   }
@@ -483,15 +483,15 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
           }}>
             <span style={{ fontSize: 26 }}>{s.icon}</span>
             <div>
-              <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 20, fontWeight: 900, color: s.color, lineHeight: 1, textShadow: `0 0 12px ${s.color}66` }}>{s.value}</div>
-              <div style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 3 }}>{s.label}</div>
+              <div style={{ fontFamily: 'Sora, monospace', fontSize: 20, fontWeight: 900, color: s.color, lineHeight: 1, textShadow: `0 0 12px ${s.color}66` }}>{s.value}</div>
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 3 }}>{s.label}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Section label */}
-      <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(255, 90, 95,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
+      <div style={{ fontFamily: 'Sora, monospace', fontSize: 11, color: 'rgba(255, 90, 95,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
         🍽️ Items Ordered Today — sorted by popularity
       </div>
 
@@ -513,7 +513,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
               <div style={{
                 position: 'absolute', top: 8, right: 8, zIndex: 2,
                 background: '#ffed4e', color: '#140a09',
-                fontSize: 8, fontFamily: 'Orbitron, monospace', fontWeight: 700,
+                fontSize: 8, fontFamily: 'Sora, monospace', fontWeight: 700,
                 padding: '2px 7px', borderRadius: 4, letterSpacing: 1,
               }}>🏆 TOP</div>
             )}
@@ -522,7 +522,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
               position: 'absolute', top: 8, left: 8, zIndex: 2,
               background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
               borderRadius: 6, padding: '2px 8px',
-              fontFamily: 'Orbitron, monospace', fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 700,
+              fontFamily: 'Sora, monospace', fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 700,
             }}>#{idx + 1}</div>
 
             {/* Image */}
@@ -536,7 +536,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
             {/* Info */}
             <div style={{ padding: '12px 13px 14px' }}>
               <div style={{
-                fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 14,
+                fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
                 color: '#fff', marginBottom: 10, lineHeight: 1.25,
                 display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
               }}>{item.name}</div>
@@ -544,9 +544,9 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
                 <div style={{
                   background: 'rgba(255, 90, 95,0.1)', border: '1px solid rgba(255, 90, 95,0.35)',
                   borderRadius: 20, padding: '3px 10px',
-                  fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#ff5a5f',
+                  fontFamily: 'Sora, monospace', fontSize: 11, fontWeight: 700, color: '#ff5a5f',
                 }}>×{item.quantity}</div>
-                <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, fontWeight: 700, color: '#ffed4e' }}>
+                <div style={{ fontFamily: 'Sora, monospace', fontSize: 11, fontWeight: 700, color: '#ffed4e' }}>
                   ₹{item.revenue.toFixed(0)}
                 </div>
               </div>
@@ -558,7 +558,7 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
       {/* Completed orders list */}
       {completed.length > 0 && (
         <>
-          <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 11, color: 'rgba(255, 90, 95,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
+          <div style={{ fontFamily: 'Sora, monospace', fontSize: 11, color: 'rgba(255, 90, 95,0.5)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
             ✅ Completed Orders Today ({completed.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -569,19 +569,19 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'Orbitron, monospace', fontSize: 12, color: '#ff5a5f', fontWeight: 700 }}>
+                  <span style={{ fontFamily: 'Sora, monospace', fontSize: 12, color: '#ff5a5f', fontWeight: 700 }}>
                     #{order.order_number}
                   </span>
                   {order.student_name && (
-                    <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
                       👤 {order.student_name}
                     </span>
                   )}
-                  <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.3)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.3)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {(order.items ?? []).map(i => `${i.quantity}× ${i.item_name}`).join('  ·  ')}
                   </span>
                 </div>
-                <span style={{ fontFamily: 'Orbitron, monospace', fontSize: 13, color: '#ffed4e', fontWeight: 700 }}>
+                <span style={{ fontFamily: 'Sora, monospace', fontSize: 13, color: '#ffed4e', fontWeight: 700 }}>
                   ₹{Number(order.total_amount).toFixed(0)}
                 </span>
               </div>
@@ -637,20 +637,20 @@ const OrdersTab: React.FC<{
               }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{
-                  fontFamily: 'Orbitron, monospace', fontSize: '0.95rem',
+                  fontFamily: 'Sora, monospace', fontSize: '0.95rem',
                   color: col.color, textShadow: `0 0 8px ${col.color}`,
                 }}>
                   {col.status === 'pending' ? '◷' : col.status === 'preparing' ? '◈' : '✦'}
                 </span>
                 <span style={{
-                  fontFamily: 'Orbitron, sans-serif', fontSize: '0.72rem', fontWeight: 700,
+                  fontFamily: 'Sora, sans-serif', fontSize: '0.72rem', fontWeight: 700,
                   color: col.color, letterSpacing: '0.28em', textTransform: 'uppercase',
                 }}>
                   {col.label}
                 </span>
               </div>
               <div style={{
-                fontFamily: 'Orbitron, monospace', fontSize: '0.85rem', fontWeight: 800,
+                fontFamily: 'Sora, monospace', fontSize: '0.85rem', fontWeight: 800,
                 color: col.color, padding: '4px 14px',
                 background: `${col.color}1a`, border: `1px solid ${col.color}55`,
                 borderRadius: 100, textShadow: `0 0 8px ${col.color}55`,
@@ -683,14 +683,14 @@ const OrdersTab: React.FC<{
                   clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)',
                 }}>
                   <div style={{
-                    fontFamily: 'Orbitron, monospace', fontSize: '2.2rem',
+                    fontFamily: 'Sora, monospace', fontSize: '2.2rem',
                     color: `${col.color}55`, marginBottom: 10,
                     textShadow: `0 0 16px ${col.color}33`,
                   }}>
                     ◯
                   </div>
                   <span style={{
-                    fontFamily: 'Orbitron, sans-serif', fontSize: '0.68rem',
+                    fontFamily: 'Sora, sans-serif', fontSize: '0.68rem',
                     color: `${col.color}99`, letterSpacing: '0.28em', textTransform: 'uppercase',
                   }}>
                     Queue Clear
@@ -733,11 +733,11 @@ const DeleteModal: React.FC<{
     }}>
       <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
       <h3 style={{
-        fontFamily: 'Orbitron, monospace', fontSize: '16px', fontWeight: '700',
+        fontFamily: 'Sora, monospace', fontSize: '16px', fontWeight: '700',
         color: '#ff3366', letterSpacing: '2px', marginBottom: '12px',
       }}>DELETE ITEM</h3>
       <p style={{
-        fontFamily: 'Rajdhani, sans-serif', fontSize: '15px',
+        fontFamily: 'Inter, sans-serif', fontSize: '15px',
         color: 'rgba(255,255,255,0.7)', marginBottom: '28px', lineHeight: 1.5,
       }}>
         Are you sure you want to delete <strong style={{ color: '#fff' }}>{itemName}</strong>? This action cannot be undone.
@@ -747,14 +747,14 @@ const DeleteModal: React.FC<{
           flex: 1, padding: '12px',
           background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)',
           borderRadius: '10px', color: 'rgba(255,255,255,0.7)',
-          fontFamily: 'Rajdhani, sans-serif', fontWeight: '700', fontSize: '14px',
+          fontFamily: 'Inter, sans-serif', fontWeight: '700', fontSize: '14px',
           cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.2s',
         }}>Cancel</button>
         <button onClick={onConfirm} style={{
           flex: 1, padding: '12px',
           background: 'rgba(255,51,102,0.15)', border: '1px solid #ff3366',
           borderRadius: '10px', color: '#ff3366',
-          fontFamily: 'Rajdhani, sans-serif', fontWeight: '700', fontSize: '14px',
+          fontFamily: 'Inter, sans-serif', fontWeight: '700', fontSize: '14px',
           cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.2s',
         }}>Delete</button>
       </div>
@@ -859,7 +859,7 @@ const EditMenuTab: React.FC<{
           box-shadow: 0 0 0 2px rgba(255, 90, 95,0.15) !important;
         }
         .chef-cat-field-label {
-          font-family: 'Orbitron', sans-serif;
+          font-family: 'Sora', sans-serif;
           font-size: 0.58rem;
           letter-spacing: 0.22em;
           color: rgba(255,255,255,0.42);
@@ -927,7 +927,7 @@ const EditMenuTab: React.FC<{
               ) : (
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  height: '100%', fontFamily: 'Orbitron, monospace', fontSize: '3rem',
+                  height: '100%', fontFamily: 'Sora, monospace', fontSize: '3rem',
                   color: 'rgba(255, 90, 95,0.4)',
                   opacity: item.is_available ? 1 : 0.4,
                 }}>⬡</div>
@@ -941,7 +941,7 @@ const EditMenuTab: React.FC<{
               {/* ID corner pill */}
               <div style={{
                 position: 'absolute', top: 10, left: 10, zIndex: 2,
-                fontFamily: 'Orbitron, monospace', fontSize: '0.58rem',
+                fontFamily: 'Sora, monospace', fontSize: '0.58rem',
                 letterSpacing: '0.18em', color: '#ff5a5f',
                 background: 'rgba(7,16,14,0.85)',
                 border: '1px solid rgba(255, 90, 95,0.5)',
@@ -963,7 +963,7 @@ const EditMenuTab: React.FC<{
                 onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
               >
                 <span style={{
-                  fontFamily: 'Orbitron, sans-serif', fontSize: '0.62rem',
+                  fontFamily: 'Sora, sans-serif', fontSize: '0.62rem',
                   color: '#ff5a5f', fontWeight: 700, letterSpacing: '0.22em',
                   textTransform: 'uppercase',
                   background: 'rgba(255, 90, 95,0.12)', padding: '6px 14px',
@@ -981,7 +981,7 @@ const EditMenuTab: React.FC<{
                   background: 'rgba(7,16,14,0.55)', pointerEvents: 'none', zIndex: 4,
                 }}>
                   <span style={{
-                    fontFamily: 'Orbitron, monospace', fontSize: '0.7rem',
+                    fontFamily: 'Sora, monospace', fontSize: '0.7rem',
                     color: '#ff9f43', letterSpacing: '0.32em', fontWeight: 800,
                     textShadow: '0 0 8px rgba(255,159,67,0.7)',
                     background: 'rgba(7,16,14,0.85)',
@@ -1005,7 +1005,7 @@ const EditMenuTab: React.FC<{
                   onChange={e => updateField(item.id, 'editName', e.target.value)}
                   style={{
                     padding: '9px 12px', borderRadius: 8,
-                    fontFamily: 'Rajdhani, sans-serif', fontSize: '0.95rem',
+                    fontFamily: 'Inter, sans-serif', fontSize: '0.95rem',
                     fontWeight: 600, boxSizing: 'border-box',
                   }}
                 />
@@ -1021,7 +1021,7 @@ const EditMenuTab: React.FC<{
                     onChange={e => updateField(item.id, 'editPrice', e.target.value)}
                     style={{
                       padding: '9px 12px', borderRadius: 8,
-                      color: '#ffed4e', fontFamily: 'Orbitron, monospace',
+                      color: '#ffed4e', fontFamily: 'Sora, monospace',
                       fontSize: '0.95rem', fontWeight: 800,
                       letterSpacing: '0.02em', boxSizing: 'border-box',
                       textShadow: '0 0 8px rgba(255,237,78,0.3)',
@@ -1041,7 +1041,7 @@ const EditMenuTab: React.FC<{
                     style={{
                       padding: '9px 12px', borderRadius: 8,
                       color: item.editStock === '-1' ? 'rgba(255,255,255,0.4)' : '#ff5a5f',
-                      fontFamily: 'Orbitron, monospace', fontSize: '0.92rem',
+                      fontFamily: 'Sora, monospace', fontSize: '0.92rem',
                       fontWeight: 700, boxSizing: 'border-box',
                       textShadow: item.editStock === '-1' ? 'none' : '0 0 8px rgba(255, 90, 95,0.35)',
                     }}
@@ -1051,7 +1051,7 @@ const EditMenuTab: React.FC<{
 
               {/* Stock readout */}
               <div style={{
-                fontFamily: 'Orbitron, monospace', fontSize: '0.62rem',
+                fontFamily: 'Sora, monospace', fontSize: '0.62rem',
                 color: 'rgba(255,255,255,0.4)', letterSpacing: '0.18em',
                 textTransform: 'uppercase', marginTop: -4,
               }}>
@@ -1071,7 +1071,7 @@ const EditMenuTab: React.FC<{
                   placeholder="https://…"
                   style={{
                     padding: '9px 12px', borderRadius: 8,
-                    fontFamily: 'Rajdhani, sans-serif', fontSize: '0.82rem',
+                    fontFamily: 'Inter, sans-serif', fontSize: '0.82rem',
                     boxSizing: 'border-box',
                   }}
                 />
@@ -1087,7 +1087,7 @@ const EditMenuTab: React.FC<{
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{
-                    fontFamily: 'Orbitron, monospace', fontSize: '0.62rem',
+                    fontFamily: 'Sora, monospace', fontSize: '0.62rem',
                     color: item.is_available ? '#ff5a5f' : '#ff9f43',
                     fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase',
                     textShadow: item.is_available
@@ -1097,7 +1097,7 @@ const EditMenuTab: React.FC<{
                     {item.is_available ? '● Online' : '○ Offline'}
                   </span>
                   <span style={{
-                    fontFamily: 'Rajdhani, sans-serif', fontSize: '0.7rem',
+                    fontFamily: 'Inter, sans-serif', fontSize: '0.7rem',
                     color: 'rgba(255,255,255,0.4)',
                   }}>
                     {item.is_available ? 'visible on the kiosk' : 'hidden from customers'}
@@ -1121,7 +1121,7 @@ const EditMenuTab: React.FC<{
                     backgroundSize: '200% 100%',
                     border: '1px solid rgba(255, 90, 95,0.45)',
                     borderRadius: 9, color: '#ff5a5f',
-                    fontFamily: 'Orbitron, sans-serif', fontWeight: 800, fontSize: '0.7rem',
+                    fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '0.7rem',
                     cursor: item.saving ? 'not-allowed' : 'pointer',
                     letterSpacing: '0.22em', textTransform: 'uppercase',
                     opacity: item.saving ? 0.6 : 1,
@@ -1148,7 +1148,7 @@ const EditMenuTab: React.FC<{
                     padding: '10px 14px',
                     background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.4)',
                     borderRadius: 9, color: '#ff3366',
-                    fontFamily: 'Orbitron, sans-serif', fontWeight: 800, fontSize: '0.78rem',
+                    fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '0.78rem',
                     cursor: 'pointer', letterSpacing: '0.22em', transition: 'background 0.2s',
                   }}
                 >
@@ -1463,7 +1463,7 @@ const ChefDisplay: React.FC = () => {
     <>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: linear-gradient(135deg, #140a09, #241512, #1b0e0c); min-height: 100vh; font-family: 'Rajdhani', sans-serif; }
+        body { background: linear-gradient(135deg, #140a09, #241512, #1b0e0c); min-height: 100vh; font-family: 'Inter', sans-serif; }
         @keyframes scanline { 0%{background-position:0 0} 100%{background-position:0 100vh} }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
         @keyframes slideInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
@@ -1497,14 +1497,14 @@ const ChefDisplay: React.FC = () => {
           {/* LEFT — Kitchen Command HUD title block */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <span style={{
-              fontFamily: 'Orbitron, monospace', fontSize: '22px', color: '#ff5a5f',
+              fontFamily: 'Sora, monospace', fontSize: '22px', color: '#ff5a5f',
               textShadow: '0 0 12px #ff5a5f', lineHeight: 1,
             }}>◈</span>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 22, height: 1, background: 'linear-gradient(90deg, transparent, #ff5a5f)' }} />
                 <h1 style={{
-                  fontFamily: 'Orbitron, monospace', fontSize: '20px', fontWeight: 900,
+                  fontFamily: 'Sora, monospace', fontSize: '20px', fontWeight: 900,
                   background: 'linear-gradient(90deg, #ffffff 0%, #ff5a5f 80%)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text', letterSpacing: '0.32em', lineHeight: 1, margin: 0,
@@ -1512,7 +1512,7 @@ const ChefDisplay: React.FC = () => {
                 }}>KITCHEN COMMAND</h1>
               </div>
               <div style={{
-                fontFamily: 'Orbitron, monospace', fontSize: '10px',
+                fontFamily: 'Sora, monospace', fontSize: '10px',
                 color: 'rgba(255, 90, 95,0.55)', letterSpacing: '0.35em',
                 marginTop: 4, marginLeft: 32, textTransform: 'uppercase',
               }}>
@@ -1534,16 +1534,16 @@ const ChefDisplay: React.FC = () => {
               boxShadow: '0 0 22px rgba(255,237,78,0.18), inset 0 0 0 1px rgba(255,237,78,0.05)',
             }}>
               <span style={{
-                fontFamily: 'Orbitron, monospace', fontSize: '26px', fontWeight: 900, color: '#ffed4e',
+                fontFamily: 'Sora, monospace', fontSize: '26px', fontWeight: 900, color: '#ffed4e',
                 lineHeight: 1, textShadow: '0 0 18px rgba(255,237,78,0.7)',
               }}>{String(totalActive).padStart(2, '0')}</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{
-                  fontFamily: 'Orbitron, monospace', fontSize: '9px',
+                  fontFamily: 'Sora, monospace', fontSize: '9px',
                   color: 'rgba(255,237,78,0.75)', letterSpacing: '0.28em', textTransform: 'uppercase',
                 }}>Active Orders</span>
                 <span style={{
-                  fontFamily: 'Orbitron, monospace', fontSize: '8px',
+                  fontFamily: 'Sora, monospace', fontSize: '8px',
                   color: 'rgba(255,255,255,0.4)', letterSpacing: '0.18em',
                 }}>in the queue</span>
               </div>
@@ -1563,7 +1563,7 @@ const ChefDisplay: React.FC = () => {
                   borderRadius: '10px', padding: '6px 12px',
                   color: ttsEnabled ? '#ffed4e' : 'rgba(255,255,255,0.3)',
                   cursor: 'pointer', fontSize: '13px',
-                  fontFamily: 'Rajdhani, sans-serif', fontWeight: '700',
+                  fontFamily: 'Inter, sans-serif', fontWeight: '700',
                   letterSpacing: '0.5px',
                   display: 'flex', alignItems: 'center', gap: '6px',
                   transition: 'all 0.2s',
@@ -1596,7 +1596,7 @@ const ChefDisplay: React.FC = () => {
                         background: ttsLang === lang.code ? 'rgba(255,237,78,0.12)' : 'transparent',
                         border: 'none', borderRadius: '9px',
                         color: ttsLang === lang.code ? '#ffed4e' : 'rgba(255,255,255,0.7)',
-                        fontFamily: 'Rajdhani, sans-serif', fontSize: '14px', fontWeight: '600',
+                        fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: '600',
                         cursor: 'pointer', textAlign: 'left', letterSpacing: '0.5px',
                         transition: 'background 0.15s',
                       }}
@@ -1618,7 +1618,7 @@ const ChefDisplay: React.FC = () => {
               <span
                 title={`No ${currentLangLabel?.label ?? ''} voice is installed on this device. Install the language's voice pack in your OS settings, or the announcement may be silent / mispronounced.`}
                 style={{
-                  fontFamily: 'Rajdhani, sans-serif', fontSize: '11px', fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif', fontSize: '11px', fontWeight: 700,
                   color: '#ff9f43', background: 'rgba(255,159,67,0.1)',
                   border: '1px solid rgba(255,159,67,0.35)', borderRadius: '6px',
                   padding: '4px 8px', letterSpacing: '0.3px', whiteSpace: 'nowrap',
@@ -1660,11 +1660,11 @@ const ChefDisplay: React.FC = () => {
                 boxShadow: connectionStatus === 'connected' ? '0 0 10px #ff5a5f' : '0 0 10px #ff3366',
                 animation: connectionStatus === 'disconnected' ? 'blink 1s ease-in-out infinite' : 'none',
               }} />
-              <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: '12px', color: connectionStatus === 'connected' ? '#ff5a5f' : '#ff3366', letterSpacing: '1px', fontWeight: '600' }}>
+              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: connectionStatus === 'connected' ? '#ff5a5f' : '#ff3366', letterSpacing: '1px', fontWeight: '600' }}>
                 {connectionStatus === 'connected' ? 'LIVE' : 'OFFLINE'}
               </span>
             </div>
-            <div style={{ fontFamily: 'Orbitron, monospace', fontSize: '16px', color: 'rgba(255,255,255,0.7)', letterSpacing: '2px', minWidth: '80px', textAlign: 'right' }}>
+            <div style={{ fontFamily: 'Sora, monospace', fontSize: '16px', color: 'rgba(255,255,255,0.7)', letterSpacing: '2px', minWidth: '80px', textAlign: 'right' }}>
               {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
             </div>
           </div>
@@ -1695,18 +1695,18 @@ const ChefDisplay: React.FC = () => {
                 <div style={{
                   position: 'absolute', inset: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'Orbitron, monospace', fontSize: '1.1rem',
+                  fontFamily: 'Sora, monospace', fontSize: '1.1rem',
                   color: '#ff5a5f', textShadow: '0 0 10px #ff5a5f',
                 }}>◈</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{
-                  fontFamily: 'Orbitron, sans-serif', fontSize: '0.85rem',
+                  fontFamily: 'Sora, sans-serif', fontSize: '0.85rem',
                   color: '#ff5a5f', letterSpacing: '0.42em',
                   textShadow: '0 0 12px rgba(255, 90, 95,0.45)',
                 }}>SYNCING KITCHEN</div>
                 <div style={{
-                  fontFamily: 'Orbitron, monospace', fontSize: '0.62rem',
+                  fontFamily: 'Sora, monospace', fontSize: '0.62rem',
                   color: 'rgba(255,255,255,0.35)', letterSpacing: '0.28em',
                   marginTop: 6, textTransform: 'uppercase',
                 }}>Loading orders + manifest</div>
@@ -1747,7 +1747,7 @@ const ChefDisplay: React.FC = () => {
                         border: 'none',
                         borderRadius: 100,
                         color: active ? '#ff5a5f' : 'rgba(255,255,255,0.5)',
-                        fontFamily: 'Orbitron, sans-serif',
+                        fontFamily: 'Sora, sans-serif',
                         fontSize: '0.7rem',
                         fontWeight: 800,
                         cursor: 'pointer',
@@ -1765,7 +1765,7 @@ const ChefDisplay: React.FC = () => {
                         if (!active) (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.5)';
                       }}
                     >
-                      <span style={{ fontFamily: 'Orbitron, monospace', fontSize: '0.9rem' }}>{tab.glyph}</span>
+                      <span style={{ fontFamily: 'Sora, monospace', fontSize: '0.9rem' }}>{tab.glyph}</span>
                       {tab.label}
                     </button>
                   );
