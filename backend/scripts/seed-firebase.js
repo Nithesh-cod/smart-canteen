@@ -17,22 +17,22 @@ const PASSWORD    = 'test1234'; // shared password for every seeded account
 
 // ── Menu (from the original schema.sql seed; a few given limited stock so the
 //    stock / oversell behaviour is testable). stock_quantity -1 = unlimited. ──
+// Each row: [name, description, category, price, rating, is_vegetarian, prep_min, stock, image]
+const IMG = (id) => `https://images.unsplash.com/photo-${id}?w=500&q=80&auto=format&fit=crop`;
 const MENU = [
-  ['Paneer Tikka',      'Grilled cottage cheese with spices',      'starters',  120, 4.5, true,  15, -1],
-  ['Chicken Biryani',   'Aromatic basmati rice with chicken',      'mains',     180, 4.8, false, 25, -1],
-  ['Veg Fried Rice',    'Chinese style fried rice with veggies',   'mains',     140, 4.3, true,  20, -1],
-  ['Gulab Jamun',       'Sweet milk dumplings in sugar syrup',     'desserts',   60, 4.7, true,   5,  6],
-  ['Cold Coffee',       'Chilled blended coffee drink',            'beverages',  80, 4.6, true,   5, 15],
-  ['Spring Rolls',      'Crispy golden vegetable rolls',           'starters',  100, 4.4, true,  10, -1],
-  ['Masala Dosa',       'Crispy South Indian crepe with filling',  'mains',      90, 4.6, true,  15, 10],
-  ['Samosa',            'Crispy pastry stuffed with spiced potato','starters',   40, 4.5, true,   5,  5],
-  ['Masala Chai',       'Classic spiced Indian tea',               'beverages',  20, 4.8, true,   5, -1],
-  ['Chocolate Brownie', 'Rich fudgy chocolate brownie',            'desserts',   70, 4.7, true,  10, -1],
-  ['Veg Burger',        'Crispy veggie patty with fresh toppings', 'mains',     110, 4.2, true,  15, -1],
-  ['Fresh Lime Soda',   'Chilled lime with soda and mint',         'beverages',  40, 4.5, true,   5, -1],
+  ['Paneer Tikka',      'Grilled cottage cheese with spices',      'starters',  120, 4.5, true,  15, -1, IMG('1599487488170-d11ec9c172f0')],
+  ['Chicken Biryani',   'Aromatic basmati rice with chicken',      'mains',     180, 4.8, false, 25, -1, IMG('1563379091339-03b21ab4a4f8')],
+  ['Veg Fried Rice',    'Chinese style fried rice with veggies',   'mains',     140, 4.3, true,  20, -1, IMG('1512058564366-18510be2db19')],
+  ['Gulab Jamun',       'Sweet milk dumplings in sugar syrup',     'desserts',   60, 4.7, true,   5,  6, IMG('1589301760014-d929f3979dbc')],
+  ['Cold Coffee',       'Chilled blended coffee drink',            'beverages',  80, 4.6, true,   5, 15, IMG('1517487881594-2787fef5ebf7')],
+  ['Spring Rolls',      'Crispy golden vegetable rolls',           'starters',  100, 4.4, true,  10, -1, IMG('1541529086526-db283c563270')],
+  ['Masala Dosa',       'Crispy South Indian crepe with filling',  'mains',      90, 4.6, true,  15, 10, IMG('1630383249896-424e482df921')],
+  ['Samosa',            'Crispy pastry stuffed with spiced potato','starters',   40, 4.5, true,   5,  5, IMG('1601050690597-df0568f70950')],
+  ['Masala Chai',       'Classic spiced Indian tea',               'beverages',  20, 4.8, true,   5, -1, IMG('1564890369478-c89ca6d9cde9')],
+  ['Chocolate Brownie', 'Rich fudgy chocolate brownie',            'desserts',   70, 4.7, true,  10, -1, IMG('1606313564200-e75d5e30476c')],
+  ['Veg Burger',        'Crispy veggie patty with fresh toppings', 'mains',     110, 4.2, true,  15, -1, IMG('1568901346375-23c9450c58cd')],
+  ['Fresh Lime Soda',   'Chilled lime with soda and mint',         'beverages',  40, 4.5, true,   5, -1, IMG('1570831739435-6601aa3fa4fb')],
 ];
-
-const IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'; // generic food image
 
 const ACCOUNTS = [
   { name: 'Canteen Owner', roll: 'OWNER001', phone: '9000000010', role: 'admin',   department: 'Management' },
@@ -43,11 +43,11 @@ const ACCOUNTS = [
 
 async function seedMenu() {
   let id = 0;
-  for (const [name, description, category, price, rating, is_vegetarian, preparation_time, stock_quantity] of MENU) {
+  for (const [name, description, category, price, rating, is_vegetarian, preparation_time, stock_quantity, image_url] of MENU) {
     id++;
     await db.collection('menu_items').doc(String(id)).set({
       name, description, category,
-      price, image_url: IMG, rating, is_vegetarian, preparation_time, stock_quantity,
+      price, image_url, rating, is_vegetarian, preparation_time, stock_quantity,
       is_available: true,
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
