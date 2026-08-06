@@ -160,12 +160,9 @@ export const OwnerStatGrid: React.FC<OwnerStatGridProps> = ({ tiles }) => {
           padding: 20px 22px 22px;
           background:
             linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 40%),
-            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
+            linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.05);
           border-radius: 16px;
-          clip-path: polygon(
-            0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%
-          );
           overflow: hidden;
           transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
         }

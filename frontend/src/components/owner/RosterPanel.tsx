@@ -253,9 +253,8 @@ const css = `
   position: relative; padding: 18px 20px 18px;
   background:
     linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%),
-    linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
+    linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%);
   border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;
-  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .roster-card::before {

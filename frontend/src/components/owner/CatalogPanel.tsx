@@ -393,9 +393,8 @@ const css = `
   position: relative; display: flex; flex-direction: column;
   background:
     linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%),
-    linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
+    linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%);
   border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
-  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
   overflow: hidden; transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .catalog-card::before {
@@ -531,7 +530,7 @@ const css = `
   position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 100vw;
   background:
     linear-gradient(180deg, rgba(255, 90, 95,0.05) 0%, transparent 30%),
-    linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
+    linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%);
   border-left: 1px solid rgba(255, 90, 95,0.3); z-index: 201;
   display: flex; flex-direction: column;
   box-shadow: -22px 0 40px rgba(0,0,0,0.5), inset 1px 0 0 rgba(255, 90, 95,0.1);

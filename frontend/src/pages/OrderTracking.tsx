@@ -170,10 +170,9 @@ const RecentOrdersList: React.FC<{
       position: 'relative',
       marginTop: 22,
       background:
-        'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%)',
+        'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%)',
       border: '1px solid rgba(255,255,255,0.06)',
       borderRadius: 18,
-      clipPath: 'polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%)',
       padding: 24,
       animation: 'fadeInUp 0.5s ease-out',
       overflow: 'hidden',
@@ -464,10 +463,9 @@ const OrderTracking: React.FC = () => {
           <div className="track-card" style={{
             position: 'relative',
             background:
-              'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%)',
+              'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%)',
             border: '1px solid rgba(255,255,255,0.06)',
             borderRadius: 18,
-            clipPath: 'polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%)',
             padding: '34px 36px 28px',
             animation: 'glowPulse 5s ease-in-out infinite',
             overflow: 'hidden',
@@ -613,10 +611,9 @@ const OrderTracking: React.FC = () => {
               position: 'relative',
               marginTop: 22,
               background:
-                'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%)',
+                'linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%), linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%)',
               border: `1px solid ${isCancelled ? 'rgba(255,51,102,0.35)' : 'rgba(255, 90, 95,0.22)'}`,
               borderRadius: 18,
-              clipPath: 'polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%)',
               padding: '28px 32px 30px', animation: 'fadeInUp 0.5s ease-out',
               overflow: 'hidden',
             }}>

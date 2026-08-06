@@ -145,12 +145,9 @@ export const SalesPanel: React.FC<SalesPanelProps> = ({ data, period, onPeriodCh
           padding: 26px 28px 24px;
           background:
             linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 40%),
-            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
+            linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 18px;
-          clip-path: polygon(
-            0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%
-          );
           overflow: hidden;
         }
         .sales-panel::before {

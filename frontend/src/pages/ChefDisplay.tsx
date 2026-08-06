@@ -48,10 +48,9 @@ const StatsRow: React.FC<{ orders: Order[]; todayOrders: Order[]; menuItems: Men
           padding: 18px 22px 20px;
           background:
             linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 40%),
-            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
+            linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 16px;
-          clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
           overflow: hidden;
           transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
         }
@@ -175,10 +174,9 @@ const ChefOrderCard: React.FC<{
         padding: '16px 18px 18px',
         marginBottom: 14,
         background:
-          `linear-gradient(180deg, ${cfg.border}10 0%, transparent 35%), linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%)`,
+          `linear-gradient(180deg, ${cfg.border}10 0%, transparent 35%), linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%)`,
         border: `1px solid ${cfg.border}55`,
         borderRadius: 16,
-        clipPath: 'polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%)',
         animation: isReady
           ? 'chef-card-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both, chef-card-readyglow 2.4s ease-in-out infinite'
           : 'chef-card-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both',
@@ -628,7 +626,6 @@ const OrdersTab: React.FC<{
                 `linear-gradient(180deg, ${col.color}10 0%, transparent 60%), rgba(7,16,14,0.65)`,
               border: `1px solid ${col.color}44`,
               borderRadius: 12,
-              clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%)',
               boxShadow: `0 0 18px ${col.glow}, inset 0 0 0 1px ${col.color}10`,
             }}>
               <div style={{
@@ -680,7 +677,6 @@ const OrdersTab: React.FC<{
                   background: 'rgba(7,16,14,0.4)',
                   border: `1px dashed ${col.color}33`,
                   borderRadius: 14,
-                  clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)',
                 }}>
                   <div style={{
                     fontFamily: 'Sora, monospace', fontSize: '2.2rem',
@@ -830,10 +826,9 @@ const EditMenuTab: React.FC<{
           position: relative;
           background:
             linear-gradient(180deg, rgba(255, 90, 95,0.04) 0%, transparent 35%),
-            linear-gradient(180deg, #0a1816 0%, #1b0e0c 100%);
+            linear-gradient(180deg, #1b0e0c 0%, #1b0e0c 100%);
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 16px;
-          clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
           overflow: hidden;
           transition: border-color 0.22s, transform 0.22s, box-shadow 0.22s;
         }
@@ -1530,7 +1525,6 @@ const ChefDisplay: React.FC = () => {
               border: '1px solid rgba(255,237,78,0.4)',
               borderRadius: '12px', padding: '10px 26px',
               display: 'flex', alignItems: 'center', gap: '12px',
-              clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%)',
               boxShadow: '0 0 22px rgba(255,237,78,0.18), inset 0 0 0 1px rgba(255,237,78,0.05)',
             }}>
               <span style={{
