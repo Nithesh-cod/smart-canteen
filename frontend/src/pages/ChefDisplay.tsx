@@ -1254,17 +1254,20 @@ const ChefDisplay: React.FC = () => {
   })();
 
   // ── Sequential announcement queue (rapid orders don't cut each other off) ──
+  // Each queue entry is one utterance in one language. A new order enqueues TWO
+  // entries — Tamil then English — so it's announced bilingually like a railway
+  // announcement, spoken one after the other.
   const speakingRef = useRef(false);
-  const speakQueueRef = useRef<Order[]>([]);
+  const speakQueueRef = useRef<Array<{ order: Order; lang: string }>>([]);
 
   const drainQueue = useCallback(() => {
     if (speakingRef.current) return;
-    const order = speakQueueRef.current.shift();
-    if (!order) return;
+    const next = speakQueueRef.current.shift();
+    if (!next) return;
     speakingRef.current = true;
-    setSpeakingOrderId(order.id);
+    setSpeakingOrderId(next.order.id);
 
-    const lang = ttsLangRef.current;
+    const { order, lang } = next;
     const utter = new SpeechSynthesisUtterance(buildAnnouncement(order, lang));
     utter.lang = lang;
     utter.rate = 0.8;   // a touch slow → intelligible over kitchen noise
@@ -1279,10 +1282,11 @@ const ChefDisplay: React.FC = () => {
     window.speechSynthesis.speak(utter);
   }, [buildAnnouncement, pickVoice]);
 
-  // Public: enqueue an order to be announced.
+  // Public: announce a new (paid) order — BILINGUAL: Tamil first, then English.
   const speakOrder = useCallback((order: Order) => {
     if (!ttsEnabled || !('speechSynthesis' in window)) return;
-    speakQueueRef.current.push(order);
+    speakQueueRef.current.push({ order, lang: 'ta-IN' }); // தமிழ் first
+    speakQueueRef.current.push({ order, lang: 'en-IN' }); // then English
     drainQueue();
   }, [ttsEnabled, drainQueue]);
 
@@ -1345,7 +1349,9 @@ const ChefDisplay: React.FC = () => {
           : Array.isArray((data as any)?.data)
             ? (data as any).data
             : [];
-      setOrders(orderList.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)));
+      // Only PAID orders reach the kitchen — an order appears here strictly
+      // after payment succeeds (unpaid/abandoned orders never show up).
+      setOrders(orderList.filter(o => o.payment_status === 'paid' && ['pending', 'preparing', 'ready'].includes(o.status)));
     } catch (err) {
       console.error('Failed to fetch orders:', err);
     }
@@ -1405,7 +1411,9 @@ const ChefDisplay: React.FC = () => {
       setConnectionStatus('connected');
 
       // Detect newly-arrived active orders → beep + voice announce (once each).
-      const active = rows.filter((r) => ['pending', 'preparing', 'ready'].includes(r.status));
+      // Detect newly-PAID orders only — the announcer/beep fire when payment
+      // completes, never when an unpaid order is first created.
+      const active = rows.filter((r) => r.payment_status === 'paid' && ['pending', 'preparing', 'ready'].includes(r.status));
       if (primed) {
         for (const r of active) {
           if (!knownActiveIds.has(r.id)) {

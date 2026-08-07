@@ -290,27 +290,22 @@ const verifyPayment = asyncHandler(async (req, res) => {
  * @returns {Promise<{ student: object|null, billPrinted: boolean, billPdfBase64: string|null }>}
  */
 async function finalisePayment(order, { io, skipBill = false } = {}) {
-  // 1. Status advance. Track whether we actually moved pending → preparing
-  // so the bill-print block (Section 4) can skip when a chef cancelled the
-  // order in flight — printing a receipt for an already-cancelled order is
-  // the worst kind of user-facing artefact (FIX Y4).
-  let statusAdvanced = true;
-  if (order.status === 'pending') {
+  // 1. Do NOT auto-advance status on payment. A paid order must land on the
+  //    chef panel as a NEW (still-'pending') order for the kitchen to accept
+  //    and prepare — the chef panel only shows PAID orders, so payment is what
+  //    makes it appear. We only compute `statusAdvanced` (= "ok to print the
+  //    bill") to skip printing a receipt for an order cancelled in the payment
+  //    round-trip window (FIX Y4).
+  let statusAdvanced = order.status !== 'cancelled';
+  if (statusAdvanced) {
     try {
-      // Optimistic WHERE-guard: only advance if still 'pending'. A chef or
-      // admin may have cancelled the order in the window between the
-      // controller's getById and our updateStatus call; without the guard
-      // we'd silently un-cancel it (FIX V5).
-      const advanced = await Order.updateStatus(order.id, 'preparing', 'pending');
-      if (!advanced) {
+      const fresh = await Order.getById(order.id);
+      if (fresh && fresh.status === 'cancelled') {
         statusAdvanced = false;
-        logger.warn(
-          `finalisePayment: status guard rejected — order #${order.order_number} ` +
-          `was no longer 'pending' (likely cancelled in flight). Skipping bill print.`
-        );
+        logger.warn(`finalisePayment: order #${order.order_number} was cancelled in flight — skipping bill print.`);
       }
     } catch (statusErr) {
-      logger.error(`finalisePayment: status advance failed for order #${order.order_number}`, statusErr);
+      logger.error(`finalisePayment: status re-check failed for order #${order.order_number}`, statusErr);
     }
   }
 
