@@ -29,6 +29,11 @@ if (process.env.NODE_ENV === 'production' && !process.env.RAZORPAY_WEBHOOK_SECRE
   process.exit(1);
 }
 
+// Cart stock holds are shared state across every server instance. Without a
+// shared store each instance keeps a private availability count and the same
+// last item can be sold once per instance. Fail on boot rather than oversell.
+require('./services/stock.service').assertProductionReady();
+
 // Trust the first proxy hop (Render / Vercel / nginx sit in front of Express).
 // Required for express-rate-limit to read X-Forwarded-For correctly.
 app.set('trust proxy', 1);
@@ -60,7 +65,13 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  // X-Cart-Token carries the signed cart identity for stock holds. The browser
+  // preflights any request bearing a non-standard header, and a header missing
+  // from this list fails that preflight — which blocks the WHOLE request, not
+  // just the header. Omitting it took down every cross-origin call the kiosk
+  // makes, including plain menu reads that have nothing to do with carts,
+  // because the interceptor attaches the token to all of them.
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Cart-Token'],
 };
 
 const io = require('socket.io')(http, {
@@ -70,6 +81,36 @@ const io = require('socket.io')(http, {
     credentials: true,
   }
 });
+
+// ============================================================================
+// MULTI-INSTANCE SOCKET FANOUT
+// ============================================================================
+// Socket.IO rooms live in the memory of ONE process. With several instances
+// behind a load balancer, a chef connected to instance A simply never receives
+// an `order:new` emitted from instance B — the kitchen silently misses orders,
+// and it looks like a flaky network rather than a missing adapter. That makes
+// horizontal scaling impossible without this.
+//
+// The Redis adapter republishes every emit over pub/sub so all instances
+// deliver it. Skipped when REDIS_URL is unset: a single dev instance needs no
+// fanout, and app boot already refuses to run production without Redis.
+if (process.env.REDIS_URL) {
+  try {
+    const { createAdapter } = require('@socket.io/redis-adapter');
+    const Redis = require('ioredis');
+    const pubClient = new Redis(process.env.REDIS_URL);
+    const subClient = pubClient.duplicate(); // pub/sub needs its own connection
+    pubClient.on('error', (e) => console.error('[socket.io] redis pub error:', e.message));
+    subClient.on('error', (e) => console.error('[socket.io] redis sub error:', e.message));
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log('[socket.io] Redis adapter active — safe to run multiple instances');
+  } catch (err) {
+    console.error('[socket.io] Redis adapter failed to load:', err.message);
+    console.error('[socket.io] Running WITHOUT fanout — do not scale past one instance.');
+  }
+} else {
+  console.log('[socket.io] No REDIS_URL — single-instance fanout only');
+}
 
 // ============================================================================
 // MIDDLEWARE
@@ -128,12 +169,26 @@ const limiter = rateLimit({
   message: { success: false, message: 'Too many requests. Please try again later.' },
 });
 
+// Rate-limit key for anonymous callers.
+//
+// Keying raw `req.ip` gives every IPv6 address its own bucket, but a single
+// residential IPv6 allocation is a /64 — 18 quintillion addresses the same
+// client can rotate through for free. That makes the order limiter below a
+// no-op against any IPv6 client. Collapse v6 addresses to their /64 prefix so
+// the whole allocation shares one bucket; v4 addresses are used as-is.
+const ipBucket = (req) => {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  // ::ffff:1.2.3.4 is an IPv4 address in v6 clothing — treat it as v4.
+  if (!ip.includes(':') || ip.startsWith('::ffff:')) return ip;
+  return ip.split(':').slice(0, 4).join(':') + '::/64';
+};
+
 // Strict limiter only for order creation (prevent order spam in production)
 const orderCreateLimiter = rateLimit({
   windowMs: 60 * 1000,           // 1 minute window
   max: isDev ? 200 : 10,         // 10 orders/min in prod, unlimited in dev
   skip: skipLocalhost,
-  keyGenerator: (req) => req.headers.authorization || req.ip,
+  keyGenerator: (req) => req.headers.authorization || ipBucket(req),
   message: { success: false, message: 'Too many orders placed. Please wait a moment.' },
 });
 
@@ -176,6 +231,22 @@ app.use('/api/menu', require('./routes/menu.routes'));
 app.use('/api/orders', require('./routes/order.routes'));
 app.use('/api/payments', require('./routes/payment.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
+app.use('/api/cart', require('./routes/cart.routes'));
+
+// ============================================================================
+// STOCK HOLD SWEEPER
+// ============================================================================
+// Abandoned carts must give their stock back on their own — a student who
+// closes the tab mid-order would otherwise hold the last three samosas until
+// the process restarted. The sweeper returns anything past its TTL and
+// broadcasts the recovered availability so every client repaints.
+const stockService = require('./services/stock.service');
+const { broadcastAvailability } = require('./controllers/cart.controller');
+
+stockService.startSweeper((freed) => {
+  broadcastAvailability(io, freed);
+  console.log(`[stock] swept ${freed.length} expired hold(s) back into availability`);
+});
 
 // ============================================================================
 // STATIC FILE SERVING (production only)

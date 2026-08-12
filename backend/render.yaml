@@ -1,8 +1,22 @@
 services:
+  # ── Shared state: cart stock holds + Socket.IO fanout ──────────────────────
+  # Both are cross-instance concerns. Without this the API cannot run more than
+  # one instance: each would keep a private stock count (overselling every
+  # tracked item) and sockets emitted on one instance would never reach clients
+  # connected to another. app.js refuses to boot in production without it.
+  - type: keyvalue
+    name: smart-canteen-redis
+    plan: starter
+    ipAllowList: []          # private network only — never expose it publicly
+
   - type: web
     name: smart-canteen-api
     env: node
-    plan: free
+    # 'free' spins the instance down when idle (cold starts drop websockets and
+    # abandon in-flight stock holds) and cannot scale out. 'standard' is the
+    # smallest plan that supports the multiple instances this app now handles.
+    plan: standard
+    numInstances: 2
     # Skip devDependencies (jest, firebase-tools) in production.
     buildCommand: npm install --omit=dev
     startCommand: npm start
@@ -12,6 +26,14 @@ services:
         value: production
       - key: PORT
         value: 5000
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: smart-canteen-redis
+          property: connectionString
+      # How long an item stays held after it is added to a cart.
+      - key: CART_HOLD_TTL_SECONDS
+        value: 600
       - key: PRINTER_TYPE
         value: none            # the thermal printer runs via the LOCAL print-agent, not here
       # ── Set these manually in the Render dashboard (Environment tab) ──────────

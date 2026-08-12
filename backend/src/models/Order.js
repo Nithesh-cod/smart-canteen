@@ -15,11 +15,11 @@
 // ============================================================================
 
 const { FieldValue, runTransaction, collections } = require('../config/firebase');
+const { nextOrderNumber } = require('../services/orderNumber.service');
 
 const ordersCol   = collections.orders;
 const menuCol      = collections.menuItems;
 const studentsCol  = collections.students;
-const countersCol  = collections.counters;
 
 const tsToIso   = (v) => (v && typeof v.toDate === 'function' ? v.toDate().toISOString() : v || null);
 const tsMillis  = (doc) => { const c = doc.data().created_at; return c && c.toMillis ? c.toMillis() : 0; };
@@ -92,13 +92,21 @@ const create = async (orderData, items) => {
     wanted.set(id, (wanted.get(id) || 0) + Number(it.quantity));
   }
   const ids = [...wanted.keys()].sort();
-  const counterRef = countersCol().doc('order_number');
+
+  // Allocate the receipt number OUTSIDE the transaction (see
+  // services/orderNumber.service.js). It used to be read-modify-written on a
+  // single Firestore counter document inside this transaction, which capped
+  // the whole system at roughly one order per second and made every order
+  // contend with every other one regardless of which items they shared.
+  //
+  // Computing it out here also means a transaction retry reuses the SAME
+  // number rather than burning a fresh one on each attempt.
+  const orderNumber = await nextOrderNumber();
 
   const result = await runTransaction(async (tx) => {
     // ── READS FIRST (Firestore requires all reads before any write) ──────────
     const snaps = new Map();
     for (const id of ids) snaps.set(id, await tx.get(menuCol().doc(id)));
-    const counterSnap = await tx.get(counterRef);
 
     // ── VALIDATE + compute stock decrements ──────────────────────────────────
     const stockWrites  = [];
@@ -120,12 +128,7 @@ const create = async (orderData, items) => {
       stockChanges.push({ id: Number(id), name: data.name, stock_quantity: next, is_available });
     }
 
-    // ── order number (collision-free, from the counter) ──────────────────────
-    const seq = (counterSnap.exists ? Number(counterSnap.data().seq) || 0 : 0) + 1;
-    const orderNumber = `OZ${String(seq).padStart(6, '0')}`;
-
     // ── WRITES ────────────────────────────────────────────────────────────────
-    tx.set(counterRef, { seq }, { merge: true });
     for (const w of stockWrites) {
       tx.update(w.ref, { stock_quantity: w.next, is_available: w.is_available, updated_at: FieldValue.serverTimestamp() });
     }
@@ -209,11 +212,32 @@ const getAll = async (filters = {}) => {
   const offset = filters.offset || 0;
 
   let q = ordersCol();
+  let serverSorted = false;
+
   if (status)              q = q.where('status', '==', status);
   else if (payment_status) q = q.where('payment_status', '==', payment_status);
   else if (from_date)      q = q.where('created_at', '>=', new Date(from_date));
 
-  const snap = await q.limit(3000).get();
+  // Read window. The old unconditional `.limit(3000)` meant EVERY call to this
+  // function — and the chef panel calls it on each realtime change plus a 30s
+  // poll — read up to three thousand documents to return a page of fifty.
+  // Firestore bills per document read, so at any real concurrency that is both
+  // the dominant latency cost and the dominant bill.
+  //
+  // With no filter we can let Firestore do the ordering and paging itself:
+  // created_at is a single field, so this needs no composite index.
+  if (!status && !payment_status && !from_date) {
+    q = q.orderBy('created_at', 'desc').limit(offset + limit);
+    serverSorted = true;
+  } else {
+    // A filter plus orderBy('created_at') would require a composite index per
+    // filter field, which has to be deployed before it works. Until those
+    // indexes exist we still scan and sort in memory, but over a window scaled
+    // to the request rather than a flat 3000.
+    q = q.limit(Math.min(3000, Math.max(500, (offset + limit) * 4)));
+  }
+
+  const snap = await q.get();
 
   let docs = snap.docs.filter((d) => {
     const o = d.data();
@@ -226,8 +250,11 @@ const getAll = async (filters = {}) => {
   });
 
   // Kitchen queues want oldest-first; everything else newest-first.
+  // Skip re-sorting when Firestore already returned them newest-first.
   const asc = status === 'pending' || status === 'preparing';
-  docs.sort((a, b) => (asc ? tsMillis(a) - tsMillis(b) : tsMillis(b) - tsMillis(a)));
+  if (asc || !serverSorted) {
+    docs.sort((a, b) => (asc ? tsMillis(a) - tsMillis(b) : tsMillis(b) - tsMillis(a)));
+  }
 
   const total  = docs.length;
   const orders = await enrichMany(docs.slice(offset, offset + limit));
