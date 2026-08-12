@@ -1,40 +1,12 @@
 services:
-  # ── Shared state: cart stock holds + Socket.IO fanout ──────────────────────
-  # Required even on a single instance, for two separate reasons:
-  #
-  #   1. app.js refuses to boot in production without REDIS_URL. That guard is
-  #      about what happens NEXT: the day someone raises numInstances, a second
-  #      process would start with its own private stock count and the same last
-  #      samosa would sell twice, silently. Requiring Redis from day one means
-  #      scaling is a number change rather than a correctness cliff.
-  #
-  #   2. It is the authority for live cart availability. Firestore sustains
-  #      roughly one write per second per document, and holding stock on
-  #      add-to-cart writes the item's document on every cart tap — a lunch
-  #      rush goes straight past that limit.
-  #
-  # Must share a region with the web service: Render's private network does
-  # not cross regions.
-  - type: keyvalue
-    name: smart-canteen-redis
-    plan: starter
-    region: singapore
-    ipAllowList: []          # private network only — never expose it publicly
-
   - type: web
     name: smart-canteen-api
     env: node
     # Singapore is Render's closest region to India. Oregon adds roughly 250ms
     # round-trip to every request, and since add-to-cart now reserves stock on
-    # the server, students feel that on every single tap.
+    # the server, that is felt on every single tap.
     region: singapore
-    # 'starter' with one instance suits a single canteen. Deliberately NOT
-    # 'free': that spins the instance down when idle, which drops websockets
-    # and strands in-flight stock holds until the sweeper reclaims them.
-    #
-    # To scale out later, raise numInstances — the Redis adapter and shared
-    # stock authority are already wired, so nothing else has to change.
-    plan: starter
+    plan: free
     numInstances: 1
     # Skip devDependencies (jest, firebase-tools) in production.
     buildCommand: npm install --omit=dev
@@ -45,16 +17,30 @@ services:
         value: production
       - key: PORT
         value: 5000
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: smart-canteen-redis
-          property: connectionString
+
+      # ── Running without Redis, on purpose ────────────────────────────────
+      # The free plan is a single instance, so cart stock holds kept in this
+      # process are genuinely correct — there is no second process to disagree
+      # with. This flag is the explicit acknowledgement app.js demands before
+      # it will boot that way.
+      #
+      # It stops being correct the moment numInstances goes above 1: each
+      # process would hold its own private stock count and the same last item
+      # would sell once per instance, silently. If you scale, provision Redis
+      # and set REDIS_URL — then DELETE this flag.
+      #
+      # A free Redis (e.g. Upstash) also works and is strictly better: set
+      # REDIS_URL to its rediss:// connection string and drop this flag. Holds
+      # then survive restarts, which on the free plan matter — see below.
+      - key: ALLOW_IN_MEMORY_STOCK
+        value: true
+
       # How long an item stays held after it is added to a cart.
       - key: CART_HOLD_TTL_SECONDS
         value: 600
       - key: PRINTER_TYPE
         value: none            # the thermal printer runs via the LOCAL print-agent, not here
+
       # ── Set these manually in the Render dashboard (Environment tab) ──────────
       # FIREBASE_SERVICE_ACCOUNT → paste the ENTIRE service-account JSON as ONE
       #                            value (config/firebase reads it via this env var).
@@ -70,3 +56,22 @@ services:
       # NOTE: DATABASE_URL / SUPABASE_URL / SUPABASE_ANON_KEY are no longer used
       #       (migrated to Firestore). ADMIN_ROLLS / CHEF_ROLLS are gone too —
       #       roles now live in the students.role field in Firestore.
+
+# ============================================================================
+# WHAT THE FREE PLAN COSTS YOU
+# ============================================================================
+# Render's free web service sleeps after ~15 minutes with no traffic, and the
+# next request pays a cold start of roughly 30–60 seconds. Consequences worth
+# knowing before a lunch rush:
+#
+#   • The first student to open the kiosk after a quiet spell waits out that
+#     cold start. Every one after that is fast, until it idles again.
+#   • Sleeping kills websockets, so the chef display drops to its 30s polling
+#     backstop until it reconnects.
+#   • Sleeping also wipes in-memory cart holds. Nothing is oversold — the
+#     counts simply reset to on-hand — but anyone mid-order silently loses
+#     their reservation. A free Redis avoids this; see ALLOW_IN_MEMORY_STOCK.
+#
+# To upgrade later: set plan to 'starter', and either add a Redis service and
+# REDIS_URL or leave the flag while you stay on one instance.
+# ============================================================================

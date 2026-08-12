@@ -249,15 +249,36 @@ const buildDriver = () => {
  * Refuse to run a multi-instance production deploy on the in-memory driver:
  * each instance would keep its own private idea of availability, so the same
  * last samosa could be sold once per instance. Called from app.js on boot.
+ *
+ * ALLOW_IN_MEMORY_STOCK=true opts out. That is legitimate for exactly one
+ * shape of deployment — a SINGLE instance, e.g. a free host — where there is
+ * no second process to disagree with, and the in-memory driver is genuinely
+ * correct. It is not a way to skip provisioning Redis on a scaled deploy: the
+ * moment a second instance starts, both hold private counts and the same last
+ * item sells twice with nothing logged. Hence the deliberate, loud opt-in
+ * rather than a silent fallback.
  */
 const assertProductionReady = () => {
-  if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
-    throw new Error(
-      'REDIS_URL is required in production. Cart stock holds are shared state; ' +
-      'the in-process fallback would give every server instance its own stock ' +
-      'count and oversell every tracked item.'
+  if (process.env.NODE_ENV !== 'production' || process.env.REDIS_URL) return;
+
+  if (process.env.ALLOW_IN_MEMORY_STOCK === 'true') {
+    logger.warn(
+      '[stock] Running WITHOUT Redis by explicit opt-in (ALLOW_IN_MEMORY_STOCK). ' +
+      'Cart holds live in this process only. This is safe for ONE instance and ' +
+      'ONLY one — scaling out without setting REDIS_URL will oversell stock ' +
+      'silently. Holds are also lost on restart, so carts release early after ' +
+      'a redeploy or a free-tier cold start.'
     );
+    return;
   }
+
+  throw new Error(
+    'REDIS_URL is required in production. Cart stock holds are shared state; ' +
+    'the in-process fallback would give every server instance its own stock ' +
+    'count and oversell every tracked item.\n' +
+    'Running a single instance on purpose (e.g. a free host)? Set ' +
+    'ALLOW_IN_MEMORY_STOCK=true to acknowledge the limitation.'
+  );
 };
 
 // ============================================================================

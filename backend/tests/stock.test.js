@@ -186,14 +186,61 @@ describe('checkout', () => {
 });
 
 describe('production safety', () => {
-  test('refuses to boot in production without Redis', () => {
-    const prev = process.env.NODE_ENV;
+  const withProdEnv = (fn) => {
+    const prevEnv = process.env.NODE_ENV;
+    const prevFlag = process.env.ALLOW_IN_MEMORY_STOCK;
     process.env.NODE_ENV = 'production';
     delete process.env.REDIS_URL;
-    try {
+    try { fn(); } finally {
+      process.env.NODE_ENV = prevEnv;
+      if (prevFlag === undefined) delete process.env.ALLOW_IN_MEMORY_STOCK;
+      else process.env.ALLOW_IN_MEMORY_STOCK = prevFlag;
+    }
+  };
+
+  test('refuses to boot in production without Redis', () => {
+    withProdEnv(() => {
+      delete process.env.ALLOW_IN_MEMORY_STOCK;
       expect(() => stock.assertProductionReady()).toThrow(/REDIS_URL is required/);
+    });
+  });
+
+  test('the error tells a single-instance operator how to proceed', () => {
+    withProdEnv(() => {
+      delete process.env.ALLOW_IN_MEMORY_STOCK;
+      // A guard that only says "no" strands anyone deploying to a free host.
+      expect(() => stock.assertProductionReady()).toThrow(/ALLOW_IN_MEMORY_STOCK/);
+    });
+  });
+
+  test('boots without Redis when a single instance is explicitly acknowledged', () => {
+    withProdEnv(() => {
+      process.env.ALLOW_IN_MEMORY_STOCK = 'true';
+      expect(() => stock.assertProductionReady()).not.toThrow();
+    });
+  });
+
+  test('only the exact string opts out — a truthy value is not enough', () => {
+    withProdEnv(() => {
+      // "1", "yes" and friends must NOT disable an overselling guard by
+      // accident; the opt-out has to be deliberate.
+      for (const v of ['1', 'yes', 'TRUE', 'on']) {
+        process.env.ALLOW_IN_MEMORY_STOCK = v;
+        expect(() => stock.assertProductionReady()).toThrow(/REDIS_URL is required/);
+      }
+    });
+  });
+
+  test('Redis present means the flag is irrelevant', () => {
+    const prevEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    delete process.env.ALLOW_IN_MEMORY_STOCK;
+    try {
+      expect(() => stock.assertProductionReady()).not.toThrow();
     } finally {
-      process.env.NODE_ENV = prev;
+      process.env.NODE_ENV = prevEnv;
+      delete process.env.REDIS_URL;
     }
   });
 });
