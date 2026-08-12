@@ -33,6 +33,20 @@ those into Render, or generate new ones. **Do not** reuse the old
 
 1. New **Web Service** → connect the GitHub repo → root directory `backend`.
    (Render reads `backend/render.yaml`; build `npm install --omit=dev`, start `npm start`.)
+
+   `render.yaml` also declares a **Key Value (Redis)** service and wires
+   `REDIS_URL` into the web service automatically. Accept it — it is not
+   optional. Cart stock holds and Socket.IO fanout are both shared state, and
+   the server **refuses to boot in production without `REDIS_URL`** on purpose:
+   two instances each keeping a private stock count would oversell every
+   tracked item, and sockets emitted on one instance would never reach clients
+   connected to the other.
+
+   The blueprint asks for `plan: standard` with `numInstances: 2`. The free
+   plan spins down when idle, which drops websockets and strands in-flight
+   stock holds, and it cannot scale out at all. **Both the web service and the
+   Key Value store are paid** — check the pricing before you click deploy.
+
 2. In **Environment**, add these (render.yaml lists them as comments too):
    - `FIREBASE_SERVICE_ACCOUNT` → paste the **entire** service-account JSON as one
      value (the same file as `backend/serviceAccountKey.json`). `config/firebase`
@@ -44,12 +58,34 @@ those into Render, or generate new ones. **Do not** reuse the old
    - `RAZORPAY_WEBHOOK_SECRET` → from step 0 (must match the webhook, see §4)
    - `FRONTEND_URLS` → your Vercel URL, e.g. `https://smart-canteen.vercel.app`
    - `CANTEEN_NAME` / `CANTEEN_COLLEGE` / `CANTEEN_ADDRESS` / `CANTEEN_GSTIN` / `CANTEEN_PHONE`
+   - `CART_HOLD_TTL_SECONDS` *(optional, default 600)* — how long an item stays
+     reserved after someone adds it to a cart before the sweeper returns it.
 3. Deploy. Confirm `https://<render-url>/health` returns `{ status: "success" }`.
+   The boot log should also show `Redis connected — stock authority is Redis`
+   and `Redis adapter active`. If it says `No REDIS_URL`, stop and fix it before
+   taking orders.
 4. Note the Render URL — it must match `frontend/vercel.json` and
    `frontend/.env.production` `VITE_SOCKET_URL`.
 
 > The server **hard-stops on boot in production** if `RAZORPAY_WEBHOOK_SECRET`
-> is unset — that's intentional (a missing secret would 500 every webhook).
+> or `REDIS_URL` is unset. Both are intentional: a missing webhook secret would
+> 500 every webhook and trigger a Razorpay retry storm, and a missing Redis
+> would silently oversell stock. A crash on boot is the cheapest possible
+> failure for either.
+
+### Creating the first staff account
+
+Nothing in the UI can mint an admin or chef login — the dashboards are gated and
+signup only ever creates students. After the backend is live, run this **once**
+from your machine with `backend/.env` pointing at the production Firebase
+project:
+
+```
+npm run create-admin -- --name "Canteen Owner" --roll OWNER001 --phone 9999999999 --password "<strong password>" --role admin
+```
+
+Repeat with `--role chef` for the kitchen account. Re-running with an existing
+roll number resets that account's password instead of creating a duplicate.
 
 ---
 
