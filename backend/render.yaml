@@ -1,22 +1,41 @@
 services:
   # ── Shared state: cart stock holds + Socket.IO fanout ──────────────────────
-  # Both are cross-instance concerns. Without this the API cannot run more than
-  # one instance: each would keep a private stock count (overselling every
-  # tracked item) and sockets emitted on one instance would never reach clients
-  # connected to another. app.js refuses to boot in production without it.
+  # Required even on a single instance, for two separate reasons:
+  #
+  #   1. app.js refuses to boot in production without REDIS_URL. That guard is
+  #      about what happens NEXT: the day someone raises numInstances, a second
+  #      process would start with its own private stock count and the same last
+  #      samosa would sell twice, silently. Requiring Redis from day one means
+  #      scaling is a number change rather than a correctness cliff.
+  #
+  #   2. It is the authority for live cart availability. Firestore sustains
+  #      roughly one write per second per document, and holding stock on
+  #      add-to-cart writes the item's document on every cart tap — a lunch
+  #      rush goes straight past that limit.
+  #
+  # Must share a region with the web service: Render's private network does
+  # not cross regions.
   - type: keyvalue
     name: smart-canteen-redis
     plan: starter
+    region: singapore
     ipAllowList: []          # private network only — never expose it publicly
 
   - type: web
     name: smart-canteen-api
     env: node
-    # 'free' spins the instance down when idle (cold starts drop websockets and
-    # abandon in-flight stock holds) and cannot scale out. 'standard' is the
-    # smallest plan that supports the multiple instances this app now handles.
-    plan: standard
-    numInstances: 2
+    # Singapore is Render's closest region to India. Oregon adds roughly 250ms
+    # round-trip to every request, and since add-to-cart now reserves stock on
+    # the server, students feel that on every single tap.
+    region: singapore
+    # 'starter' with one instance suits a single canteen. Deliberately NOT
+    # 'free': that spins the instance down when idle, which drops websockets
+    # and strands in-flight stock holds until the sweeper reclaims them.
+    #
+    # To scale out later, raise numInstances — the Redis adapter and shared
+    # stock authority are already wired, so nothing else has to change.
+    plan: starter
+    numInstances: 1
     # Skip devDependencies (jest, firebase-tools) in production.
     buildCommand: npm install --omit=dev
     startCommand: npm start

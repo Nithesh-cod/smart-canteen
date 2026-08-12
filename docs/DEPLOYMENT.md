@@ -42,10 +42,25 @@ those into Render, or generate new ones. **Do not** reuse the old
    tracked item, and sockets emitted on one instance would never reach clients
    connected to the other.
 
-   The blueprint asks for `plan: standard` with `numInstances: 2`. The free
-   plan spins down when idle, which drops websockets and strands in-flight
-   stock holds, and it cannot scale out at all. **Both the web service and the
-   Key Value store are paid** — check the pricing before you click deploy.
+   The blueprint asks for `plan: starter` with `numInstances: 1`, in the
+   **Singapore** region — Render's closest to India. Oregon adds roughly 250ms
+   round-trip to every request, and since add-to-cart now reserves stock on the
+   server, that is felt on every tap.
+
+   Deliberately not the free plan: it spins the instance down when idle, which
+   drops websockets and strands in-flight stock holds. **Both the web service
+   and the Key Value store are paid** — check pricing before deploying.
+
+   To scale out later, raise `numInstances`. The Redis adapter and the shared
+   stock authority are already wired, so nothing else changes.
+
+> **Create this as a Blueprint, not a Web Service.** Render only reads
+> `render.yaml` for Blueprints — `New → Blueprint`. Creating a Web Service by
+> hand ignores the file completely: no Key Value store, no `REDIS_URL`, no
+> `NODE_ENV=production`, and Render auto-detects `yarn` even though this repo
+> uses npm. The result still boots and looks healthy, which is what makes it
+> dangerous — it would be running the single-process stock driver with dev
+> rate limits.
 
 2. In **Environment**, add these (render.yaml lists them as comments too):
    - `FIREBASE_SERVICE_ACCOUNT` → paste the **entire** service-account JSON as one
