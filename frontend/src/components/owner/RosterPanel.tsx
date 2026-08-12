@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { Student } from '../../types';
+import { EmptyState, NoResultsState } from '../common/states';
 
 /**
  * RosterPanel — student admin view rendered as a crystal card grid.
@@ -121,14 +122,18 @@ export const RosterPanel: React.FC<RosterPanelProps> = ({ students, onRefresh })
       </div>
 
       {filtered.length === 0 ? (
-        <div className="roster-empty">
-          <div className="roster-empty-glyph">◯</div>
-          <div className="roster-empty-title">
-            {safe.length === 0 ? 'Roster is empty' : 'No accounts match this slice'}
-          </div>
-          <div className="roster-empty-sub">
-            {safe.length === 0 ? 'First customer to sign up will appear here' : 'Try a broader filter'}
-          </div>
+        <div style={{ padding: '28px 12px' }}>
+          {safe.length === 0 ? (
+            <EmptyState
+              glyph="◯"
+              title="No customers yet"
+              body="Students appear here as soon as they create an account at the kiosk. Nothing to do until then."
+            />
+          ) : (
+            <NoResultsState
+              suggestion="No accounts match this filter. Widen the tier or clear the search."
+            />
+          )}
         </div>
       ) : (
         <div className="roster-grid">

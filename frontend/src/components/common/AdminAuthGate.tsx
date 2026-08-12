@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as authService from '../../services/auth.service';
 import { signIntoFirebase } from '../../services/firebase';
+import { PermissionDeniedState, SessionExpiredState, Skeleton } from './states';
 
 /**
  * Sign into Firebase Auth (custom token from the backend) so the dashboard's
@@ -30,7 +31,7 @@ async function ensureFirebaseAuth(): Promise<void> {
 //     backend/scripts/create-admin.js.
 // ============================================================================
 
-type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated' | 'wrong_role';
+type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated' | 'wrong_role' | 'expired';
 
 interface AdminAuthGateProps {
   requiredRoles: string[];
@@ -77,9 +78,12 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
   useEffect(() => {
     verifyAccess();
 
+    // A 401 mid-session means the token aged out while someone was working —
+    // shown as its own state rather than dumping them on a bare login form
+    // with a red line, which reads like their password stopped working.
     const handleUnauth = () => {
-      setStatus('unauthenticated');
-      setError('Session expired. Please log in again.');
+      setStatus('expired');
+      setError('');
     };
     window.addEventListener('auth:unauthorized', handleUnauth);
     return () => window.removeEventListener('auth:unauthorized', handleUnauth);
@@ -101,8 +105,15 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
       if (!requiredRoles.includes(role)) {
         // Do NOT keep a session that lacks the required role.
         authService.clearAuthData();
-        setError(`Access denied. This dashboard requires: ${requiredRoles.join(' / ')}.`);
-        setStatus('unauthenticated');
+        // There are TWO ways to hit a wrong role — a stored token checked on
+        // mount, and a fresh login like this one. They used to behave
+        // differently: the stored-token path got a proper explanation while
+        // this path, the far more common one (someone typing chef credentials
+        // into the owner screen), just tinted a line above the same form and
+        // invited them to try the credentials that were only just rejected.
+        // Both now land on the same state.
+        setError('');
+        setStatus('wrong_role');
         return;
       }
       authService.saveAuthData(result.data.token, result.data.student);
@@ -121,8 +132,10 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
   if (status === 'checking') {
     return (
       <div style={pageStyle}>
-        <div style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Inter, sans-serif', fontSize: '1rem' }}>
-          Loading…
+        <div className="lg-surface" style={{ padding: '34px 40px', display: 'flex', flexDirection: 'column', gap: 14, minWidth: 260 }}>
+          <Skeleton width={150} height={16} />
+          <Skeleton width={210} height={12} />
+          <Skeleton width={180} height={12} />
         </div>
       </div>
     );
@@ -130,6 +143,31 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
 
   if (status === 'authenticated') {
     return <>{children}</>;
+  }
+
+  // ── Permission denied ─────────────────────────────────────────────────────
+  // A valid login at the wrong door. Previously this only tinted a line of
+  // text above the same form, so a chef who opened the owner dashboard was
+  // invited to type the very credentials that had just been rejected. Naming
+  // the required role turns "try again" into "ask an owner".
+  if (status === 'wrong_role') {
+    return (
+      <PermissionDeniedState
+        requiredRoles={requiredRoles}
+        onSwitchAccount={() => {
+          authService.clearAuthData();
+          setStatus('unauthenticated');
+          setError('');
+        }}
+      />
+    );
+  }
+
+  // ── Session expired ───────────────────────────────────────────────────────
+  // Distinct from a plain sign-in prompt: this person WAS working and got
+  // interrupted, so the reassurance that nothing was lost is the message.
+  if (status === 'expired') {
+    return <SessionExpiredState onSignIn={() => { setStatus('unauthenticated'); setError(''); }} />;
   }
 
   return (
@@ -140,11 +178,9 @@ const AdminAuthGate: React.FC<AdminAuthGateProps> = ({
             {dashboardName.toLowerCase().includes('owner') ? '👔' : '👨‍🍳'}
           </div>
           <h1 style={headingStyle}>{dashboardName}</h1>
-          <p style={subStyle}>
-            {status === 'wrong_role'
-              ? `Your account doesn't have ${requiredRoles.join('/')} access.`
-              : 'Sign in to continue.'}
-          </p>
+          {/* wrong_role and expired now return their own screens above, so by
+              the time we reach this form the only case left is "not signed in". */}
+          <p style={subStyle}>Sign in to continue.</p>
         </div>
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

@@ -10,11 +10,18 @@ class BallpitBoundary extends Component<{ children: React.ReactNode }, { failed:
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
 import { logout as logoutAction } from '../store/slices/authSlice';
-import { setItems, updateItem } from '../store/slices/menuSlice';
-import { addItem, removeItem, updateQuantity, clearCart, selectCartCount } from '../store/slices/cartSlice';
-// removeItem is used by handleDecrement below
+import {
+  setItems,
+  updateItem,
+  setAvailability,
+  setItemAvailability,
+  selectAvailability,
+} from '../store/slices/menuSlice';
+import { selectCartCount } from '../store/slices/cartSlice';
+import { useCart } from '../hooks/useCart';
 import * as menuService from '../services/menu.service';
 import * as authService from '../services/auth.service';
+import * as cartService from '../services/cart.service';
 import { subscribeToCollection } from '../services/firebase';
 import socketService from '../services/socket.service';
 import MenuGrid from '../components/student/MenuGrid';
@@ -24,6 +31,8 @@ import LoginForm from '../components/student/LoginForm';
 import { useNavigate } from 'react-router-dom';
 import type { Student } from '../types';
 import { useToast } from '../components/common/Toast';
+import { ErrorState } from '../components/common/states';
+import NetworkBanner from '../components/common/NetworkBanner';
 import type { MenuItem, Order } from '../types';
 import api from '../services/api';
 // @ts-ignore — JSX component without types
@@ -155,12 +164,23 @@ const StudentKiosk: React.FC = () => {
   const menuLoading = useSelector((state: RootState) => state.menu.loading);
   const cartItems = useSelector((state: RootState) => state.cart.items);
   const cartCount = useSelector(selectCartCount);
+  const availability = useSelector(selectAvailability);
   const { currentStudent } = useSelector((state: RootState) => state.auth);
+
+  // Server-backed cart: these reserve and release real stock (see useCart).
+  const {
+    addToCart,
+    removeFromCart,
+    updateQuantity: updateCartQuantity,
+    clearAfterCheckout,
+  } = useCart();
 
   const [favorites, setFavorites] = useState<number[]>([]);
   const [showLogin, setShowLogin] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  /** Set when the menu fetch fails, so the grid renders a retryable error. */
+  const [menuError, setMenuError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeOffers, setActiveOffers] = useState<ActiveOffer[]>([]);
@@ -258,10 +278,32 @@ const StudentKiosk: React.FC = () => {
       loadMenu();
     };
 
+    // ── Live availability ────────────────────────────────────────────────────
+    // The number a shopper can still add is on-hand stock MINUS everything
+    // sitting in other people's carts right now, across the counter PC, the
+    // web app and the Android app. The server pushes this on every hold,
+    // release, expiry and sale, which is what keeps all three in agreement.
+    const handleAvailability = (data: { id: number; available: number }) => {
+      dispatch(setItemAvailability({ id: data.id, available: data.available }));
+    };
+
+    // Seed the map once up front; socket events keep it current afterwards.
+    cartService.getAvailability()
+      .then((rows) => {
+        const map: Record<number, number> = {};
+        for (const r of rows) map[r.id] = r.available;
+        dispatch(setAvailability(map));
+      })
+      .catch(() => { /* falls back to stock_quantity until the first push */ });
+
+    // Make sure this browser owns a cart before anything can be added to it.
+    cartService.ensureSession();
+
     socket.on('menu:stock-updated',       handleStockUpdate);
     socket.on('menu:availability-changed', handleAvailabilityChange);
     socket.on('menu:item-updated',         handleItemUpdated);
     socket.on('menu:bulk-updated',         handleBulkUpdate);
+    socket.on('stock:availability',        handleAvailability);
 
     return () => {
       menuUnsub();
@@ -269,18 +311,24 @@ const StudentKiosk: React.FC = () => {
       socket.off('menu:availability-changed', handleAvailabilityChange);
       socket.off('menu:item-updated',         handleItemUpdated);
       socket.off('menu:bulk-updated',         handleBulkUpdate);
+      socket.off('stock:availability',        handleAvailability);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadMenu = async () => {
     try {
+      setMenuError(null);
       const result = await menuService.getAvailable();
       if (result.success && Array.isArray(result.data)) {
         dispatch(setItems(result.data));
       }
     } catch {
-      showToast('Failed to load menu. Please refresh.', 'error');
+      // A toast alone was the wrong shape here: it disappears, leaving a blank
+      // menu with no explanation and no way back except reloading the page —
+      // which on a kiosk also throws away the shopper's cart. Record the
+      // failure so the grid can render a retryable error state instead.
+      setMenuError('We could not load the menu.');
     }
   };
 
@@ -294,50 +342,71 @@ const StudentKiosk: React.FC = () => {
   }, [dispatch]);
 
   const handleAddToCart = useCallback(
-    (item: MenuItem) => {
+    async (item: MenuItem) => {
       const existing = cartItems.find((ci) => ci.id === item.id);
       const currentQty = existing?.quantity ?? 0;
 
       // ── Stock guard ──────────────────────────────────────────────────────
-      const stock = item.stock_quantity;
-      if (stock !== undefined && stock !== null && stock !== -1) {
-        if (currentQty >= stock) {
+      // Checked against LIVE availability, not item.stock_quantity. The latter
+      // is what the kitchen physically has and ignores units already reserved
+      // in other shoppers' carts, so it would happily let someone add the last
+      // dosa that another kiosk is midway through buying — and only fail them
+      // at checkout.
+      //
+      // The two figures mean DIFFERENT things and must not be compared the
+      // same way. `availability` already has this shopper's own held units
+      // subtracted, so it answers "how many MORE may I add" — testing
+      // `currentQty >= availability` compares a running total against a
+      // remainder and blocks the shopper roughly halfway to the real limit
+      // (with 3 in stock they could take 2, then get refused). `stock_quantity`
+      // is a total, so there the total comparison is the correct one.
+      const live = availability[item.id];
+      if (live !== undefined) {
+        if (live !== -1 && live <= 0) {
+          showToast(`"${item.name}" just sold out`, 'error');
+          return;
+        }
+      } else {
+        const stock = item.stock_quantity;
+        if (stock !== undefined && stock !== null && stock !== -1 && currentQty >= stock) {
           showToast(`Only ${stock} available for "${item.name}"`, 'error');
           return;
         }
       }
 
-      if (existing) {
-        dispatch(updateQuantity({ id: item.id, quantity: currentQty + 1 }));
-      } else {
-        dispatch(
-          addItem({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: 1,
-            image_url: item.image_url,
-            is_vegetarian: item.is_vegetarian,
-          })
-        );
+      // Optimistic in Redux, then reserved on the server. A refusal rolls the
+      // quantity back inside the hook and returns a message to show.
+      const res = await addToCart({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: 1,
+        image_url: item.image_url,
+        is_vegetarian: item.is_vegetarian,
+      });
+
+      if (!res.ok) {
+        showToast(res.message ?? `Could not reserve "${item.name}"`, 'error');
+        return;
       }
       showToast(`${item.name} added to cart! 🛒`, 'success');
     },
-    [cartItems, dispatch, showToast]
+    [cartItems, availability, addToCart, showToast]
   );
 
   /** Decrement quantity in the card stepper; removes the item when it reaches 0. */
   const handleDecrement = useCallback(
-    (itemId: number) => {
+    async (itemId: number) => {
       const existing = cartItems.find((ci) => ci.id === itemId);
       if (!existing) return;
+      // Both paths release the freed unit(s) back to every other client.
       if (existing.quantity <= 1) {
-        dispatch(removeItem(itemId));
+        await removeFromCart(itemId);
       } else {
-        dispatch(updateQuantity({ id: itemId, quantity: existing.quantity - 1 }));
+        await updateCartQuantity(itemId, existing.quantity - 1);
       }
     },
-    [cartItems, dispatch]
+    [cartItems, removeFromCart, updateCartQuantity]
   );
 
   const handleToggleFavorite = useCallback((itemId: number) => {
@@ -348,8 +417,12 @@ const StudentKiosk: React.FC = () => {
 
   const handleOrderSuccess = useCallback(
     (_order: Order) => {
-      // Reset kiosk for the next student
-      dispatch(clearCart());
+      // Reset kiosk for the next student.
+      //
+      // clearAfterCheckout, NOT the normal clear: the server already converted
+      // this cart's holds into a sale. Asking it to release them here would
+      // put the food the customer is walking away with back on the menu.
+      clearAfterCheckout();
       setCheckoutOpen(false);
       setCartOpen(false);
       setSelectedCategory('all');
@@ -387,6 +460,11 @@ const StudentKiosk: React.FC = () => {
 
   return (
     <div style={bgStyle}>
+      {/* Connection state lives above everything. Offline and slow-network are
+          CONDITIONS, not events, so they get a persistent strip rather than a
+          toast that vanishes before the shopper looks up. */}
+      <NetworkBanner />
+
       {/* Calm GridFloor background — replaces the Orb. Tron-style perspective
           grid + cursor-following ambient glow, no chaotic swirls competing
           with content. The Orb shader was beautiful but read as noise. */}
@@ -566,20 +644,32 @@ const StudentKiosk: React.FC = () => {
         {/* Active offers banner */}
         <OfferBanner offers={activeOffers} />
 
-        {/* Menu grid */}
-        <MenuGrid
-          items={menuItems}
-          favorites={favorites}
-          onAddToCart={handleAddToCart}
-          onDecrement={handleDecrement}
-          onToggleFavorite={handleToggleFavorite}
-          cartItems={cartItems}
-          loading={menuLoading}
-          selectedCategory={selectedCategory}
-          searchQuery={searchQuery}
-          onCategoryChange={setSelectedCategory}
-          onSearchChange={setSearchQuery}
-        />
+        {/* Menu grid — or a retryable error when the menu could not load.
+            Distinguishing "no dishes" from "we couldn't fetch the dishes"
+            matters: the first is the canteen's answer, the second is ours. */}
+        {menuError ? (
+          <div style={{ padding: '56px 16px' }}>
+            <ErrorState
+              title="We couldn't load the menu"
+              body="The kitchen is there — we just couldn't reach it. Your cart is safe."
+              onRetry={loadMenu}
+            />
+          </div>
+        ) : (
+          <MenuGrid
+            items={menuItems}
+            favorites={favorites}
+            onAddToCart={handleAddToCart}
+            onDecrement={handleDecrement}
+            onToggleFavorite={handleToggleFavorite}
+            cartItems={cartItems}
+            loading={menuLoading}
+            selectedCategory={selectedCategory}
+            searchQuery={searchQuery}
+            onCategoryChange={setSelectedCategory}
+            onSearchChange={setSearchQuery}
+          />
+        )}
       </main>
 
       {/* Floating cart button with bounce animation */}

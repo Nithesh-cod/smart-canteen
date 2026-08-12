@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import type { MenuItem as MenuItemType, CartItem } from '../../types';
 import DataCrystal from '../fx/DataCrystal';
 import CategoryChannels from '../fx/CategoryChannels';
+import { LoadingGrid, EmptyState, NoResultsState } from '../common/states';
 
 interface MenuGridProps {
   items: MenuItemType[];
@@ -102,57 +103,41 @@ const MenuGrid: React.FC<MenuGridProps> = ({
         onSearchChange={onSearchChange}
       />
 
-      {/* Loading skeletons — DataCrystal-shaped */}
-      {loading && (
-        <div className="menu-grid">
-          {Array.from({ length: 8 }).map((_, idx) => (
-            <div
-              key={idx}
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,200,180,0.1)',
-                borderRadius: 22,
-                overflow: 'hidden',
-                height: 300,
-                position: 'relative',
-              }}
-            >
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 90, 95,0.06) 50%, transparent 100%)',
-                backgroundSize: '200% 100%',
-                animation: 'crystal-shimmer 1.8s infinite',
-              }} />
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ── Loading ─────────────────────────────────────────────────────────
+          Card-shaped skeletons, not a spinner: they show what is coming and
+          hold the layout so nothing jumps when the dishes land. */}
+      {loading && <LoadingGrid count={8} />}
 
-      {/* Empty state */}
+      {/* ── Empty / no-results ──────────────────────────────────────────────
+          Three genuinely different situations that used to share one "No
+          dishes found" message, leaving the reader without the one thing that
+          would help: what to do next.
+            • a search that matched nothing  → clear the search
+            • an empty favourites list       → how to add one
+            • a category with nothing in it  → nothing to do but look elsewhere
+      */}
       {!loading && filteredItems.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '80px 16px',
-          color: 'rgba(255,255,255,0.4)',
-        }}>
-          <div style={{ fontSize: '3.2rem', marginBottom: 14 }}>🍽️</div>
-          <p style={{
-            fontFamily: 'Sora, sans-serif',
-            fontSize: '1.05rem',
-            fontWeight: 700,
-            color: '#fff7f2',
-          }}>
-            No dishes found
-          </p>
-          {searchQuery && (
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', marginTop: 8, color: 'rgba(255,255,255,0.4)' }}>
-              Try a different search
-            </p>
-          )}
-          {selectedCategory === 'favorites' && favorites.length === 0 && !searchQuery && (
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', marginTop: 8, color: 'rgba(255,255,255,0.4)' }}>
-              Tap the ❤️ on a dish to save it here
-            </p>
+        <div style={{ padding: '48px 16px' }}>
+          {searchQuery ? (
+            <NoResultsState
+              query={searchQuery}
+              onClear={() => onSearchChange('')}
+              suggestion="Try a shorter word — or browse a category instead."
+            />
+          ) : selectedCategory === 'favorites' && favorites.length === 0 ? (
+            <EmptyState
+              glyph="❤️"
+              title="No favourites yet"
+              body="Tap the heart on any dish and it'll be waiting here next time."
+              actions={[{ label: 'Browse all dishes', onClick: () => onCategoryChange('all'), ghost: true }]}
+            />
+          ) : (
+            <EmptyState
+              glyph="🍽️"
+              title="Nothing on the menu here"
+              body="This category is empty right now. The kitchen updates the menu through the day, so check back shortly."
+              actions={[{ label: 'See all dishes', onClick: () => onCategoryChange('all'), ghost: true }]}
+            />
           )}
         </div>
       )}

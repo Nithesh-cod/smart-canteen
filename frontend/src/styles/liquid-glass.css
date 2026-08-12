@@ -1,0 +1,286 @@
+/* ============================================================================
+   LIQUID GLASS — the shared material for every UI state
+   ============================================================================
+   One physical surface used by every state screen (empty, error, offline,
+   permission denied, session expired, success…) so the app reads as a single
+   system instead of a collection of differently-styled dead ends.
+
+   What makes it read as *liquid* rather than flat frosted glass:
+     • a bright specular lip along the top edge,
+     • a soft caustic blob drifting slowly beneath the surface,
+     • saturate() on the backdrop so the warm embers behind bloom through.
+
+   Colours come from the Warm-Glass tokens already in index.css.
+   ========================================================================== */
+
+.lg-surface {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0.028) 38%,
+      rgba(255, 255, 255, 0.055) 100%);
+  backdrop-filter: blur(28px) saturate(165%);
+  -webkit-backdrop-filter: blur(28px) saturate(165%);
+  border: 1px solid rgba(255, 200, 180, 0.16);
+  border-radius: 22px;
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+/* Drifting caustic — the liquid tell. Behind content via z-index. */
+.lg-surface::after {
+  content: '';
+  position: absolute;
+  inset: -45% -65%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 30% at 28% 18%, rgba(255, 255, 255, 0.13), transparent 70%),
+    radial-gradient(30% 24% at 78% 82%, rgba(255, 158, 61, 0.10), transparent 72%);
+  animation: lg-drift 16s ease-in-out infinite alternate;
+}
+
+@keyframes lg-drift {
+  from { transform: translate(-6%, -4%) scale(1); }
+  to   { transform: translate(8%, 6%) scale(1.06); }
+}
+
+/* Hairline sheen across the very top edge. */
+.lg-surface::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 18%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
+}
+
+/* ── State scaffold ──────────────────────────────────────────────────────── */
+
+.lg-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 44px 32px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.lg-state-glyph {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 18px rgba(255, 90, 95, 0.35));
+  animation: lg-float 4.5s ease-in-out infinite;
+}
+
+@keyframes lg-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+
+.lg-state-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+}
+
+.lg-state-body {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-tertiary);
+  max-width: 38ch;
+}
+
+.lg-state-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.lg-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 11px 22px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+  border: 1px solid rgba(255, 90, 95, 0.5);
+  background: linear-gradient(135deg, rgba(255, 90, 95, 0.22), rgba(255, 158, 61, 0.18));
+  color: #fff7f2;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.lg-btn:hover  { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(255, 90, 95, 0.28); }
+.lg-btn:active { transform: translateY(0); }
+.lg-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.lg-btn.ghost {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--text-secondary);
+}
+
+/* Tone variants — same material, different light. */
+.lg-tone-danger  { border-color: rgba(255, 51, 102, 0.34); }
+.lg-tone-danger  .lg-state-glyph { filter: drop-shadow(0 4px 18px rgba(255, 51, 102, 0.40)); }
+.lg-tone-warn    { border-color: rgba(255, 159, 67, 0.34); }
+.lg-tone-warn    .lg-state-glyph { filter: drop-shadow(0 4px 18px rgba(255, 159, 67, 0.40)); }
+.lg-tone-success { border-color: rgba(90, 220, 150, 0.34); }
+.lg-tone-success .lg-state-glyph { filter: drop-shadow(0 4px 18px rgba(90, 220, 150, 0.40)); }
+
+/* ── Skeletons (loading) ─────────────────────────────────────────────────── */
+
+.lg-skel {
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.11) 37%,
+    rgba(255, 255, 255, 0.04) 63%);
+  background-size: 400% 100%;
+  animation: lg-shimmer 1.5s ease infinite;
+  border-radius: 10px;
+}
+
+@keyframes lg-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* ── Global network banner ───────────────────────────────────────────────── */
+
+.lg-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 18px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #fff7f2;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  animation: lg-banner-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.lg-banner.offline { background: linear-gradient(180deg, rgba(255, 51, 102, 0.34), rgba(255, 51, 102, 0.16)); }
+.lg-banner.slow    { background: linear-gradient(180deg, rgba(255, 159, 67, 0.32), rgba(255, 159, 67, 0.14)); }
+.lg-banner.back    { background: linear-gradient(180deg, rgba(90, 220, 150, 0.30), rgba(90, 220, 150, 0.12)); }
+
+@keyframes lg-banner-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.lg-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: lg-pulse 1.3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes lg-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.75); }
+}
+
+/* ── Form validation ─────────────────────────────────────────────────────── */
+
+.lg-field { display: flex; flex-direction: column; gap: 6px; }
+
+.lg-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.lg-input {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 200, 180, 0.16);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.98rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+}
+
+.lg-input:focus {
+  border-color: rgba(255, 90, 95, 0.6);
+  box-shadow: 0 0 0 3px rgba(255, 90, 95, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lg-input.invalid {
+  border-color: rgba(255, 51, 102, 0.65);
+  box-shadow: 0 0 0 3px rgba(255, 51, 102, 0.12);
+}
+
+.lg-input.valid { border-color: rgba(90, 220, 150, 0.50); }
+
+.lg-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: #ff6b8a;
+  animation: lg-shake 0.32s ease;
+}
+
+@keyframes lg-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+
+.lg-hint {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+/* Motion here is decoration — never required to understand a state. */
+@media (prefers-reduced-motion: reduce) {
+  .lg-surface::after,
+  .lg-state-glyph,
+  .lg-skel,
+  .lg-dot,
+  .lg-banner,
+  .lg-error {
+    animation: none !important;
+  }
+}

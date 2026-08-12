@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { MenuItem } from '../../types';
 import api from '../../services/api';
 import { useToast } from '../common/Toast';
+import { EmptyState, NoResultsState } from '../common/states';
 
 /**
  * CatalogPanel — replaces the inline MenuManagement block with a real
@@ -192,14 +193,25 @@ export const CatalogPanel: React.FC<CatalogPanelProps> = ({ items, onRefresh }) 
       </div>
 
       {filtered.length === 0 ? (
-        <div className="catalog-empty">
-          <div className="catalog-empty-glyph">⬡</div>
-          <div className="catalog-empty-title">
-            {safe.length === 0 ? 'Catalog is empty' : 'No entries match the filter'}
-          </div>
-          <div className="catalog-empty-sub">
-            {safe.length === 0 ? 'Add the first dish to start serving' : 'Refine the query to find an entry'}
-          </div>
+        // Two different situations that shared one panel. An empty catalog
+        // needs a way to add the first dish; a filter that matched nothing
+        // needs the filter cleared. Offering "Add entry" to someone who simply
+        // mistyped a search sends them down the wrong path entirely.
+        <div style={{ padding: '32px 12px' }}>
+          {safe.length === 0 ? (
+            <EmptyState
+              glyph="⬡"
+              title="Catalog is empty"
+              body="Nothing is on the menu yet. Add the first dish and it appears on every kiosk immediately."
+              actions={[{ label: '⊕ Add first dish', onClick: openNew }]}
+            />
+          ) : (
+            <NoResultsState
+              query={search}
+              onClear={() => setSearch('')}
+              suggestion="No dishes match that filter. Try a shorter word, or clear it to see the whole catalog."
+            />
+          )}
         </div>
       ) : (
         <div className="catalog-grid">

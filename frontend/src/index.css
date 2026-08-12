@@ -1,3 +1,8 @@
+/* Liquid-glass state system. Must precede all rules — CSS requires @import
+   before any other statement. Loaded here so every entry point (kiosk, chef,
+   owner) inherits the same state material without three separate imports. */
+@import './styles/liquid-glass.css';
+
 /* Fonts are loaded via <link> in index.html — no @import needed here */
 /* ─── prevent horizontal scroll on every page ─── */
 html, body { max-width: 100vw; overflow-x: hidden; }

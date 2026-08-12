@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { Order } from '../../types';
+import { EmptyState, NoResultsState } from '../common/states';
 
 /**
  * OrdersPanel — modern orders table for the Owner dashboard.
@@ -311,12 +312,18 @@ export const OrdersPanel: React.FC<OrdersPanelProps> = ({ orders, onRefresh }) =
       </div>
 
       {filtered.length === 0 ? (
-        <div className="orders-empty">
-          <div className="orders-empty-glyph">◯</div>
-          <div className="orders-empty-title">No orders in this slice</div>
-          <div className="orders-empty-sub">
-            {safeOrders.length === 0 ? 'Waiting for the first transmission' : 'Try a different filter or query'}
-          </div>
+        <div style={{ padding: '28px 12px' }}>
+          {safeOrders.length === 0 ? (
+            <EmptyState
+              glyph="◯"
+              title="No orders yet"
+              body="Orders land here the moment a student pays. Nothing has come through today."
+            />
+          ) : (
+            <NoResultsState
+              suggestion="No orders match this filter. Try another status, or widen the date range."
+            />
+          )}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>

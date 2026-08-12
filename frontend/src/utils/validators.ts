@@ -50,6 +50,64 @@ export const validateSignupForm = ({
   return null;
 };
 
+export interface SignupFieldErrors {
+  name: string | null;
+  roll_number: string | null;
+  phone: string | null;
+  password: string | null;
+}
+
+/**
+ * Per-FIELD signup validation.
+ *
+ * validateSignupForm above returns a single combined sentence, which forces
+ * the UI to print one message for the whole form. That leaves the reader to
+ * work out which of four inputs it refers to, and it can only ever report the
+ * first problem — fix the name and you discover the phone was wrong too, one
+ * submit at a time. Returning a map lets each field carry its own error and
+ * show every problem at once.
+ *
+ * Every message names the rule rather than just saying "invalid", because the
+ * user cannot guess a rule they were never told.
+ */
+export const validateSignupFields = (fields: {
+  name: string;
+  roll_number: string;
+  phone: string;
+  password: string;
+}): SignupFieldErrors => {
+  const name = fields.name.trim();
+  const roll = fields.roll_number.trim();
+  const phone = fields.phone.trim();
+
+  return {
+    name:
+      !name ? 'Please enter your name.'
+      : name.length < 2 ? 'That looks too short — please enter your full name.'
+      : name.length > 100 ? 'Name must be 100 characters or fewer.'
+      : null,
+
+    roll_number:
+      !roll ? 'Please enter your roll number.'
+      : roll.length > 20 ? 'Roll number must be 20 characters or fewer.'
+      : null,
+
+    phone:
+      !phone ? 'Please enter your phone number.'
+      : !validatePhone(phone) ? 'Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9.'
+      : null,
+
+    password:
+      !fields.password ? 'Please choose a password.'
+      : fields.password.length < 6 ? 'Use at least 6 characters.'
+      : null,
+  };
+};
+
+/** True when no field in the map carries an error. */
+export const isSignupValid = (errors: SignupFieldErrors): boolean =>
+  Object.values(errors).every((e) => e === null);
+
 /**
  * Validate the login form identifier (roll number or phone).
  * Returns an error message string if invalid, or null if valid.

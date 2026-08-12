@@ -16,6 +16,13 @@ export interface GetAllParams {
   status?: string;
   page?: number;
   limit?: number;
+  /**
+   * ISO date string. Returns orders created at or after it, across ALL
+   * statuses — the chef panel needs this for its "Today's Log" tab, whose
+   * completed-order list and revenue total are otherwise filtered out by the
+   * server's default kitchen-queue view.
+   */
+  from_date?: string;
 }
 
 /**

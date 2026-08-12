@@ -5,6 +5,7 @@ import { setCredentials } from '../../store/slices/authSlice';
 import * as authService from '../../services/auth.service';
 import type { Student } from '../../types';
 import { useToast } from '../common/Toast';
+import { validateSignupFields, isSignupValid } from '../../utils/validators';
 
 interface LoginFormProps {
   onLoginSuccess: (student: Student) => void;
@@ -91,6 +92,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
   const [recentStudents, setRecentStudents] = useState<Student[]>([]);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
+  // Per-field signup validation. `touched` gates display so a field isn't
+  // marked red while it is still being typed — being corrected mid-word reads
+  // as being told off, and every empty form would light up on first render.
+  const [signupTouched, setSignupTouched] = useState<Record<string, boolean>>({});
+  const signupErrors = validateSignupFields({
+    name: signupName,
+    roll_number: signupRoll,
+    phone: signupPhone,
+    password: signupPassword,
+  });
+  const touch = (field: string) => setSignupTouched((t) => ({ ...t, [field]: true }));
+  const errFor = (field: keyof typeof signupErrors) =>
+    signupTouched[field] ? signupErrors[field] : null;
+
   useEffect(() => {
     setRecentStudents(getRecentStudents());
   }, []);
@@ -123,14 +138,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signupName.trim() || !signupRoll.trim() || !signupPhone.trim() || !signupPassword) {
-      setError('Name, Roll Number, Phone, and Password are required');
+
+    // Mark everything touched so submitting an untouched form reveals ALL the
+    // problems at once, rather than dripping them out one submit at a time.
+    setSignupTouched({ name: true, roll_number: true, phone: true, password: true });
+    if (!isSignupValid(signupErrors)) {
+      setError('');
       return;
     }
-    if (signupPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+
     setLoading(true);
     setError('');
     try {
@@ -157,10 +173,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
     }
   };
 
-  const getInputStyle = (name: string): React.CSSProperties => ({
+  const getInputStyle = (name: string, invalid = false): React.CSSProperties => ({
     width: '100%',
     background: 'rgba(255,255,255,0.05)',
-    border: `1px solid ${focusedInput === name ? '#ff5a5f' : 'rgba(255, 90, 95,0.25)'}`,
+    border: `1px solid ${
+      invalid ? 'rgba(255,51,102,0.7)'
+      : focusedInput === name ? '#ff5a5f'
+      : 'rgba(255, 90, 95,0.25)'
+    }`,
     borderRadius: '10px',
     color: '#fff',
     padding: '14px 18px',
@@ -169,8 +189,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
     outline: 'none',
     transition: 'border-color 0.2s, box-shadow 0.2s',
     boxSizing: 'border-box',
-    boxShadow: focusedInput === name ? '0 0 12px rgba(255, 90, 95,0.2)' : 'none',
+    boxShadow: invalid
+      ? '0 0 0 3px rgba(255,51,102,0.14)'
+      : focusedInput === name ? '0 0 12px rgba(255, 90, 95,0.2)' : 'none',
   });
+
+  /**
+   * Inline field error. Rendered with role="alert" and tied to the input via
+   * aria-invalid so it is announced rather than only coloured — red-on-dark is
+   * precisely where colour-only signalling fails.
+   */
+  const FieldError: React.FC<{ msg: string | null }> = ({ msg }) =>
+    msg ? <div className="lg-error" role="alert" style={{ marginTop: 6 }}><span aria-hidden="true">⚠</span>{msg}</div> : null;
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
@@ -386,47 +416,57 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onClose })
                 <div>
                   <label style={labelStyle}>Full Name *</label>
                   <input
-                    style={getInputStyle('s-name')}
+                    style={getInputStyle('s-name', !!errFor('name'))}
                     placeholder="John Doe"
                     value={signupName}
+                    aria-invalid={!!errFor('name')}
                     onChange={(e) => setSignupName(e.target.value)}
                     onFocus={() => setFocusedInput('s-name')}
-                    onBlur={() => setFocusedInput(null)}
+                    onBlur={() => { setFocusedInput(null); touch('name'); }}
                   />
+                  <FieldError msg={errFor('name')} />
                 </div>
                 <div>
                   <label style={labelStyle}>Roll Number *</label>
                   <input
-                    style={getInputStyle('s-roll')}
+                    style={getInputStyle('s-roll', !!errFor('roll_number'))}
                     placeholder="CS2023001"
                     value={signupRoll}
+                    aria-invalid={!!errFor('roll_number')}
                     onChange={(e) => setSignupRoll(e.target.value)}
                     onFocus={() => setFocusedInput('s-roll')}
-                    onBlur={() => setFocusedInput(null)}
+                    onBlur={() => { setFocusedInput(null); touch('roll_number'); }}
                   />
+                  <FieldError msg={errFor('roll_number')} />
                 </div>
                 <div>
                   <label style={labelStyle}>Phone *</label>
                   <input
-                    style={getInputStyle('s-phone')}
+                    style={getInputStyle('s-phone', !!errFor('phone'))}
                     placeholder="9876543210"
                     value={signupPhone}
+                    inputMode="numeric"
+                    maxLength={13}
+                    aria-invalid={!!errFor('phone')}
                     onChange={(e) => setSignupPhone(e.target.value)}
                     onFocus={() => setFocusedInput('s-phone')}
-                    onBlur={() => setFocusedInput(null)}
+                    onBlur={() => { setFocusedInput(null); touch('phone'); }}
                   />
+                  <FieldError msg={errFor('phone')} />
                 </div>
                 <div>
                   <label style={labelStyle}>Password * (min 6 characters)</label>
                   <input
                     type="password"
-                    style={getInputStyle('s-pw')}
+                    style={getInputStyle('s-pw', !!errFor('password'))}
                     placeholder="••••••••"
                     value={signupPassword}
+                    aria-invalid={!!errFor('password')}
                     onChange={(e) => setSignupPassword(e.target.value)}
                     onFocus={() => setFocusedInput('s-pw')}
-                    onBlur={() => setFocusedInput(null)}
+                    onBlur={() => { setFocusedInput(null); touch('password'); }}
                   />
+                  <FieldError msg={errFor('password')} />
                 </div>
                 <div>
                   <label style={labelStyle}>Department (optional)</label>
