@@ -13,13 +13,18 @@
 // If an account with the given roll number already exists, its password and
 // role are updated (useful for promoting an existing student or resetting a
 // forgotten admin password).
+//
+// STORAGE: Firestore, via the Student model — the same data layer the running
+// server uses. This script previously talked to Postgres through
+// src/config/database.js, which stopped existing as a live datastore when the
+// app migrated to Firestore. That made `npm run create-admin` fail outright,
+// and since AdminAuthGate offers no other way to mint a staff login, the chef
+// and owner dashboards were unreachable on any fresh deployment.
 // ============================================================================
 
-process.env.MIGRATION_MODE = '1'; // skip the DB self-test in database.js
-
 require('dotenv').config();
-const bcrypt = require('bcrypt');
-const { pool } = require('../src/config/database');
+const bcrypt  = require('bcrypt');
+const Student = require('../src/models/Student');
 
 const BCRYPT_COST = 12;
 
@@ -51,33 +56,32 @@ async function main() {
     process.exit(1);
   }
 
-  const hash = await bcrypt.hash(String(password), BCRYPT_COST);
+  const password_hash = await bcrypt.hash(String(password), BCRYPT_COST);
 
   try {
-    const existing = await pool.query(
-      'SELECT id FROM students WHERE roll_number = $1', [roll]
-    );
+    const existing = await Student.findByRoll(String(roll).trim());
 
-    if (existing.rows.length > 0) {
-      await pool.query(
-        'UPDATE students SET password_hash = $1, role = $2, is_active = true WHERE roll_number = $3',
-        [hash, role, roll]
-      );
+    if (existing) {
+      // adminUpdate is the privileged path: role + password + reactivation.
+      await Student.adminUpdate(existing.id, {
+        password_hash,
+        role,
+        is_active: true,
+      });
       console.log(`✅ Updated existing account ${roll} → role=${role}, password reset.`);
     } else {
-      await pool.query(
-        `INSERT INTO students
-           (name, roll_number, phone, password_hash, role, tier, created_at, last_login)
-         VALUES ($1, $2, $3, $4, $5, 'Bronze', NOW(), NOW())`,
-        [name, roll, phone, hash, role]
-      );
-      console.log(`✅ Created ${role} account: ${roll}`);
+      const created = await Student.create({
+        name:        String(name).trim(),
+        roll_number: String(roll).trim(),
+        phone:       String(phone).trim(),
+        password_hash,
+        role,
+      });
+      console.log(`✅ Created ${role} account: ${roll} (id ${created.id})`);
     }
   } catch (err) {
     console.error('❌ Failed:', err.message);
     process.exitCode = 1;
-  } finally {
-    await pool.end();
   }
 }
 

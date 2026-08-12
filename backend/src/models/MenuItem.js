@@ -118,8 +118,13 @@ const update = async (id, data) => {
   const snap = await ref.get();
   if (!snap.exists) return null;
 
+  // 'is_available' belongs here even though toggleAvailability exists: the
+  // restock path needs to set stock and availability in ONE write, and while
+  // it was missing from this list any is_available passed to update() was
+  // dropped without a word — the caller got a 200 and a response object that
+  // still said false.
   const allowed = ['name', 'description', 'category', 'price', 'image_url',
-    'is_vegetarian', 'preparation_time', 'rating', 'stock_quantity'];
+    'is_vegetarian', 'preparation_time', 'rating', 'stock_quantity', 'is_available'];
   const upd = {};
   for (const k of allowed) if (data[k] !== undefined) upd[k] = data[k];
   if (Object.keys(upd).length === 0) throw new Error('No fields to update');

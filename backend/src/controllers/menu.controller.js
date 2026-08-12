@@ -6,6 +6,7 @@
 // ============================================================================
 
 const MenuItem = require('../models/MenuItem');
+const stock = require('../services/stock.service');
 const logger = require('../utils/logger');
 const { asyncHandler } = require('../middleware/error.middleware');
 
@@ -210,7 +211,60 @@ const update = asyncHandler(async (req, res) => {
     });
   }
 
+  // ── Field-level permissions ───────────────────────────────────────────────
+  // A chef knows what is left in the tray, so they may correct stock. Price,
+  // naming and categorisation are commercial decisions that stay with the
+  // owner — a kitchen account should not be able to reprice the menu.
+  if (req.user?.role !== 'admin') {
+    const CHEF_EDITABLE = new Set(['stock_quantity', 'is_available']);
+    const forbidden = Object.keys(updateData).filter((k) => !CHEF_EDITABLE.has(k));
+    if (forbidden.length) {
+      return res.status(403).json({
+        success: false,
+        message:
+          `Chef accounts may only update stock and availability. ` +
+          `Ask an owner to change: ${forbidden.join(', ')}.`,
+      });
+    }
+  }
+
+  // ── Restocking must put the item back on the menu ─────────────────────────
+  // Selling the last unit sets is_available = false automatically (see
+  // Order.create). Nothing ever set it back, so a chef who refilled the tray
+  // and typed the new count into the Catalog tab watched the dish stay hidden
+  // from every kiosk, with no indication why — the stock said 20 and the item
+  // was still invisible. The only way out was to also notice the separate
+  // availability toggle.
+  //
+  // Restoring stock above zero therefore re-enables the item, unless the chef
+  // set is_available explicitly in the same request (an intentional "keep it
+  // off the menu even though we have some" wins).
+  if (
+    updateData.stock_quantity !== undefined &&
+    req.body.is_available === undefined &&
+    updateData.stock_quantity > 0 &&
+    existing.is_available === false &&
+    Number(existing.stock_quantity) <= 0
+  ) {
+    updateData.is_available = true;
+  }
+
   const updated = await MenuItem.update(id, updateData);
+
+  // Keep the live availability cache in step with the new on-hand figure.
+  // Applied as a delta, never an overwrite, so units already held in customers'
+  // carts are not handed out a second time (see stock.applyOnHandChange).
+  if (updateData.stock_quantity !== undefined) {
+    try {
+      await stock.applyOnHandChange(
+        updated.id,
+        Number(existing.stock_quantity),
+        Number(updated.stock_quantity),
+      );
+    } catch (stockErr) {
+      logger.error(`Live availability not reconciled for menu item ${id}`, stockErr);
+    }
+  }
 
   // Broadcast changes so all connected panels (chef, owner, kiosk) update live
   const io = req.app.get('io');
@@ -224,6 +278,11 @@ const update = asyncHandler(async (req, res) => {
         id:             updated.id,
         stock_quantity: updated.stock_quantity,
         is_available:   updated.is_available,
+      });
+      io.emit('stock:availability', {
+        id:        updated.id,
+        available: await stock.getAvailable(updated.id),
+        timestamp: new Date().toISOString(),
       });
     }
   }

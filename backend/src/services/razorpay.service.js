@@ -10,6 +10,33 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 // ============================================================================
+// CONSTANT-TIME SIGNATURE COMPARISON
+// ============================================================================
+/**
+ * Compare two hex signatures without leaking their contents through timing.
+ *
+ * `a === b` on strings short-circuits at the first differing byte, so the
+ * comparison takes measurably longer the more leading characters match. That
+ * turns the verification endpoints below into an oracle: an attacker replaying
+ * a payment with a guessed signature can recover it byte-by-byte from response
+ * latency. crypto.timingSafeEqual always reads both buffers in full.
+ *
+ * timingSafeEqual throws when the buffers differ in length, so length is
+ * checked first — that leak is harmless (HMAC-SHA256 hex is always 64 chars).
+ *
+ * @param {string} expected - signature we computed
+ * @param {string} received - signature supplied by the caller
+ * @returns {boolean}
+ */
+const safeCompare = (expected, received) => {
+  if (typeof expected !== 'string' || typeof received !== 'string') return false;
+  const a = Buffer.from(expected, 'utf8');
+  const b = Buffer.from(received, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+};
+
+// ============================================================================
 // INITIALIZE RAZORPAY INSTANCE
 // ============================================================================
 
@@ -104,15 +131,19 @@ const verifyPayment = (orderId, paymentId, signature) => {
       .update(text)
       .digest('hex');
 
-    // Compare signatures
-    const isValid = generatedSignature === signature;
+    // Compare signatures in constant time (see safeCompare above).
+    const isValid = safeCompare(generatedSignature, signature);
 
     if (isValid) {
       console.log('✅ Payment signature verified successfully');
     } else {
-      console.error('❌ Payment signature verification failed');
-      console.error('Expected:', generatedSignature);
-      console.error('Received:', signature);
+      // Never log the expected signature. It is a valid HMAC for this
+      // order/payment pair, so anyone who can read the logs (hosting
+      // dashboard, log shipper, support bundle) could replay it to mark the
+      // order paid. Log the identifiers instead — enough to investigate.
+      console.error(
+        `❌ Payment signature verification failed for order ${orderId} / payment ${paymentId}`
+      );
     }
 
     return isValid;
@@ -244,7 +275,8 @@ const verifyWebhookSignature = (webhookBody, webhookSignature, webhookSecret) =>
       .update(webhookBody)
       .digest('hex');
 
-    return expectedSignature === webhookSignature;
+    // Constant-time — same reasoning as verifyPayment above.
+    return safeCompare(expectedSignature, webhookSignature);
 
   } catch (error) {
     console.error('❌ Webhook signature verification failed:', error);

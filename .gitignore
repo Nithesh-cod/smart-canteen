@@ -24,6 +24,11 @@ dist-chef/
 dist-owner/
 build/
 
+# ── Local archives ────────────────────────────────────────────────────────────
+# Snapshot zips of the project (these bundle node_modules and run to hundreds
+# of MB — they must never reach a commit).
+*.zip
+
 # ── Vite ─────────────────────────────────────────────────────────────────────
 frontend/.vite/
 
@@ -47,10 +52,15 @@ Thumbs.db
 # ── TypeScript cache ──────────────────────────────────────────────────────────
 *.tsbuildinfo
 
-# ── Claude Code internal files ────────────────────────────────────────────────
+# ── Local editor / tooling state ──────────────────────────────────────────────
 .claude/
+.vscode/
+.idea/
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 *.local
 coverage/
 .nyc_output/
+
+# Local archive — 205MB, not source
+smart-canteen.zip

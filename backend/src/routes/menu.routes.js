@@ -104,7 +104,12 @@ router.post('/', verifyToken, isAdmin, menuController.create);
  * @desc    Update menu item
  * @access  Private (Admin only)
  */
-router.put('/:id', verifyToken, isAdmin, menuController.update);
+// Chef OR admin. The chef display's Catalog tab edits stock from this endpoint,
+// but it was admin-only — so every Save a chef-role account made came back 403
+// and, because the client swallowed the error, simply appeared to do nothing.
+// The controller enforces which FIELDS each role may change: chefs own stock,
+// admins own everything (price, name, category, …).
+router.put('/:id', verifyToken, isChef, menuController.update);
 
 /**
  * @route   DELETE /api/menu/:id

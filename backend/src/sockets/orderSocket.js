@@ -94,162 +94,28 @@ const setupSocketHandlers = (io) => {
     });
 
     // ========================================================================
-    // ORDER EVENTS
+    // ORDER / MENU / PAYMENT EVENTS — deliberately NOT accepted from clients
     // ========================================================================
-
-    /**
-     * Broadcast new order to kitchen
-     * @event order:created
-     * @param {object} order - Order data
-     */
-    socket.on('order:created', (order) => {
-      logger.info(`📦 New order created: #${order.order_number}`);
-      
-      // Notify kitchen (chef display)
-      io.to('kitchen').emit('order:new', {
-        ...order,
-        timestamp: new Date().toISOString(),
-        notification: {
-          title: 'New Order!',
-          message: `Order #${order.order_number} - ${order.items.length} items`,
-          sound: true
-        }
-      });
-      
-      // Notify owner dashboard
-      io.to('admin').emit('order:new', order);
-      
-      logger.success(`✅ Order #${order.order_number} broadcasted to kitchen`);
-    });
-
-    /**
-     * Order status updated
-     * @event order:status-updated
-     * @param {object} data - { orderId, status, studentId }
-     */
-    socket.on('order:status-updated', (data) => {
-      const { orderId, orderNumber, status, studentId } = data;
-      logger.info(`🔄 Order #${orderNumber} status: ${status}`);
-      
-      // Notify specific student
-      if (studentId) {
-        io.to(`student:${studentId}`).emit('order:status-change', {
-          orderId,
-          orderNumber,
-          status,
-          message: getStatusMessage(status),
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      // Notify kitchen and admin
-      io.to('kitchen').emit('order:updated', data);
-      io.to('admin').emit('order:updated', data);
-      
-      logger.success(`✅ Order #${orderNumber} status update sent`);
-    });
-
-    /**
-     * Order cancelled
-     * @event order:cancelled
-     * @param {object} data - { orderId, orderNumber, studentId, reason }
-     */
-    socket.on('order:cancelled', (data) => {
-      const { orderId, orderNumber, studentId, reason } = data;
-      logger.warn(`❌ Order #${orderNumber} cancelled: ${reason}`);
-      
-      // Notify student
-      if (studentId) {
-        io.to(`student:${studentId}`).emit('order:cancelled', {
-          orderId,
-          orderNumber,
-          reason,
-          message: 'Your order has been cancelled',
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      // Notify kitchen and admin
-      io.to('kitchen').emit('order:cancelled', data);
-      io.to('admin').emit('order:cancelled', data);
-    });
-
+    // This server used to relay `order:created`, `order:status-updated`,
+    // `order:cancelled`, `menu:availability-changed` and `payment:success`
+    // straight from whatever socket emitted them back out to the `kitchen`,
+    // `admin` and `student:<id>` rooms.
+    //
+    // Socket connections carry no authentication, so ANY browser that could
+    // reach the server could forge those events: fake "your order is ready"
+    // and "Payment successful!" notifications to a student, phantom orders on
+    // the chef display, or bogus stock/availability changes on every kiosk.
+    //
+    // Every one of these events is already emitted server-side, from the
+    // controllers, after the corresponding write commits and the caller's
+    // role/ownership has been checked (order.controller.updateStatus / cancel,
+    // payment.controller.finalisePayment, …). The relays were pure attack
+    // surface with no legitimate producer — the frontend only ever emits the
+    // four join events handled above (see socket.service.ts). They are removed
+    // rather than authenticated; re-adding them would need a real socket
+    // handshake (JWT in `auth`) plus a server-side role check, and would still
+    // duplicate what the controllers already broadcast.
     // ========================================================================
-    // MENU EVENTS
-    // ========================================================================
-
-    /**
-     * Menu item availability changed
-     * @event menu:availability-changed
-     * @param {object} data - { itemId, itemName, isAvailable }
-     */
-    socket.on('menu:availability-changed', (data) => {
-      const { itemId, itemName, isAvailable } = data;
-      logger.info(`🍽️ Menu item ${itemName}: ${isAvailable ? 'Available' : 'Unavailable'}`);
-      
-      // Broadcast to all connected students
-      io.emit('menu:item-updated', {
-        itemId,
-        itemName,
-        isAvailable,
-        message: `${itemName} is now ${isAvailable ? 'available' : 'unavailable'}`,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    // ========================================================================
-    // PAYMENT EVENTS
-    // ========================================================================
-
-    /**
-     * Payment successful - trigger bill print
-     * @event payment:success
-     * @param {object} data - { orderId, studentId, amount }
-     */
-    socket.on('payment:success', (data) => {
-      const { orderId, studentId, amount } = data;
-      logger.success(`💳 Payment successful: Order #${orderId} - ₹${amount}`);
-      
-      // Notify student
-      if (studentId) {
-        io.to(`student:${studentId}`).emit('payment:confirmed', {
-          orderId,
-          amount,
-          message: 'Payment successful! Your order is being prepared.',
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
-
-    // ========================================================================
-    // ADMIN EVENTS
-    // ========================================================================
-
-    /**
-     * Admin requests real-time stats update
-     * @event admin:request-stats
-     */
-    socket.on('admin:request-stats', () => {
-      // This would typically fetch latest stats and send back
-      // For now, just acknowledge
-      socket.emit('admin:stats-requested', {
-        message: 'Stats update requested',
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    // ========================================================================
-    // TYPING INDICATORS (Optional - for chef notes)
-    // ========================================================================
-
-    /**
-     * Chef is typing a note
-     * @event chef:typing
-     * @param {object} data - { orderId }
-     */
-    socket.on('chef:typing', (data) => {
-      socket.to('admin').emit('chef:typing', data);
-    });
 
     // ========================================================================
     // DISCONNECTION
@@ -294,23 +160,6 @@ const setupSocketHandlers = (io) => {
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-/**
- * Get user-friendly status message
- * @param {string} status - Order status
- * @returns {string} User-friendly message
- */
-const getStatusMessage = (status) => {
-  const messages = {
-    pending: 'Your order has been received',
-    preparing: 'Your order is being prepared',
-    ready: 'Your order is ready for pickup!',
-    completed: 'Order completed. Thank you!',
-    cancelled: 'Your order has been cancelled'
-  };
-  
-  return messages[status] || 'Order status updated';
-};
 
 /**
  * Get connected clients count

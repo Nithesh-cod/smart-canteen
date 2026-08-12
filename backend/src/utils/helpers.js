@@ -14,13 +14,39 @@ const generateOrderNumber = () => {
   return `OZ${timestamp}${random}`;
 };
 
+// ── Loyalty economics ───────────────────────────────────────────────────────
+// Two separate numbers decide what the canteen actually gives away, and it is
+// their PRODUCT that matters — which is what made the old comment misleading.
+//
+//   POINTS_PER_RUPEE   how many points a rupee of spend earns   (0.1)
+//   POINT_VALUE_PAISE  what one point is worth at redemption    (10 paise)
+//
+// A ₹100 order earns 10 points, and 10 points discount ₹1. That is a **1%**
+// effective cashback — not the "10% cashback" the previous comment claimed.
+// The 10% is only the points-per-rupee rate; it says nothing about value until
+// multiplied by what a point is worth. Anyone budgeting the loyalty scheme off
+// that comment would have over-provisioned the giveaway by 10x.
+//
+//   effective cashback = POINTS_PER_RUPEE × POINT_VALUE_PAISE ÷ 100
+//                      = 0.1 × 10 ÷ 100 = 1%
+//
+// Both are env-tunable so the rate is a deliberate business decision rather
+// than a constant buried in a helper. Raising POINT_VALUE_PAISE to 100 would
+// make it a true 10% scheme.
+const POINTS_PER_RUPEE  = parseFloat(process.env.POINTS_PER_RUPEE) || 0.1;
+const POINT_VALUE_PAISE = parseInt(process.env.POINT_VALUE_PAISE, 10) || 10;
+
+/** Effective cashback as a percentage, for display and sanity checks. */
+const effectiveCashbackPercent = () =>
+  (POINTS_PER_RUPEE * POINT_VALUE_PAISE) / 100;
+
 /**
- * Calculate loyalty points earned from order amount
+ * Calculate loyalty points earned from an order amount.
  * @param {number} amount - Order amount in rupees
- * @returns {number} Points earned (10% of amount)
+ * @returns {number} Points earned
  */
 const calculatePoints = (amount) => {
-  return Math.floor(amount * 0.1); // 10% cashback as points
+  return Math.floor(amount * POINTS_PER_RUPEE);
 };
 
 /**
@@ -250,6 +276,9 @@ const sleep = (ms) => {
 module.exports = {
   generateOrderNumber,
   calculatePoints,
+  POINTS_PER_RUPEE,
+  POINT_VALUE_PAISE,
+  effectiveCashbackPercent,
   getTier,
   formatPrice,
   rupeesToPaise,
