@@ -9,6 +9,7 @@ const Order          = require('../models/Order');
 const Student        = require('../models/Student');
 const razorpayService = require('../services/razorpay.service');
 const printerService  = require('../services/printer.service');
+const stock           = require('../services/stock.service');
 const logger          = require('../utils/logger');
 const { asyncHandler }         = require('../middleware/error.middleware');
 const { rupeesToPaise }        = require('../utils/helpers');
@@ -347,10 +348,17 @@ async function finalisePayment(order, { io, skipBill = false } = {}) {
     }
     io.to(`order:${order.id}`).emit('payment:confirmed', confirmedPayload);
 
+    // Report the status the order ACTUALLY has. Step 1 above deliberately
+    // stopped auto-advancing paid orders to 'preparing' (the kitchen has to
+    // accept them first), but this payload kept the old hardcoded
+    // 'preparing' — so the moment payment landed, every chef screen was told
+    // the order was already being prepared while Firestore still said
+    // 'pending'. Panels that trust the socket payload render the wrong
+    // column until the next full refetch corrects them.
     io.to('kitchen').emit('order:updated', {
       orderId:     order.id,
       orderNumber: order.order_number,
-      status:      'preparing',
+      status:      order.status,
       timestamp:   new Date().toISOString()
     });
 
@@ -535,6 +543,13 @@ const processRefund = asyncHandler(async (req, res) => {
     stockRestored = await Order.restoreStock(order.id);
     if (!['completed', 'cancelled'].includes(order.status)) {
       await Order.cancel(order.id);
+    }
+    // Mirror the durable restore into the live availability cache, otherwise
+    // refunded stock stays hidden from every client until the next reseed.
+    try {
+      await stock.restore(order.items || []);
+    } catch (stockErr) {
+      logger.error(`Live availability not restored for refunded #${order.order_number}`, stockErr);
     }
   } catch (dbErr) {
     logger.error(

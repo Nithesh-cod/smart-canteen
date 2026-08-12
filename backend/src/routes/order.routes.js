@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/order.controller');
 const { verifyToken, isChef, isAdmin, optionalAuth } = require('../middleware/auth.middleware');
+const { resolveCart } = require('../middleware/cart.middleware');
 
 // ============================================================================
 // STATIC ROUTES (must come before /:id to avoid being swallowed)
@@ -47,7 +48,9 @@ router.get('/track/:orderNumber', orderController.track);
  * @access  Public — token optional; guest_name/guest_phone/guest_roll in body for guests
  * @body    { items: [{ menu_item_id, quantity }], points_to_redeem?, guest_name?, guest_phone?, guest_roll? }
  */
-router.post('/', optionalAuth, orderController.create);
+// resolveCart supplies req.cartId so checkout can convert this cart's stock
+// holds into a sale instead of leaving them to expire back into availability.
+router.post('/', optionalAuth, resolveCart, orderController.create);
 
 /**
  * @route   GET /api/orders

@@ -136,6 +136,12 @@ export interface MenuState {
   error: string | null;
   selectedCategory: string;
   searchQuery: string;
+  /**
+   * Live availability per menu item id: what a shopper can still add, i.e.
+   * on-hand stock minus every active cart hold across all three apps.
+   * Distinct from MenuItem.stock_quantity, which ignores holds. -1 = unlimited.
+   */
+  availability: Record<number, number>;
 }
 
 export interface CartState {

@@ -2,12 +2,12 @@ import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../store/store';
 import {
-  removeItem,
-  updateQuantity,
   setPointsToRedeem,
   selectCartTotal,
   selectFinalTotal,
 } from '../../store/slices/cartSlice';
+import { selectAvailability } from '../../store/slices/menuSlice';
+import { useCart } from '../../hooks/useCart';
 import Modal from '../common/Modal';
 import type { MenuItem } from '../../types';
 
@@ -26,6 +26,11 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
   const cartTotal  = useSelector(selectCartTotal);
   const finalTotal = useSelector(selectFinalTotal);
   const pointsToRedeem = useSelector((state: RootState) => state.cart.pointsToRedeem);
+  const availability = useSelector(selectAvailability);
+
+  // Server-backed: these release and reserve real stock, so every other
+  // client's view updates as the shopper adjusts quantities here.
+  const { removeFromCart, updateQuantity: updateCartQuantity } = useCart();
 
   // 1 pt = ₹0.10; backend caps discount at 50% of order total
   const actualPointsSavings = pointsToRedeem * 0.10;
@@ -35,21 +40,30 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
 
   const handleDecrement = (id: number, currentQty: number) => {
     if (currentQty <= 1) {
-      dispatch(removeItem(id));
+      void removeFromCart(id);
     } else {
-      dispatch(updateQuantity({ id, quantity: currentQty - 1 }));
+      void updateCartQuantity(id, currentQty - 1);
     }
   };
 
   const handleIncrement = (id: number, currentQty: number) => {
-    // Stock guard — look up the live stock from the menu store
+    // Stock guard against LIVE availability rather than stock_quantity, which
+    // ignores units already held in other shoppers' carts.
+    //
+    // These two are compared DIFFERENTLY on purpose: `availability` already
+    // excludes this shopper's own holds, so it is "how many more may I add"
+    // and only needs to be > 0. `stock_quantity` is a total, so it is compared
+    // against the running quantity. Treating availability as a total blocks
+    // the shopper about halfway to the real limit.
     const menuItem = menuItems.find((m) => m.id === id);
-    const stock = menuItem?.stock_quantity;
-    if (stock !== undefined && stock !== null && stock !== -1 && currentQty >= stock) {
-      // Silently block — the button will be visually disabled anyway
-      return;
+    const live = availability[id];
+    if (live !== undefined) {
+      if (live !== -1 && live <= 0) return;
+    } else {
+      const stock = menuItem?.stock_quantity;
+      if (stock !== undefined && stock !== null && stock !== -1 && currentQty >= stock) return;
     }
-    dispatch(updateQuantity({ id, quantity: currentQty + 1 }));
+    void updateCartQuantity(id, currentQty + 1);
   };
 
   // ── Points handlers ────────────────────────────────────────────────────────
@@ -210,7 +224,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout, studentPoints,
 
                   {/* Remove */}
                   <button
-                    onClick={() => dispatch(removeItem(item.id))}
+                    onClick={() => void removeFromCart(item.id)}
                     title="Remove item"
                     style={{
                       width: 28, height: 28, borderRadius: '50%',

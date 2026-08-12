@@ -8,6 +8,7 @@ const initialState: MenuState = {
   error: null,
   selectedCategory: 'all',
   searchQuery: '',
+  availability: {},
 };
 
 const menuSlice = createSlice({
@@ -52,6 +53,27 @@ const menuSlice = createSlice({
         state.items[idx] = { ...state.items[idx], ...action.payload };
       }
     },
+
+    // ── Live availability ────────────────────────────────────────────────────
+    // Separate from `stock_quantity` on purpose. stock_quantity is what the
+    // kitchen physically has; `availability` is what a shopper can actually
+    // still add — on-hand minus everything sitting in other people's carts
+    // right now. Showing stock_quantity as "left" would promise units that are
+    // already reserved and fail the customer at checkout.
+
+    /** Replace the whole availability map (initial load / reconnect). */
+    setAvailability(state, action: PayloadAction<Record<number, number>>) {
+      state.availability = action.payload;
+    },
+
+    /** Apply one live change pushed from the server. */
+    setItemAvailability(
+      state,
+      action: PayloadAction<{ id: number; available: number }>
+    ) {
+      if (!state.availability) state.availability = {};
+      state.availability[action.payload.id] = action.payload.available;
+    },
   },
 });
 
@@ -63,7 +85,13 @@ export const {
   setSearchQuery,
   updateItemAvailability,
   updateItem,
+  setAvailability,
+  setItemAvailability,
 } = menuSlice.actions;
+
+/** Live availability map: menu item id → units a shopper can still add. */
+export const selectAvailability = (state: RootState) =>
+  state.menu.availability ?? {};
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
 

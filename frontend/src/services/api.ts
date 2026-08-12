@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { API_URL } from '../utils/constants';
 
+/** localStorage key holding this browser's signed cart token. */
+export const CART_TOKEN_KEY = 'canteen_cart_token';
+
 // ─── Numeric field normalizer ─────────────────────────────────────────────────
 // PostgreSQL DECIMAL/NUMERIC columns arrive as strings from the `pg` driver.
 // These field names should always be numbers — coerce them wherever they appear.
@@ -49,6 +52,16 @@ const api = axios.create({
 // truthy, which silently dropped the guest token and nullified the Round-1
 // C2 IDOR fix.
 api.interceptors.request.use((config) => {
+  // Cart identity travels on every request, independent of auth. The server
+  // uses it to decide whose stock holds these are — a guest checking out still
+  // needs its holds converted into a sale, and a guest order is deliberately
+  // sent with skipAuth, so this must be attached OUTSIDE the auth branches
+  // below or it would be dropped on exactly the request that needs it.
+  const cartToken = localStorage.getItem(CART_TOKEN_KEY);
+  if (cartToken && !(config.headers as any)['X-Cart-Token']) {
+    (config.headers as any)['X-Cart-Token'] = cartToken;
+  }
+
   const callerAuth = (config.headers as any)?.Authorization;
   if (callerAuth) return config;
 

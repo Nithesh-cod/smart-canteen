@@ -10,16 +10,25 @@ const Student        = require('../models/Student');
 const MenuItem       = require('../models/MenuItem');
 const printerService = require('../services/printer.service');
 const razorpayService = require('../services/razorpay.service');
+const stock          = require('../services/stock.service');
 const logger         = require('../utils/logger');
 const { asyncHandler }                  = require('../middleware/error.middleware');
 const { issueGuestToken }               = require('../middleware/auth.middleware');
-const { calculatePoints, generateOrderNumber } = require('../utils/helpers');
+const { calculatePoints, generateOrderNumber, POINT_VALUE_PAISE } = require('../utils/helpers');
 
-// Valid status transition map
+// Valid status transition map.
+//
+// 'ready' → 'cancelled' exists because food does go uncollected: a student
+// leaves campus, a guest walks off, an order is placed twice by mistake. With
+// 'ready' → ['completed'] as the only route, such an order could never be
+// closed. It sat on the chef's Ready column forever, permanently inflating the
+// live queue count, and — because cancelling is what restores stock and
+// triggers the refund — the kitchen had no way to return the ingredients or
+// give the money back without an admin editing the database by hand.
 const VALID_TRANSITIONS = {
   pending:   ['preparing', 'cancelled'],
   preparing: ['ready', 'cancelled'],
-  ready:     ['completed'],
+  ready:     ['completed', 'cancelled'],
   completed: [],
   cancelled: []
 };
@@ -156,13 +165,15 @@ const create = asyncHandler(async (req, res) => {
 
     // Work in paise (integers) — float math on 0.10 produces off-by-one
      // results because 0.1 is not exactly representable in IEEE-754.
-    // 1 pt = 10 paise; cap discount at 50% of order total.
+    // Point value comes from the single source of truth in utils/helpers so
+    // earning and redeeming can never drift apart; cap discount at 50% of the
+    // order total.
     const originalPaise     = Math.round(originalAmount * 100);
     const maxDiscountPaise  = Math.floor(originalPaise / 2);
-    const requestedPaise    = points_to_redeem * 10;
+    const requestedPaise    = points_to_redeem * POINT_VALUE_PAISE;
     const actualDiscPaise   = Math.min(requestedPaise, maxDiscountPaise);
 
-    pointsUsed  = Math.floor(actualDiscPaise / 10);
+    pointsUsed  = Math.floor(actualDiscPaise / POINT_VALUE_PAISE);
     totalAmount = (originalPaise - actualDiscPaise) / 100;
   }
 
@@ -185,10 +196,35 @@ const create = asyncHandler(async (req, res) => {
     guest_roll:  isGuest ? (guest_roll  || null) : null
   };
 
-  // Order.create now atomically decrements stock inside the transaction
-  // (FIX H4). If any item is short, it throws with .status = 400 — let
-  // asyncHandler propagate that to the global error middleware.
+  // Order.create atomically decrements the DURABLE stock inside a Firestore
+  // transaction (FIX H4). If any item is short it throws with .status = 400.
+  //
+  // Firestore stays the final authority on overselling even though Redis now
+  // serves live availability: Redis is a fast cache in front of the truth, and
+  // a stale or evicted Redis figure must never be able to sell stock that
+  // isn't there. So the transaction check is kept exactly as it was.
   const newOrder = await Order.create(orderData, orderItems);
+
+  // The cart's holds have now become a real sale. Committing DISCARDS them
+  // without crediting availability back — the stock left with the customer.
+  // (Releasing here instead would put sold food back on the menu.)
+  //
+  // Ordering matters: commit only after Order.create has committed, so a
+  // failed order leaves the holds intact and the TTL sweeper returns them.
+  if (req.cartId) {
+    try {
+      await stock.commitCart(req.cartId);
+    } catch (holdErr) {
+      // Non-fatal: the order is already durable. Worst case these holds sit
+      // until their TTL expires and the sweeper returns them — which would
+      // over-credit availability, so it is reconciled against Firestore on the
+      // next syncItem rather than left to drift silently.
+      logger.error(
+        `Order #${newOrder.order_number} created but cart ${req.cartId} holds ` +
+        `were not committed; TTL sweep will reconcile.`, holdErr
+      );
+    }
+  }
 
   // Broadcast post-commit stock updates so kiosks/chef screens stay in sync.
   // _stockChanges is attached by Order.create() and only used here; it is
@@ -287,18 +323,44 @@ const getAll = asyncHandler(async (req, res) => {
     return res.json({ success: true, data: { orders, total: orders.length } });
   }
 
-  // --- Chef: kitchen-relevant statuses (pending / preparing / ready) ---
+  // --- Chef: kitchen queue by default, full history on request ---
+  //
+  // This branch used to hardcode `limit: 200` (ignoring ?limit=) and, unless
+  // an explicit ?status= was passed, drop everything that wasn't
+  // pending/preparing/ready. That silently broke the chef panel's "Today's
+  // Log" tab and its "Today's Revenue" tile: both are computed from COMPLETED
+  // orders, which this branch filtered out before they ever reached the
+  // client. A chef-role login therefore always saw an empty log and ₹0
+  // revenue, while an admin-role login — which falls through to the admin
+  // branch below — saw the real numbers, so the bug was invisible to anyone
+  // who tested the panel as admin.
+  //
+  // The default stays narrowed to the kitchen statuses on purpose: the live
+  // queue must contain every open order however old, and a plain
+  // newest-N-of-all-statuses window would push a stale pending order off the
+  // board once a busy day produced more than N orders. Callers that want the
+  // wider history ask for it explicitly, by status or by from_date.
   if (role === 'chef') {
-    const statusFilter = req.query.status;
-    const { orders: allOrders } = await Order.getAll({ limit: 200, offset: 0 });
+    const parsedLimit = Math.min(parseInt(req.query.limit) || 200, 500);
+    const { status, from_date } = req.query;
 
-    const kitchenOrders = statusFilter
-      ? allOrders.filter(o => o.status === statusFilter)
+    // from_date → every status in that window (powers "Today's Log").
+    // status    → just that status.
+    // neither   → the open kitchen queue.
+    const { orders: allOrders, total } = await Order.getAll({
+      status:    status    || undefined,
+      from_date: from_date || undefined,
+      limit:     parsedLimit,
+      offset:    0,
+    });
+
+    const kitchenOrders = (status || from_date)
+      ? allOrders
       : allOrders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status));
 
     return res.json({
       success: true,
-      data: { orders: kitchenOrders, total: kitchenOrders.length }
+      data: { orders: kitchenOrders, total: (status || from_date) ? total : kitchenOrders.length }
     });
   }
 
@@ -552,6 +614,15 @@ const cancel = asyncHandler(async (req, res) => {
     // idempotent enough to retry. Restore stock → cancel → (mark refunded).
     stockRestored = await Order.restoreStock(order.id);
     finalOrder    = await Order.cancel(order.id);
+
+    // Firestore's on-hand count is back up; the live availability every client
+    // renders has to follow, or a cancelled order's food stays invisible on
+    // the menu until the cache is next reseeded.
+    try {
+      await stock.restore(order.items || []);
+    } catch (stockErr) {
+      logger.error(`Live availability not restored for cancelled #${order.order_number}`, stockErr);
+    }
     if (refund) {
       finalOrder = await Order.updatePayment(order.id, {
         payment_status:      'refunded',
@@ -673,13 +744,28 @@ const track = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
 
-  // Remove sensitive fields before responding
+  // Remove sensitive fields before responding.
+  //
+  // This route is fully public — order numbers are short sequential strings
+  // (OZ000001, OZ000002, …), so anyone can enumerate them. Only fields safe
+  // for a stranger to see may survive.
+  //
+  // guest_phone / guest_roll are the raw guest-checkout columns that
+  // Order.shapeOrder spreads onto every order. Stripping student_phone alone
+  // (as this did before) only covered logged-in students: for a guest order
+  // shapeOrder leaves student_phone null and the real number sits in
+  // guest_phone, so every guest's phone number was readable by order number.
+  // student_id is dropped too — it is an internal document id and identifies
+  // the account behind the order.
   const {
     razorpay_order_id,    // eslint-disable-line no-unused-vars
     razorpay_payment_id,  // eslint-disable-line no-unused-vars
     razorpay_signature,   // eslint-disable-line no-unused-vars
     student_phone,        // eslint-disable-line no-unused-vars
     student_points,       // eslint-disable-line no-unused-vars
+    guest_phone,          // eslint-disable-line no-unused-vars
+    guest_roll,           // eslint-disable-line no-unused-vars
+    student_id,           // eslint-disable-line no-unused-vars
     ...safeOrder
   } = order;
 

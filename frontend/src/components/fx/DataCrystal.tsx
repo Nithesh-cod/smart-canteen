@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { selectAvailability } from '../../store/slices/menuSlice';
 import type { MenuItem as MenuItemType } from '../../types';
 
 /**
@@ -66,7 +68,28 @@ const css = `
 
 const DataCrystal: React.FC<DataCrystalProps> = ({ item, isFavorite, onAddToCart, onDecrement, onToggleFavorite, cartQuantity }) => {
   const [imgOk, setImgOk] = useState(true);
-  const soldOut = item.is_available === false || item.stock_quantity === 0;
+
+  // What's genuinely still gettable, live across all three apps: on-hand stock
+  // minus every unit sitting in someone else's cart right now. `stock_quantity`
+  // is only what the kitchen physically has and ignores those holds, so using
+  // it here would advertise units that are already reserved and fail the
+  // shopper at checkout. Falls back to stock_quantity until the first push.
+  const availability = useSelector(selectAvailability);
+  const live = availability[item.id];
+  const remaining = live !== undefined ? live : item.stock_quantity;
+
+  const untracked = remaining === -1 || remaining === undefined || remaining === null;
+
+  // `remaining` already has THIS shopper's held units deducted, so it is
+  // exactly "how many more may I add" — no adjustment needed.
+  const canAddMore = untracked || remaining > 0;
+
+  // Only cover the card when nothing is left AND the shopper holds none of it.
+  // If they already have some in their cart they must keep seeing the stepper,
+  // or they'd be unable to decrement and free the stock back up.
+  const nothingLeft = !untracked && remaining <= 0;
+  const soldOut = item.is_available === false || (nothingLeft && cartQuantity === 0);
+
   const veg = item.is_vegetarian !== false;
   const vegColor = veg ? '#4caf50' : '#e2483d';
 
@@ -98,6 +121,16 @@ const DataCrystal: React.FC<DataCrystalProps> = ({ item, isFavorite, onAddToCart
           <div className="wg-meta">
             {item.rating != null && <span>★ {Number(item.rating).toFixed(1)}</span>}
             {item.preparation_time != null && <span>· {item.preparation_time} min</span>}
+            {/* Live count. Updates the moment anyone on any of the three apps
+                adds this dish to a cart, releases it, or lets a hold expire. */}
+            {!untracked && !soldOut && (
+              <span style={{
+                color: remaining <= 3 ? '#ff9f43' : 'rgba(255,242,235,0.55)',
+                fontWeight: remaining <= 3 ? 700 : 400,
+              }}>
+                · {remaining} left
+              </span>
+            )}
           </div>
           <div className="wg-row">
             <span className="wg-price">₹{Number(item.price).toFixed(0)}</span>
@@ -107,7 +140,12 @@ const DataCrystal: React.FC<DataCrystalProps> = ({ item, isFavorite, onAddToCart
               <div className="wg-step">
                 <button onClick={() => onDecrement(item.id)}>−</button>
                 <span>{cartQuantity}</span>
-                <button onClick={() => onAddToCart(item)}>+</button>
+                <button
+                  onClick={() => canAddMore && onAddToCart(item)}
+                  disabled={!canAddMore}
+                  title={canAddMore ? 'Add one more' : 'No more left'}
+                  style={!canAddMore ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
+                >+</button>
               </div>
             ) : (
               <button className="wg-add" onClick={() => onAddToCart(item)}>ADD +</button>

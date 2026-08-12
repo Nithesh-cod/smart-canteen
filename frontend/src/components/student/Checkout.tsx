@@ -196,6 +196,10 @@ const Checkout: React.FC<CheckoutProps> = ({
           }));
           const subtotalSnapshot = cartTotal;
 
+          // Redux-only clear, deliberately. The server already converted this
+          // cart's stock holds into a sale at order creation; calling the
+          // server-backed clear here would ask it to release them and put the
+          // food the customer just paid for back on the menu.
           dispatch(clearCart());
 
           // Use updated points/tier from server response if available
