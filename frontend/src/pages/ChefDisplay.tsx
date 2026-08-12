@@ -4,6 +4,16 @@ import * as menuService from '../services/menu.service';
 import { subscribeToCollection } from '../services/firebase';
 import type { Order, MenuItem, OrderStatus } from '../types';
 import { useToast } from '../components/common/Toast';
+import { EmptyState } from '../components/common/states';
+import NetworkBanner from '../components/common/NetworkBanner';
+import {
+  ANNOUNCE_LANGUAGES,
+  findLanguage,
+  buildAnnouncement,
+  chooseVoice,
+  hasNativeVoice,
+  type AnnouncableOrder,
+} from '../utils/announce';
 
 // ─── Stats Row ────────────────────────────────────────────────────────────────
 
@@ -454,9 +464,12 @@ const TodayFoodGrid: React.FC<{ todayOrders: Order[]; menuItems: MenuItem[] }> =
 
   if (aggItems.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px 20px', color: 'rgba(255,255,255,0.3)' }}>
-        <div style={{ fontSize: '4rem', marginBottom: 16 }}>🍽️</div>
-        <div style={{ fontFamily: 'Sora, monospace', fontSize: 13, letterSpacing: 3, color: 'rgba(255,255,255,0.25)' }}>NO ORDERS YET TODAY</div>
+      <div style={{ padding: '48px 20px' }}>
+        <EmptyState
+          glyph="🍽️"
+          title="Nothing served yet today"
+          body="Dishes appear here as orders come in. The day's totals build up through service."
+        />
       </div>
     );
   }
@@ -671,25 +684,28 @@ const OrdersTab: React.FC<{
                   isSpeaking={speakingOrderId === order.id}
                 />
               )) : (
-                <div style={{
+                // Compact per-column empty rather than the full state panel:
+                // three of these sit side by side in a kanban, and three large
+                // panels would drown the one column that does have orders.
+                // Same liquid-glass material, column-sized.
+                <div className="lg-surface" style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  padding: '46px 20px',
-                  background: 'rgba(7,16,14,0.4)',
-                  border: `1px dashed ${col.color}33`,
-                  borderRadius: 14,
+                  padding: '42px 18px', gap: 10,
                 }}>
                   <div style={{
-                    fontFamily: 'Sora, monospace', fontSize: '2.2rem',
-                    color: `${col.color}55`, marginBottom: 10,
+                    fontFamily: 'Sora, monospace', fontSize: '2rem',
+                    color: `${col.color}66`,
                     textShadow: `0 0 16px ${col.color}33`,
                   }}>
                     ◯
                   </div>
                   <span style={{
-                    fontFamily: 'Sora, sans-serif', fontSize: '0.68rem',
-                    color: `${col.color}99`, letterSpacing: '0.28em', textTransform: 'uppercase',
+                    fontFamily: 'Sora, sans-serif', fontSize: '0.66rem',
+                    color: `${col.color}99`, letterSpacing: '0.26em', textTransform: 'uppercase',
                   }}>
-                    Queue Clear
+                    {col.status === 'pending' ? 'Nothing waiting'
+                      : col.status === 'preparing' ? 'Nothing on the line'
+                      : 'Nothing to collect'}
                   </span>
                 </div>
               )}
@@ -791,8 +807,17 @@ const EditMenuTab: React.FC<{
         stock_quantity: item.editStock === '' ? -1 : parseInt(item.editStock, 10),
       });
       onRefresh();
+      showToast(`Saved ${item.editName.trim() || item.name}`, 'success');
     } catch (err) {
-      console.error('Save failed:', err);
+      // A rejected save used to go only to console.error, so the button
+      // finished its spinner and the row looked saved. A chef whose account
+      // lacks permission, or who hit a validation error, had no way to know
+      // the change never landed — they'd walk away believing the stock was
+      // updated. Surface the server's reason instead.
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Save failed — check your connection and try again.';
+      showToast(msg, 'error');
     } finally {
       setEditItems(prev => prev.map(i => i.id === item.id ? { ...i, saving: false } : i));
     }
@@ -813,8 +838,15 @@ const EditMenuTab: React.FC<{
     try {
       await menuService.deleteItem(item.id);
       onRefresh();
+      showToast(`Deleted ${item.name}`, 'success');
     } catch (err) {
-      console.error('Delete failed:', err);
+      // Deleting is owner-only. Without this the confirmation dialog closed
+      // and the item stayed in the grid, which reads as a UI glitch rather
+      // than a refused permission.
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Delete failed — menu items can only be removed by an owner account.';
+      showToast(msg, 'error');
     }
   };
 
@@ -1176,18 +1208,13 @@ const ChefDisplay: React.FC = () => {
   const [ttsLang, setTtsLang]           = useState('en-IN');
   const [ttsLangOpen, setTtsLangOpen]   = useState(false);
   const [speakingOrderId, setSpeakingOrderId] = useState<string | null>(null);
-  const ttsQueueRef = useRef<SpeechSynthesisUtterance[]>([]);
   const ttsDropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Languages with a hand-written announcement template (offline — no API).
-  const TTS_LANGUAGES = [
-    { code: 'en-IN', label: 'English', flag: '🇬🇧' },
-    { code: 'ta-IN', label: 'தமிழ் Tamil',   flag: '🌺' },
-    { code: 'hi-IN', label: 'हिन्दी Hindi',  flag: '🇮🇳' },
-    { code: 'mr-IN', label: 'मराठी Marathi', flag: '🦁' },
-  ] as const;
+  // All 22 scheduled Indian languages + English, with hand-written
+  // announcement text and romanized fallbacks (see utils/announce.ts).
+  const TTS_LANGUAGES = ANNOUNCE_LANGUAGES;
 
-  const currentLangLabel = TTS_LANGUAGES.find(l => l.code === ttsLang);
+  const currentLangLabel = findLanguage(ttsLang);
 
   // Close language dropdown on outside click
   useEffect(() => {
@@ -1201,64 +1228,78 @@ const ChefDisplay: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [ttsLangOpen]);
 
-  // ── Offline multilingual announcement builder ────────────────────────────
-  // Per the product decision, the STRUCTURE is translated per language while
-  // item names stay as-is (English) and numbers stay as digits (the voice reads
-  // them in its own language). No translation API — fully offline & instant.
-  const buildAnnouncement = useCallback((order: Order, lang: string): string => {
-    const items = (order.items ?? []).map(i => `${i.quantity} ${i.item_name}`).join(', ');
-    const count = (order.items ?? []).length;
-    // "OZ000042" → "42" so the order number is spoken cleanly.
-    const digits = String(order.order_number || '').replace(/\D/g, '').replace(/^0+/, '');
-    const no = digits || String(order.order_number || '');
-
-    switch (lang) {
-      case 'ta-IN': // Tamil
-        return `புதிய ஆர்டர். ஆர்டர் எண் ${no}. ${count} பொருட்கள்: ${items}.`;
-      case 'hi-IN': // Hindi
-        return `नया ऑर्डर। ऑर्डर नंबर ${no}। ${count} आइटम: ${items}।`;
-      case 'mr-IN': // Marathi
-        return `नवीन ऑर्डर. ऑर्डर नंबर ${no}. ${count} वस्तू: ${items}.`;
-      default:      // English
-        return `New order. Order number ${no}. ${count} item${count === 1 ? '' : 's'}: ${items}.`;
-    }
-  }, []);
-
   // Keep the selected language in a ref so the speak queue never goes stale.
   const ttsLangRef = useRef(ttsLang);
   useEffect(() => { ttsLangRef.current = ttsLang; }, [ttsLang]);
 
   // Available system voices. getVoices() is often empty until 'voiceschanged'
   // fires (Chrome), so we keep a ref + a tick to re-evaluate availability in UI.
+  // Chrome can also populate the list lazily on first access, so we re-poll a
+  // few times after mount — without that, an announcement fired in the first
+  // second of the shift picks no voice at all.
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const [voicesTick, setVoicesTick] = useState(0);
   useEffect(() => {
     if (!('speechSynthesis' in window)) return;
-    const load = () => { voicesRef.current = window.speechSynthesis.getVoices(); setVoicesTick(t => t + 1); };
+    const load = () => {
+      const v = window.speechSynthesis.getVoices();
+      if (v.length) { voicesRef.current = v; setVoicesTick(t => t + 1); }
+    };
     load();
     window.speechSynthesis.addEventListener('voiceschanged', load);
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
+    const retries = [250, 750, 1500, 3000].map(ms => window.setTimeout(load, ms));
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', load);
+      retries.forEach(clearTimeout);
+    };
   }, []);
 
-  const pickVoice = useCallback((lang: string): SpeechSynthesisVoice | undefined => {
-    const base = lang.split('-')[0];
-    return voicesRef.current.find(v => v.lang === lang)
-        || voicesRef.current.find(v => v.lang.startsWith(base));
-  }, []);
-
-  // Is a voice for the *currently selected* language installed on this device?
-  // (Browser TTS can only speak a language if its voice pack is present.)
+  // Is a real voice pack for the selected language installed on this device?
+  // When it isn't we still speak — via the romanized fallback — so this only
+  // drives an informational hint, not a failure.
   const hasVoiceForCurrentLang = (() => {
     void voicesTick; // re-evaluate when the voice list loads
-    return ttsLang === 'en-IN' || pickVoice(ttsLang) !== undefined;
+    return hasNativeVoice(voicesRef.current, ttsLang);
   })();
 
   // ── Sequential announcement queue (rapid orders don't cut each other off) ──
-  // Each queue entry is one utterance in one language. A new order enqueues TWO
-  // entries — Tamil then English — so it's announced bilingually like a railway
-  // announcement, spoken one after the other.
+  // Each queue entry is one utterance in one language. A new order enqueues the
+  // chef's language then English, spoken one after the other like a railway
+  // announcement.
   const speakingRef = useRef(false);
   const speakQueueRef = useRef<Array<{ order: Order; lang: string }>>([]);
+
+  /**
+   * Speak one utterance and return a promise-free callback chain.
+   *
+   * Two platform quirks are handled here:
+   *  • Chrome silently stops synthesising after ~15s. A resume() heartbeat
+   *    while speaking keeps long item lists from being cut off mid-sentence.
+   *  • speak() queues onto whatever the previous utterance left behind, so a
+   *    stuck queue wedges every later announcement. cancel() before the first
+   *    utterance of a batch clears it.
+   */
+  const utter = useCallback((text: string, code: string, onDone: () => void) => {
+    const choice = chooseVoice(voicesRef.current, code);
+    const u = new SpeechSynthesisUtterance(text);
+    if (choice.voice) u.voice = choice.voice;
+    u.lang   = choice.lang;
+    // 0.8 was slurring consonants on most bundled voices; 0.95 stays crisp
+    // while remaining slower than conversational speech.
+    u.rate   = 0.95;
+    u.pitch  = 1.0;
+    u.volume = 1.0;
+
+    const keepAlive = window.setInterval(() => {
+      if (window.speechSynthesis.speaking) window.speechSynthesis.resume();
+      else window.clearInterval(keepAlive);
+    }, 5000);
+
+    const finish = () => { window.clearInterval(keepAlive); onDone(); };
+    u.onend   = finish;
+    u.onerror = finish;
+    window.speechSynthesis.speak(u);
+  }, []);
 
   const drainQueue = useCallback(() => {
     if (speakingRef.current) return;
@@ -1268,47 +1309,53 @@ const ChefDisplay: React.FC = () => {
     setSpeakingOrderId(next.order.id);
 
     const { order, lang } = next;
-    const utter = new SpeechSynthesisUtterance(buildAnnouncement(order, lang));
-    utter.lang = lang;
-    utter.rate = 0.8;   // a touch slow → intelligible over kitchen noise
-    utter.pitch = 1.0;
-    utter.volume = 1.0;
-    const v = pickVoice(lang);
-    if (v) utter.voice = v;
+    const choice = chooseVoice(voicesRef.current, lang);
+    const text = buildAnnouncement(order, lang, choice.romanized);
 
-    const done = () => { speakingRef.current = false; setSpeakingOrderId(null); drainQueue(); };
-    utter.onend = done;
-    utter.onerror = done;
-    window.speechSynthesis.speak(utter);
-  }, [buildAnnouncement, pickVoice]);
+    utter(text, lang, () => {
+      speakingRef.current = false;
+      setSpeakingOrderId(null);
+      drainQueue();
+    });
+  }, [utter]);
 
-  // Public: announce a new (paid) order — BILINGUAL: Tamil first, then English.
+  // Public: announce a new (paid) order — the chef's selected language first,
+  // then English as the fallback everyone in the kitchen understands.
+  //
+  // This used to hardcode ['ta-IN', 'en-IN'] and never read ttsLang, so the
+  // language dropdown was decorative: picking हिन्दी changed the button label
+  // and nothing else. ttsLangRef existed for exactly this purpose and was
+  // written on every change but never read anywhere.
+  //
+  // When the selection IS English there's no point queueing it twice, so the
+  // announcement collapses to a single utterance.
   const speakOrder = useCallback((order: Order) => {
     if (!ttsEnabled || !('speechSynthesis' in window)) return;
-    speakQueueRef.current.push({ order, lang: 'ta-IN' }); // தமிழ் first
+    const lang = ttsLangRef.current;
+    if (!speakingRef.current) window.speechSynthesis.cancel(); // clear a wedged queue
+    if (lang !== 'en-IN') {
+      speakQueueRef.current.push({ order, lang });      // chef's language first
+    }
     speakQueueRef.current.push({ order, lang: 'en-IN' }); // then English
     drainQueue();
   }, [ttsEnabled, drainQueue]);
 
-  // Preview a language's voice with a sample order (used when picking a language).
+  // Preview a language with a sample order (fired when picking from the list).
   const speakSample = useCallback((lang: string) => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     speakingRef.current = false;
-    const sample = {
-      order_number: 'OZ000007',
+    speakQueueRef.current = [];
+    const sample: AnnouncableOrder = {
+      order_number: 'OZ000042',
       items: [
-        { menu_item_id: 0, item_name: 'Masala Dosa', quantity: 2, price: 0 },
-        { menu_item_id: 0, item_name: 'Filter Coffee', quantity: 1, price: 0 },
+        { item_name: 'Masala Dosa', quantity: 2 },
+        { item_name: 'Filter Coffee', quantity: 1 },
       ],
-    } as unknown as Order;
-    const utter = new SpeechSynthesisUtterance(buildAnnouncement(sample, lang));
-    utter.lang = lang;
-    utter.rate = 0.8;
-    const v = pickVoice(lang);
-    if (v) utter.voice = v;
-    window.speechSynthesis.speak(utter);
-  }, [buildAnnouncement, pickVoice]);
+    };
+    const choice = chooseVoice(voicesRef.current, lang);
+    utter(buildAnnouncement(sample, lang, choice.romanized), lang, () => {});
+  }, [utter]);
 
   // Web Audio API beep
   const playNotificationBeep = useCallback(() => {
@@ -1368,10 +1415,20 @@ const ChefDisplay: React.FC = () => {
     }
   }, []);
 
-  // Fetch ALL of today's orders (including completed) for the food-grid tab
+  // Fetch ALL of today's orders (including completed) for the food-grid tab.
+  //
+  // from_date is required here: without it the server returns only the open
+  // kitchen queue (pending/preparing/ready) to a chef-role account, so the
+  // completed orders this tab is built around never arrived and both the
+  // "Today's Log" list and the revenue totals sat empty.
   const fetchTodayOrders = useCallback(async () => {
     try {
-      const data = await orderService.getAll({ limit: 300 });
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const data = await orderService.getAll({
+        limit: 300,
+        from_date: startOfToday.toISOString(),
+      });
       const list: Order[] = Array.isArray(data)
         ? data
         : Array.isArray((data as any)?.data?.orders)
@@ -1478,6 +1535,11 @@ const ChefDisplay: React.FC = () => {
       `}</style>
 
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #140a09, #241512, #1b0e0c)', position: 'relative' }}>
+        {/* A kitchen screen that has quietly lost its connection is worse than
+            a kiosk that has: the chef keeps working from a queue that stopped
+            updating minutes ago. Make the disconnection impossible to miss. */}
+        <NetworkBanner />
+
         {/* Grid overlay */}
         <div style={{
           position: 'fixed', inset: 0,
@@ -1584,9 +1646,11 @@ const ChefDisplay: React.FC = () => {
                   backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                   border: '1px solid rgba(255,237,78,0.25)',
                   borderRadius: '14px', padding: '8px',
-                  zIndex: 200, minWidth: '170px',
+                  zIndex: 200, minWidth: '210px',
                   boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
                   animation: 'fadeInUp 0.15s ease',
+                  // 23 languages — the list has to scroll or it runs off-screen.
+                  maxHeight: '60vh', overflowY: 'auto',
                 }}>
                   {TTS_LANGUAGES.map(lang => (
                     <button
@@ -1614,19 +1678,31 @@ const ChefDisplay: React.FC = () => {
               )}
             </div>
 
-            {/* Voice-availability hint — browser TTS needs the language's voice
-                pack installed on the OS. Warn if the selected one is missing. */}
-            {ttsEnabled && !hasVoiceForCurrentLang && (
+            {/* Voice-availability hint. Browser TTS can only pronounce a
+                language whose voice pack the OS has installed — a stock
+                Windows box has English only. Rather than fail, we speak a
+                romanized transliteration through the English voice, which is
+                perfectly intelligible. This badge says so, so the chef knows
+                the audio is working as designed and how to upgrade it. */}
+            {ttsEnabled && !hasVoiceForCurrentLang && ttsLang !== 'en-IN' && (
               <span
-                title={`No ${currentLangLabel?.label ?? ''} voice is installed on this device. Install the language's voice pack in your OS settings, or the announcement may be silent / mispronounced.`}
+                title={
+                  `No ${currentLangLabel.label} voice pack is installed on this device, so ` +
+                  `announcements are spoken in romanized ${currentLangLabel.label} using the ` +
+                  `English voice — still clear and understandable.\n\n` +
+                  `For native pronunciation, install the voice pack:\n` +
+                  `Windows → Settings → Time & Language → Language & region → ` +
+                  `add the language → Language options → Speech.`
+                }
                 style={{
                   fontFamily: 'Inter, sans-serif', fontSize: '11px', fontWeight: 700,
                   color: '#ff9f43', background: 'rgba(255,159,67,0.1)',
                   border: '1px solid rgba(255,159,67,0.35)', borderRadius: '6px',
                   padding: '4px 8px', letterSpacing: '0.3px', whiteSpace: 'nowrap',
+                  cursor: 'help',
                 }}
               >
-                ⚠ No {currentLangLabel?.label ?? ''} voice
+                ⓘ Romanized voice
               </span>
             )}
 
