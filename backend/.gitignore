@@ -3,8 +3,18 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
 yarn.lock
+
+# package-lock.json is COMMITTED on purpose (it was ignored here, which is the
+# right call for a published library and the wrong one for a deployed service).
+#
+# Without it Render resolves every dependency fresh on each build, so the code
+# handling payments is not the code that was tested — a transitive package can
+# publish a new version between two deploys and change behaviour with no commit
+# to point at. It also meant security fixes applied locally never reached
+# production, since there was no pinned tree to ship.
+#
+# frontend/package-lock.json was already tracked; this only aligns the backend.
 
 # Environment Variables
 .env

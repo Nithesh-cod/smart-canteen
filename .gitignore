@@ -86,3 +86,9 @@ frontend/ios/App/build/
 # Web assets copied into the native project by `npx cap sync` — a duplicate of
 # frontend/dist, which is itself ignored.
 frontend/android/app/src/main/assets/public/
+
+# Built APKs. Kept out of git deliberately: a 13MB binary that changes on every
+# build would live in history forever and could not be removed without a rewrite.
+# Ship builds via GitHub Releases (gh release upload) instead.
+*.apk
+*.aab
