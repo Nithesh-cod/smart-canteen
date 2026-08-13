@@ -61,7 +61,22 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS: origin "${origin}" not allowed`));
+
+    // A plain Error here surfaces as 500, which reads as "the backend is
+    // broken" when the truth is "this origin isn't in FRONTEND_URLS" — and it
+    // sends you debugging the wrong system entirely. 403 says the request was
+    // understood and refused, and the log names the origin so the fix is
+    // obvious from the Render logs alone.
+    console.warn(
+      `[CORS] rejected origin "${origin}" — add it to FRONTEND_URLS ` +
+      `(currently: ${allowedOrigins.join(', ')})`
+    );
+    const err = new Error(
+      `Origin "${origin}" is not allowed. Add it to the FRONTEND_URLS ` +
+      `environment variable on the API service.`
+    );
+    err.status = 403;
+    callback(err);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
