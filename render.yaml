@@ -8,6 +8,12 @@ services:
     region: singapore
     plan: free
     numInstances: 1
+    # This file MUST live at the repository root — Render only looks for
+    # render.yaml there, and will not find it inside a subdirectory. Since the
+    # Node app is in backend/, rootDir points the build and start commands at
+    # it. Without this, `npm install` runs at the root, finds no package.json,
+    # and the deploy fails before it ever reaches the app.
+    rootDir: backend
     # Skip devDependencies (jest, firebase-tools) in production.
     buildCommand: npm install --omit=dev
     startCommand: npm start

@@ -32,7 +32,9 @@ those into Render, or generate new ones. **Do not** reuse the old
 ## 1. Backend → Render
 
 1. New **Web Service** → connect the GitHub repo → root directory `backend`.
-   (Render reads `backend/render.yaml`; build `npm install --omit=dev`, start `npm start`.)
+   (Render reads `render.yaml` **at the repository root** — it does not look in
+   subdirectories. The file sets `rootDir: backend` so the build and start
+   commands run inside `backend/`.)
 
    `render.yaml` also declares a **Key Value (Redis)** service and wires
    `REDIS_URL` into the web service automatically. Accept it — it is not
