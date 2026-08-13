@@ -30,12 +30,30 @@ function safeNext(next: string | null): string | null {
   return next;
 }
 
-const UnifiedLogin: React.FC = () => {
+interface UnifiedLoginProps {
+  /**
+   * Native shell hook. The APK has no URL bar and no routes to navigate to —
+   * MobileApp decides what to render from the role it re-reads off the server.
+   * When supplied, URL routing is skipped entirely rather than pushing paths
+   * that mean nothing inside a WebView.
+   */
+  onAuthenticated?: () => void;
+}
+
+const UnifiedLogin: React.FC<UnifiedLoginProps> = ({ onAuthenticated }) => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = safeNext(params.get('next'));
 
   const routeByRole = (student: Student) => {
+    // Native: hand back to the shell. Deliberately does NOT pass the student
+    // through — the shell re-asks the server for the role rather than trusting
+    // a value that arrived via the client.
+    if (onAuthenticated) {
+      onAuthenticated();
+      return;
+    }
+
     const role = student.role || 'student';
 
     if (role === 'admin') {

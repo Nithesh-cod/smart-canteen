@@ -55,6 +55,19 @@ const http = require('http').createServer(app);
  */
 const normalizeOrigin = (value) => String(value).trim().replace(/\/+$/, '');
 
+// The Android/iOS app shell is a WebView serving the bundle from a local
+// origin, so its requests carry one of these rather than a real domain. They
+// are not "any localhost" — they are the fixed origins Capacitor uses, and
+// omitting them refuses every write from the app exactly the way a missing
+// Vercel URL did. There is no wildcard here: an attacker cannot present these
+// from a browser, since a page's origin is assigned by the browser, not chosen.
+const NATIVE_APP_ORIGINS = [
+  'capacitor://localhost', // iOS shell
+  'http://localhost',      // Android shell
+  'https://localhost',     // Android shell over https scheme
+  'ionic://localhost',     // older Capacitor/Ionic shells
+];
+
 const buildAllowedOrigins = () => {
   const extras = (process.env.FRONTEND_URLS || '')
     .split(',')
@@ -62,6 +75,7 @@ const buildAllowedOrigins = () => {
     .filter(Boolean);
   return Array.from(new Set([
     'http://localhost:3000', // single Vite dev server
+    ...NATIVE_APP_ORIGINS,
     ...extras,
   ]));
 };

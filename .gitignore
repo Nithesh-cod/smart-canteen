@@ -68,3 +68,21 @@ smart-canteen.zip
 # Generated production env dumps — contain real secrets
 render.env.txt
 *.env.txt
+
+# ── Capacitor native project ─────────────────────────────────────────────────
+# android/ IS committed on purpose. It is not purely generated: the launcher
+# background colour, app name, permissions and (later) signing config live in
+# there, and `npx cap add android` would silently revert them. Only the build
+# outputs are ignored.
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/release/
+frontend/android/capacitor-cordova-android-plugins/
+frontend/ios/App/Pods/
+frontend/ios/App/build/
+
+# Web assets copied into the native project by `npx cap sync` — a duplicate of
+# frontend/dist, which is itself ignored.
+frontend/android/app/src/main/assets/public/
