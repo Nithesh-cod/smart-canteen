@@ -5,11 +5,16 @@
 // that all fail quietly. This reads the local file, drops what must not travel,
 // overrides what must change, and writes a paste-ready block.
 //
-//   node scripts/make-render-env.js > render.env.txt
+//   node scripts/make-render-env.js            → writes backend/render.env.txt
+//   node scripts/make-render-env.js out.txt    → writes to a path you choose
 //
-// The output contains REAL SECRETS. It is written to stdout so it never lands
-// in the repo by accident; redirect it somewhere outside version control, paste
-// it into the host, then delete it.
+// The file is written HERE rather than via shell redirection, because `>` in
+// Windows PowerShell 5.1 encodes as UTF-16. Render reads that as binary and the
+// paste silently produces nothing usable. Writing it directly, always UTF-8,
+// removes a failure that gives no clue what went wrong.
+//
+// The output contains REAL SECRETS. render.env.txt and *.env.txt are gitignored;
+// paste it into the host, then delete it.
 // ============================================================================
 
 const fs = require('fs');
@@ -106,14 +111,22 @@ for (const [key, value] of env) {
   lines.push(`${key}=${value}`);
 }
 
-console.log(lines.join('\n'));
+const outPath = path.resolve(process.argv[2] || path.join(__dirname, '..', 'render.env.txt'));
+fs.writeFileSync(outPath, lines.join('\n') + '\n', 'utf8');
 
-console.error('\n──────── review before pasting ────────');
+const varCount = lines.filter((l) => /^[A-Z_]+=/.test(l)).length;
+
+console.log(`\n  Wrote ${varCount} variables to:\n    ${outPath}\n`);
+console.log('  Upload THAT FILE via Render → Environment → Add from .env → "Choose a file".');
+console.log('  Do not copy the notes below — they are commentary, not values.');
+console.log('  Delete the file once pasted; it holds real secrets.\n');
+
+console.log('──────── what changed, and what still needs you ────────');
 for (const [key, why] of Object.entries(DROP)) {
-  if (env.has(key)) console.error(`  dropped ${key} — ${why}`);
+  if (env.has(key)) console.log(`  dropped ${key} — ${why}`);
 }
-for (const n of notes) console.error(`  ${n}`);
+for (const n of notes) console.log(`  ${n}`);
 for (const key of Object.keys(REVIEW)) {
-  if (env.has(key)) console.error(`  CHECK ${key} — ${REVIEW[key]}`);
+  if (env.has(key)) console.log(`  CHECK ${key} — ${REVIEW[key]}`);
 }
-console.error('───────────────────────────────────────');
+console.log('───────────────────────────────────────────────────────');
