@@ -45,8 +45,21 @@ const http = require('http').createServer(app);
 // Prod: Same origin — frontend is served by this Express server, so CORS is
 //       not required, but we keep it permissive for any external API callers.
 // Extra origins can be added via FRONTEND_URLS (comma-separated) in .env.
+/**
+ * An Origin is scheme + host + port and NEVER carries a path, so a browser
+ * sends "https://x.vercel.app" — never "https://x.vercel.app/". Pasting a URL
+ * from the address bar reliably brings a trailing slash with it, and since the
+ * check is exact string matching, that one character rejects every request from
+ * the site you just allowed. Normalising both sides removes a whole class of
+ * config error that otherwise costs a deploy cycle to spot.
+ */
+const normalizeOrigin = (value) => String(value).trim().replace(/\/+$/, '');
+
 const buildAllowedOrigins = () => {
-  const extras = (process.env.FRONTEND_URLS || '').split(',').map(s => s.trim()).filter(Boolean);
+  const extras = (process.env.FRONTEND_URLS || '')
+    .split(',')
+    .map(normalizeOrigin)
+    .filter(Boolean);
   return Array.from(new Set([
     'http://localhost:3000', // single Vite dev server
     ...extras,
@@ -58,9 +71,11 @@ console.log('[CORS] Allowed origins:', allowedOrigins.join(', '));
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    // Allow requests with no origin (mobile apps, curl, server-to-server).
+    // This is also why reads through the Vercel rewrite work while writes do
+    // not: a same-origin GET sends no Origin header, but POST/PUT/DELETE do.
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (allowedOrigins.includes(normalizeOrigin(origin))) return callback(null, true);
 
     // A plain Error here surfaces as 500, which reads as "the backend is
     // broken" when the truth is "this origin isn't in FRONTEND_URLS" — and it
