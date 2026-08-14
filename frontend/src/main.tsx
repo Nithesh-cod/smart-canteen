@@ -21,6 +21,13 @@ import './index.css'
 // MobileApp does its own switching.
 const Root = IS_NATIVE ? MobileApp : App
 
+// Marks the document so CSS can adjust for the app shell without every
+// component needing to know it is running natively. The shell supplies its own
+// top bar and sign-out, so page-level chrome built for the website (the
+// floating profile pill, the desktop hero spacing) would otherwise sit on top
+// of it — the overlap that made the app look like the layout had collapsed.
+if (IS_NATIVE) document.documentElement.classList.add('is-native')
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>

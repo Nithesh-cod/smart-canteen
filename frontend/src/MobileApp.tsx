@@ -146,10 +146,21 @@ const MobileApp: React.FC = () => {
   }
 
   // ── Student — Menu | Track ────────────────────────────────────────────────
+  // Laid out as a flex column with the bar in NORMAL FLOW, not fixed.
+  //
+  // Three separate things previously claimed `position: fixed; top: 0` — the
+  // network banner, this tab bar, and the kiosk's own floating profile pill —
+  // so on a phone they stacked on top of one another and the page read as if
+  // its layout had collapsed. A fixed bar also needs its height hardcoded as
+  // padding on the content below, which silently breaks the moment the banner
+  // appears and adds 69px nothing accounted for.
+  //
+  // In flow, the browser does that arithmetic. `position: sticky` keeps the
+  // bar visible while the menu scrolls without removing it from the layout.
   return (
-    <>
-      <NetworkBanner />
-      <div style={{ paddingTop: 52 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+      <NetworkBanner inline />
+      <div style={{ flex: 1, minHeight: 0 }}>
         <nav style={tabBarStyle} className="lg-surface">
           <TabButton active={tab === 'menu'} onClick={() => setTab('menu')} glyph="🍽️" label="Menu" />
           <TabButton active={tab === 'track'} onClick={() => setTab('track')} glyph="📍" label="Track" />
@@ -166,7 +177,7 @@ const MobileApp: React.FC = () => {
           <OrderTracking />
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
@@ -241,10 +252,11 @@ const splashStyle: React.CSSProperties = {
 };
 
 const tabBarStyle: React.CSSProperties = {
-  position: 'fixed',
+  // Sticky, not fixed: it stays visible while the menu scrolls but remains part
+  // of the layout, so the content below is positioned by the browser instead of
+  // by a hardcoded padding that breaks whenever the banner appears.
+  position: 'sticky',
   top: 0,
-  left: 0,
-  right: 0,
   zIndex: 150,
   display: 'flex',
   gap: 6,

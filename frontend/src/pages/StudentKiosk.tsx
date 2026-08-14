@@ -475,7 +475,7 @@ const StudentKiosk: React.FC = () => {
 
       {/* Sign-in / profile — top-right. Students can sign in to earn & redeem
           points; guests can still check out without an account. */}
-      <div style={{ position: 'fixed', top: 16, right: 18, zIndex: 60, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="kiosk-profile-pill" style={{ position: 'fixed', top: 16, right: 18, zIndex: 60, display: 'flex', alignItems: 'center', gap: 10 }}>
         {currentStudent ? (
           <>
             <div style={{

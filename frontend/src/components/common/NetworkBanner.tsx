@@ -14,7 +14,19 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 // signal that it is safe to try again and just keeps waiting.
 // ============================================================================
 
-export const NetworkBanner: React.FC = () => {
+interface NetworkBannerProps {
+  /**
+   * Render in normal document flow instead of pinned over the page.
+   *
+   * Overlaying is right on the website, where it floats above a full-height
+   * layout. In the app shell the banner shares the top edge with the tab bar,
+   * and two fixed elements at top:0 simply cover each other — so the shell
+   * places it in flow and lets the browser stack them.
+   */
+  inline?: boolean;
+}
+
+export const NetworkBanner: React.FC<NetworkBannerProps> = ({ inline = false }) => {
   const { online, slow, latency, recheck } = useNetworkStatus();
   const [showBack, setShowBack] = useState(false);
   const wasOffline = useRef(false);
@@ -35,7 +47,7 @@ export const NetworkBanner: React.FC = () => {
 
   if (!online) {
     return (
-      <div className="lg-banner offline" role="status" aria-live="assertive">
+      <div className={`lg-banner offline ${inline ? "inline" : ""}`} role="status" aria-live="assertive">
         <span className="lg-dot" />
         <span>No connection — your cart is saved. We'll reconnect automatically.</span>
         <button
@@ -52,7 +64,7 @@ export const NetworkBanner: React.FC = () => {
 
   if (slow) {
     return (
-      <div className="lg-banner slow" role="status" aria-live="polite">
+      <div className={`lg-banner slow ${inline ? "inline" : ""}`} role="status" aria-live="polite">
         <span className="lg-dot" />
         <span>
           Slow connection{latency ? ` (${(latency / 1000).toFixed(1)}s)` : ''} — things may take a moment.
@@ -63,7 +75,7 @@ export const NetworkBanner: React.FC = () => {
 
   if (showBack) {
     return (
-      <div className="lg-banner back" role="status" aria-live="polite">
+      <div className={`lg-banner back ${inline ? "inline" : ""}`} role="status" aria-live="polite">
         <span aria-hidden="true">✓</span>
         <span>Back online</span>
       </div>

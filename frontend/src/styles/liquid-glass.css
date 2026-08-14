@@ -284,3 +284,98 @@
     animation: none !important;
   }
 }
+
+/* ============================================================================
+   MOBILE PERFORMANCE
+   ============================================================================
+   backdrop-filter is the single most expensive thing this UI asks for. Every
+   element carrying one forces the compositor to snapshot what is behind it,
+   blur that copy, and recomposite — per frame, per element. The kiosk shows
+   twelve menu cards at blur(20px) plus two blurred chips each, so a phone is
+   asked for ~36 of those passes before any scrolling starts. A desktop GPU
+   absorbs it; a mid-range Android drops frames, which is the lag in the app.
+
+   Rather than delete the design, the blur is dialled back where it costs most
+   and the purely decorative motion is stopped. The material still reads as
+   glass — translucency and the specular edge survive, since those are cheap;
+   it is the blur RADIUS and the animated repaints that are not.
+   ========================================================================== */
+
+@media (max-width: 820px) {
+  /* Halving the radius is not half the cost — blur scales with the square of
+     the kernel, so 28px -> 12px is roughly a 5x saving per element. */
+  .lg-surface {
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+  }
+
+  /* The drifting caustic repaints a large blurred layer forever, on every
+     surface at once, for pure decoration. It is the first thing to go. */
+  .lg-surface::after { animation: none; opacity: 0.5; }
+
+  .lg-banner {
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+  }
+
+  /* Menu cards: the big win. Twelve of these composite at once, and the small
+     blurred chips inside each one multiply that by three. The chips sit on
+     opaque artwork where a blur reads as almost nothing anyway. */
+  .wg-card {
+    backdrop-filter: blur(10px) saturate(125%) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(125%) !important;
+  }
+  .wg-fav, .wg-veg, .wg-sold {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Glyph float and shimmer run continuously even when nothing is loading.
+     Skeletons keep their shimmer — that one communicates progress. */
+  .lg-state-glyph { animation: none; }
+}
+
+/* Very small or low-DPI phones: drop backdrop blur entirely and fall back to a
+   solid translucent panel. Below this width the blurred area is small enough
+   that the effect is barely legible, while the compositing cost is unchanged. */
+@media (max-width: 480px) {
+  .lg-surface,
+  .wg-card,
+  .lg-banner {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(28, 15, 13, 0.92);
+  }
+  .lg-surface::after { display: none; }
+}
+
+/* ============================================================================
+   APP SHELL (Capacitor)
+   ============================================================================
+   The website and the app disagree about who owns the top edge. On the web the
+   page supplies its own floating chrome; in the app the shell does, and both
+   claiming `position: fixed; top: 0` means they cover each other — which is
+   what made the app look like its layout had collapsed rather than merely
+   overlapped.
+   ========================================================================== */
+
+/* In-flow banner for the app shell: same material, no longer pinned. */
+.lg-banner.inline {
+  position: static;
+  animation: none;      /* nothing to slide over — it occupies real space */
+}
+
+/* The kiosk's floating profile pill duplicates the shell's own sign-out and
+   lands on top of the tab bar. The shell is authoritative in the app. */
+.is-native .kiosk-profile-pill { display: none !important; }
+
+/* The kiosk hero is sized for a desktop viewport; inside the app it pushes the
+   first row of dishes below the fold on a phone. */
+.is-native .wg-hero { padding: 14px 16px 8px; }
+.is-native .kiosk-main { padding-top: 8px !important; }
+
+/* A floating cart button clears the Android gesture bar. */
+.is-native .kiosk-cart-btn { bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important; }
+
+/* Respect the status bar and gesture area so content is not drawn underneath. */
+.is-native body { padding-top: env(safe-area-inset-top, 0px); }

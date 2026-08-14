@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { API_URL } from '../utils/constants';
 
 // ============================================================================
 // NETWORK STATUS — offline + slow-connection detection
@@ -14,7 +15,18 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 // reaching our own health endpoint.
 // ============================================================================
 
-const HEALTH_URL = `${import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api'}`.replace(/\/api\/?$/, '') + '/health';
+// Derived from the RESOLVED API_URL, not the raw env var.
+//
+// The production web build sets VITE_API_URL="/api", so reading the env var
+// directly produced the relative "/health". On the website that happens to work
+// — Vercel serves the same origin. Inside the app it resolves against the
+// WebView's own origin (https://localhost), where nothing is listening, so the
+// probe failed forever and the app showed a permanent "No connection" banner
+// while every other request was succeeding against Render.
+//
+// API_URL already knows the difference between web and native; using it means
+// the probe follows the same origin as the traffic it is meant to be reporting on.
+const HEALTH_URL = API_URL.replace(/\/api\/?$/, '') + '/health';
 
 /** Above this, a connection is "slow" rather than merely busy. */
 const SLOW_MS = 2500;
