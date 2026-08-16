@@ -29,6 +29,12 @@ export default defineConfig({
           vendor:  ['react', 'react-dom', 'react-router-dom'],
           redux:   ['@reduxjs/toolkit', 'react-redux'],
           charts:  ['chart.js', 'react-chartjs-2'],
+          // Firestore's client SDK is the single largest dependency here and
+          // it changes far less often than app code. Splitting it out lets the
+          // browser cache it across deploys instead of re-downloading it inside
+          // the main chunk every time a component changes, and lets the two
+          // parse in parallel rather than as one long block on the main thread.
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
         },
       },
     },

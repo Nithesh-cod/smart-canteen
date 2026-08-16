@@ -1,12 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, Component } from 'react';
-
-// ── Error boundary so Ballpit WebGL failures never crash the kiosk UI ─────────
-class BallpitBoundary extends Component<{ children: React.ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
-  componentDidCatch(err: Error) { console.warn('Ballpit caught by error boundary:', err.message); }
-  render() { return this.state.failed ? null : this.props.children; }
-}
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
 import { logout as logoutAction } from '../store/slices/authSlice';
@@ -36,7 +28,6 @@ import NetworkBanner from '../components/common/NetworkBanner';
 import type { MenuItem, Order } from '../types';
 import api from '../services/api';
 // @ts-ignore — JSX component without types
-import Orb from '../components/student/Orb';
 import { CinematicHero } from '../components/fx/CinematicHero';
 import { HoloCursor } from '../components/fx/HoloCursor';
 import { GridFloor } from '../components/fx/GridFloor';

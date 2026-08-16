@@ -40,6 +40,18 @@ public class MainActivity extends BridgeActivity {
         WebView main = getBridge().getWebView();
         WebSettings settings = main.getSettings();
 
+        // Remote debugging for debug builds only. Without this there is no way
+        // to see a console error from inside the app — a payment failure looks
+        // identical whether the gateway rejected it, a script failed to load,
+        // or a popup was blocked. With it, chrome://inspect on a connected
+        // machine shows the real console and network activity.
+        //
+        // Gated on the debuggable flag so release builds never expose their
+        // WebView to anything plugged into the phone.
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
+
         // Permit the popup request. JavaScript itself is already enabled by
         // Capacitor; without this flag the call is rejected before any listener
         // is consulted.

@@ -1,11 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import * as authService from './services/auth.service';
 import { signIntoFirebase } from './services/firebase';
 import UnifiedLogin from './pages/UnifiedLogin';
 import StudentKiosk from './pages/StudentKiosk';
-import OrderTracking from './pages/OrderTracking';
-import ChefDisplay from './pages/ChefDisplay';
-import OwnerDashboard from './pages/OwnerDashboard';
 import NetworkBanner from './components/common/NetworkBanner';
 import { Skeleton } from './components/common/states';
 import logoUrl from './assets/logo.png';
@@ -19,13 +16,24 @@ import logoUrl from './assets/logo.png';
 //
 // That is not an arbitrary difference. A phone belongs to one person, so the
 // app can carry their identity, points and order history between sessions —
-// which is the whole reason to install it rather than use the website. A guest
-// kiosk flow on a personal device would throw that away on every launch.
+// which is the whole reason to install it rather than use the website.
 //
-// Role decides what the app IS, and role comes from the server (GET /api/auth/me)
-// — never from anything stored on the device. The same account works here, on
-// the hosted site and on the counter PC, because all three talk to one backend.
+// Role decides what the app IS, and role comes from the server
+// (GET /api/auth/me) — never from anything stored on the device. The same
+// account works here, on the hosted site and on the counter PC, because all
+// three talk to one backend.
+//
+// ── WHY THE STAFF PANELS ARE LAZY ───────────────────────────────────────────
+// Statically importing them put the chef display, the owner dashboard and the
+// charting library into the one bundle every launch has to parse — around a
+// megabyte of JavaScript before the first pixel, on a phone CPU. A student
+// never opens either panel, and an owner does not need the kitchen display.
+// Loading them on demand means each role parses roughly what it actually uses.
 // ============================================================================
+
+const ChefDisplay = lazy(() => import('./pages/ChefDisplay'));
+const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'));
+const OrderTracking = lazy(() => import('./pages/OrderTracking'));
 
 type Phase = 'checking' | 'signed-out' | 'ready';
 type StudentTab = 'menu' | 'track';
@@ -44,6 +52,17 @@ async function ensureFirebaseAuth(): Promise<void> {
     /* non-fatal — falls back to REST polling */
   }
 }
+
+/** Shown while a lazily-loaded panel is fetched. */
+const PanelFallback: React.FC = () => (
+  <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="lg-surface" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <Skeleton width="60%" height={16} />
+      <Skeleton width="85%" height={12} />
+      <Skeleton width="45%" height={12} />
+    </div>
+  </div>
+);
 
 const MobileApp: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('checking');
@@ -73,7 +92,6 @@ const MobileApp: React.FC = () => {
         setPhase('signed-out');
       }
     } catch {
-      // 401/expired/offline — treat as signed out rather than guessing.
       authService.clearAuthData();
       setPhase('signed-out');
     }
@@ -109,39 +127,27 @@ const MobileApp: React.FC = () => {
   }
 
   // ── Signed out — sign in or create an account ─────────────────────────────
-  // UnifiedLogin already routes by server-assigned role on the web. Here the
-  // shell owns navigation instead, so it just re-resolves the session and this
-  // component decides what to render.
   if (phase === 'signed-out') {
     return (
-      <>
-        <NetworkBanner />
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+        <NetworkBanner inline />
         <UnifiedLogin onAuthenticated={resolveSession} />
-      </>
+      </div>
     );
   }
 
   // ── Staff ─────────────────────────────────────────────────────────────────
-  // Same panels as the web, same credentials, same data. No tab bar: a chef
-  // has one job on this screen and a bottom-of-screen switcher would only get
-  // in the way during service.
-  if (role === 'chef') {
+  // Same panels as the web, same credentials, same data. No tab bar: a chef has
+  // one job on this screen and a switcher would only get in the way in service.
+  if (role === 'chef' || role === 'admin') {
     return (
-      <>
-        <NetworkBanner />
-        <ChefDisplay />
-        <SignOutPill label={name || 'Chef'} onSignOut={handleSignOut} />
-      </>
-    );
-  }
-
-  if (role === 'admin') {
-    return (
-      <>
-        <NetworkBanner />
-        <OwnerDashboard />
-        <SignOutPill label={name || 'Owner'} onSignOut={handleSignOut} />
-      </>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+        <NetworkBanner inline />
+        <Suspense fallback={<PanelFallback />}>
+          {role === 'chef' ? <ChefDisplay /> : <OwnerDashboard />}
+        </Suspense>
+        <SignOutPill label={name || (role === 'chef' ? 'Chef' : 'Owner')} onSignOut={handleSignOut} />
+      </div>
     );
   }
 
@@ -153,10 +159,10 @@ const MobileApp: React.FC = () => {
   // so on a phone they stacked on top of one another and the page read as if
   // its layout had collapsed. A fixed bar also needs its height hardcoded as
   // padding on the content below, which silently breaks the moment the banner
-  // appears and adds 69px nothing accounted for.
+  // appears and adds ~66px nothing accounted for.
   //
-  // In flow, the browser does that arithmetic. `position: sticky` keeps the
-  // bar visible while the menu scrolls without removing it from the layout.
+  // In flow, the browser does that arithmetic. `position: sticky` keeps the bar
+  // visible while the menu scrolls without removing it from the layout.
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <NetworkBanner inline />
@@ -166,16 +172,18 @@ const MobileApp: React.FC = () => {
           <TabButton active={tab === 'track'} onClick={() => setTab('track')} glyph="📍" label="Track" />
         </nav>
 
-        {/* Both stay MOUNTED, with the inactive one hidden. Unmounting the menu
-            on every tab switch would drop the cart's optimistic state and force
-            a refetch of the whole menu — and on a phone that is a visible
-            stall each time someone checks their order. */}
+        {/* The menu stays MOUNTED when switching to Track. Unmounting it would
+            drop the cart's optimistic state and refetch the whole menu, which
+            on a phone is a visible stall every time someone checks an order.
+            Track is lazy, so it costs nothing until first opened. */}
         <div style={{ display: tab === 'menu' ? 'block' : 'none' }}>
           <StudentKiosk />
         </div>
-        <div style={{ display: tab === 'track' ? 'block' : 'none' }}>
-          <OrderTracking />
-        </div>
+        {tab === 'track' && (
+          <Suspense fallback={<PanelFallback />}>
+            <OrderTracking />
+          </Suspense>
+        )}
       </div>
     </div>
   );
@@ -222,15 +230,13 @@ const SignOutPill: React.FC<{ label: string; onSignOut: () => void }> = ({ label
     onClick={onSignOut}
     style={{
       position: 'fixed',
-      bottom: 16,
+      bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
       right: 16,
       zIndex: 200,
       padding: '10px 16px',
       borderRadius: 100,
       border: '1px solid rgba(255,255,255,0.18)',
-      background: 'rgba(20,10,9,0.82)',
-      backdropFilter: 'blur(18px)',
-      WebkitBackdropFilter: 'blur(18px)',
+      background: 'rgba(20,10,9,0.92)',
       color: 'rgba(255,242,235,0.8)',
       fontFamily: "'Inter', sans-serif",
       fontSize: '0.76rem',
@@ -243,7 +249,7 @@ const SignOutPill: React.FC<{ label: string; onSignOut: () => void }> = ({ label
 );
 
 const splashStyle: React.CSSProperties = {
-  minHeight: '100vh',
+  minHeight: '100dvh',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
