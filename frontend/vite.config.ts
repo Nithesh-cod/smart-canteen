@@ -28,7 +28,11 @@ export default defineConfig({
         manualChunks: {
           vendor:  ['react', 'react-dom', 'react-router-dom'],
           redux:   ['@reduxjs/toolkit', 'react-redux'],
-          charts:  ['chart.js', 'react-chartjs-2'],
+          // chart.js is deliberately NOT listed here. Naming it as a manual
+          // chunk pinned it into the entry's module graph, so every visitor
+          // preloaded 160KB of charting before first paint even though only
+          // the (lazily loaded) owner dashboard uses it. Left to Vite, it lands
+          // inside that dashboard's chunk and loads with it.
           // Firestore's client SDK is the single largest dependency here and
           // it changes far less often than app code. Splitting it out lets the
           // browser cache it across deploys instead of re-downloading it inside

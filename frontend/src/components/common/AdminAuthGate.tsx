@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as authService from '../../services/auth.service';
-import { signIntoFirebase } from '../../services/firebase';
 import { PermissionDeniedState, SessionExpiredState, Skeleton } from './states';
 
 /**
@@ -12,6 +11,9 @@ async function ensureFirebaseAuth(): Promise<void> {
   try {
     const res = await authService.getFirebaseToken();
     if (res.success && res.data?.firebase_token) {
+      // Dynamic: services/firebase initialises the Firestore SDK at module
+      // scope, so a static import would load 649KB to render a login form.
+      const { signIntoFirebase } = await import('../../services/firebase');
       await signIntoFirebase(res.data.firebase_token);
     }
   } catch {

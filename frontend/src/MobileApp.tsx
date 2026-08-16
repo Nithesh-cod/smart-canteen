@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import * as authService from './services/auth.service';
-import { signIntoFirebase } from './services/firebase';
 import UnifiedLogin from './pages/UnifiedLogin';
-import StudentKiosk from './pages/StudentKiosk';
 import NetworkBanner from './components/common/NetworkBanner';
 import { Skeleton } from './components/common/states';
 import logoUrl from './assets/logo.png';
@@ -31,6 +29,11 @@ import logoUrl from './assets/logo.png';
 // Loading them on demand means each role parses roughly what it actually uses.
 // ============================================================================
 
+// StudentKiosk is lazy for the same reason the staff panels are: it imports
+// services/firebase, which initialises the Firestore SDK at module scope. A
+// static import here would drag that 649KB onto the LOGIN screen — the one
+// screen in the app that needs no database at all.
+const StudentKiosk = lazy(() => import('./pages/StudentKiosk'));
 const ChefDisplay = lazy(() => import('./pages/ChefDisplay'));
 const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'));
 const OrderTracking = lazy(() => import('./pages/OrderTracking'));
@@ -41,11 +44,20 @@ type StudentTab = 'menu' | 'track';
 /**
  * Sign into Firebase Auth so the client-side realtime listeners are authorised
  * by Security Rules. Best-effort: the REST-backed UI still works without it.
+ *
+ * The import is DYNAMIC on purpose. services/firebase runs initializeApp,
+ * getFirestore and getAuth at module scope, so importing it at the top of this
+ * file pulled the whole 649KB Firestore SDK — downloaded, parsed AND
+ * initialised — before the login form could paint. That is the single largest
+ * dependency in the app, loaded to render a screen with two text inputs, on a
+ * phone CPU. Deferring it to the moment a session actually exists moves that
+ * cost off the launch path entirely.
  */
 async function ensureFirebaseAuth(): Promise<void> {
   try {
     const res = await authService.getFirebaseToken();
     if (res.success && res.data?.firebase_token) {
+      const { signIntoFirebase } = await import('./services/firebase');
       await signIntoFirebase(res.data.firebase_token);
     }
   } catch {
@@ -177,7 +189,9 @@ const MobileApp: React.FC = () => {
             on a phone is a visible stall every time someone checks an order.
             Track is lazy, so it costs nothing until first opened. */}
         <div style={{ display: tab === 'menu' ? 'block' : 'none' }}>
-          <StudentKiosk />
+          <Suspense fallback={<PanelFallback />}>
+            <StudentKiosk />
+          </Suspense>
         </div>
         {tab === 'track' && (
           <Suspense fallback={<PanelFallback />}>

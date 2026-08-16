@@ -14,7 +14,6 @@ import { useCart } from '../hooks/useCart';
 import * as menuService from '../services/menu.service';
 import * as authService from '../services/auth.service';
 import * as cartService from '../services/cart.service';
-import { subscribeToCollection } from '../services/firebase';
 import socketService from '../services/socket.service';
 import MenuGrid from '../components/student/MenuGrid';
 import Cart from '../components/student/Cart';
@@ -220,9 +219,20 @@ const StudentKiosk: React.FC = () => {
     }
 
     // ── Firestore Realtime: refresh the menu whenever any item changes ───────
-    const menuUnsub = subscribeToCollection('menu_items', () => {
-      loadMenu();
-    });
+    // Imported DYNAMICALLY. services/firebase initialises the Firestore SDK at
+    // module scope, so a static import here made its 649KB chunk a dependency
+    // of the entry bundle — preloaded before first paint on every screen,
+    // including the app's login form, which touches no database at all.
+    //
+    // Realtime is an enhancement on top of the REST fetch above: loadMenu()
+    // has already run and the socket below covers stock changes, so arriving a
+    // moment later costs nothing visible.
+    let menuUnsub: (() => void) | undefined;
+    let cancelled = false;
+    import('../services/firebase').then(({ subscribeToCollection }) => {
+      if (cancelled) return;
+      menuUnsub = subscribeToCollection('menu_items', () => loadMenu());
+    }).catch(() => { /* realtime unavailable — REST + socket still cover it */ });
 
     // ── Socket.IO fallback for stock/availability changes ────────────────────
     // Fires when owner/chef edits a menu item directly (even if Supabase Realtime
@@ -297,7 +307,11 @@ const StudentKiosk: React.FC = () => {
     socket.on('stock:availability',        handleAvailability);
 
     return () => {
-      menuUnsub();
+      // The listener is set up asynchronously now, so unmounting before the
+      // dynamic import resolves must both skip attaching it (via `cancelled`)
+      // and tolerate there being nothing to tear down.
+      cancelled = true;
+      menuUnsub?.();
       socket.off('menu:stock-updated',       handleStockUpdate);
       socket.off('menu:availability-changed', handleAvailabilityChange);
       socket.off('menu:item-updated',         handleItemUpdated);
