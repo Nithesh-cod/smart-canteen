@@ -40,6 +40,25 @@ const config: CapacitorConfig = {
     // "http://localhost" origin; the https scheme avoids that class of
     // surprise without needing a certificate, since the content is local.
     androidScheme: 'https',
+
+    // Serve the local bundle under the site's own hostname so the page origin
+    // is https://smart-canteen-pi-gray.vercel.app instead of https://localhost.
+    //
+    // Razorpay's checkout session is bound to the origin that created it, and
+    // that origin is the last remaining difference between "netbanking works on
+    // the website" and "netbanking 500s in the app" — same key, same backend,
+    // same account, and the cleartext fix in network_security_config.xml did
+    // not change the outcome. An unregistered origin is a plausible reason for
+    // /payments/validate/account to fail the way it does.
+    //
+    // Nothing is fetched FROM this origin at runtime: API and socket traffic
+    // both go to the absolute Render origin (see utils/constants.ts), so
+    // routing the origin's own paths to local files costs nothing. The backend
+    // already allows this origin through CORS because the website uses it.
+    //
+    // Side effect worth knowing: storage is per-origin, so anyone already
+    // signed in on a previous build lands on the login screen once.
+    hostname: 'smart-canteen-pi-gray.vercel.app',
   },
 };
 

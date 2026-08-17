@@ -306,6 +306,18 @@ body::before {
   .owner-topbar h1            { font-size: 1.35rem !important; }
 }
 
+/* The app's sign-out pill is fixed to the bottom-right. Below 600px the owner
+   sidebar becomes a fixed 56px bar along that same edge (see .owner-sidebar
+   just below), so the two occupied the same corner and the pill sat on top of
+   the navigation. Lifting it by the bar's height plus a gap puts it above the
+   bar instead of over it, and it still clears the gesture area because the
+   safe-area inset is carried through from the inline style. */
+@media (max-width: 600px) {
+  .app-signout-pill {
+    bottom: calc(56px + 12px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
 /* ── OwnerDashboard — phone: bottom tab bar ─────────────────────────── */
 @media (max-width: 600px) {
   .owner-sidebar {

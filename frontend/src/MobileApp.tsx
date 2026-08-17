@@ -179,9 +179,22 @@ const MobileApp: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <NetworkBanner inline />
       <div style={{ flex: 1, minHeight: 0 }}>
+        {/* Sign out lives IN the bar, not as a floating pill. The kiosk's own
+            profile pill is hidden on native (it duplicated the app chrome), so
+            without this a student had no way to sign out at all. A floating
+            pill would not work here either: the kiosk already floats a cart
+            button in the bottom-right corner. */}
         <nav style={tabBarStyle} className="lg-surface">
           <TabButton active={tab === 'menu'} onClick={() => setTab('menu')} glyph="🍽️" label="Menu" />
           <TabButton active={tab === 'track'} onClick={() => setTab('track')} glyph="📍" label="Track" />
+          <button
+            onClick={handleSignOut}
+            title={name ? `${name} — sign out` : 'Sign out'}
+            aria-label={name ? `${name} — sign out` : 'Sign out'}
+            style={signOutTabStyle}
+          >
+            <span aria-hidden="true">⏻</span>
+          </button>
         </nav>
 
         {/* The menu stays MOUNTED when switching to Track. Unmounting it would
@@ -239,9 +252,14 @@ const TabButton: React.FC<{
   </button>
 );
 
+// Staff panels only. The class carries the positioning so index.css can lift it
+// clear of the owner dashboard's bottom bar — below 600px that sidebar becomes a
+// fixed 56px tab bar along the bottom edge, and this pill was landing on top of
+// it. Inline styles cannot express that breakpoint.
 const SignOutPill: React.FC<{ label: string; onSignOut: () => void }> = ({ label, onSignOut }) => (
   <button
     onClick={onSignOut}
+    className="app-signout-pill"
     style={{
       position: 'fixed',
       bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
@@ -269,6 +287,24 @@ const splashStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 24,
+};
+
+const signOutTabStyle: React.CSSProperties = {
+  // flex: 0 so it takes only the width it needs — the two real tabs keep the
+  // rest and stay equal, rather than being squeezed into thirds by a control
+  // that is not a destination.
+  flex: '0 0 auto',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 44,
+  padding: '13px 0',
+  background: 'transparent',
+  border: 'none',
+  borderRadius: 14,
+  color: 'rgba(255,242,235,0.45)',
+  fontSize: '1rem',
+  cursor: 'pointer',
 };
 
 const tabBarStyle: React.CSSProperties = {
