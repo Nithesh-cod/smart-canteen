@@ -1,14 +1,19 @@
 package com.smartcanteen.app;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Message;
 import android.view.ViewGroup;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebViewClient;
 
 /**
  * Razorpay checkout needs a second window; a stock WebView refuses to open one.
@@ -52,6 +57,43 @@ public class MainActivity extends BridgeActivity {
             WebView.setWebContentsDebuggingEnabled(true);
         }
 
+        // ── Why UPI / GPay / QR were missing from checkout ───────────────────
+        // Android's WebView appends a "wv" token to its user agent. Razorpay's
+        // checkout reads that, concludes it is inside a WebView, and hides the
+        // UPI intent methods — because in a stock WebView they cannot work:
+        // tapping GPay produces a upi:// URL the WebView has no idea how to
+        // open. The methods were not missing from the account; checkout chose
+        // not to offer them.
+        //
+        // Dropping just that token, rather than replacing the whole string,
+        // keeps the real Chrome version, Android version and device model
+        // intact, so nothing else that sniffs the agent is misled.
+        //
+        // On its own this would be dishonest — it would advertise a capability
+        // the app lacks — so it is paired with the scheme handling below, which
+        // supplies the capability. Neither half is any use alone.
+        String ua = settings.getUserAgentString();
+        if (ua != null) {
+            settings.setUserAgentString(ua.replace("; wv", "").replace(" wv", ""));
+        }
+
+        // Give checkout somewhere to send upi:// and intent:// URLs. Without
+        // this the WebView fails them as ERR_UNKNOWN_URL_SCHEME and the handoff
+        // to the payment app dies silently.
+        //
+        // Extends Capacitor's own client rather than replacing it: the bridge
+        // lives in shouldOverrideUrlLoading, and a bare WebViewClient here
+        // would cut the JavaScript layer off from the native one and break the
+        // entire app, not just payments.
+        main.setWebViewClient(new BridgeWebViewClient(getBridge()) {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                if (isExternalScheme(url) && launchExternalApp(url)) return true;
+                return super.shouldOverrideUrlLoading(view, request);
+            }
+        });
+
         // Permit the popup request. JavaScript itself is already enabled by
         // Capacitor; without this flag the call is rejected before any listener
         // is consulted.
@@ -78,10 +120,18 @@ public class MainActivity extends BridgeActivity {
                 ps.setBuiltInZoomControls(true);
                 ps.setDisplayZoomControls(false);
 
-                // Keep navigation inside this WebView. Handing bank URLs to an
-                // external browser breaks the return trip: the payment result
-                // would land in Chrome and never reach checkout's handler.
-                popupWebView.setWebViewClient(new WebViewClient());
+                // Keep https navigation inside this WebView — handing bank URLs
+                // to an external browser breaks the return trip, because the
+                // payment result would land in Chrome and never reach
+                // checkout's handler. But upi:// and intent:// are exactly the
+                // URLs that MUST leave, since they address another app.
+                popupWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
+                        String url = request.getUrl().toString();
+                        return isExternalScheme(url) && launchExternalApp(url);
+                    }
+                });
                 popupWebView.setWebChromeClient(new WebChromeClient() {
                     @Override
                     public void onCloseWindow(WebView window) {
@@ -109,6 +159,61 @@ public class MainActivity extends BridgeActivity {
                 removePopup();
             }
         });
+    }
+
+    /**
+     * True for URLs addressed to another app rather than to the web.
+     *
+     * upi: is the generic UPI intent every payment app registers. tez: (Google
+     * Pay's original name), phonepe: and paytmmp: are app-specific schemes
+     * checkout uses when it knows which app was chosen. intent: is Android's
+     * own encoding, which carries a fallback URL for when the app is absent.
+     */
+    private static boolean isExternalScheme(String url) {
+        return url.startsWith("upi:")
+            || url.startsWith("intent:")
+            || url.startsWith("tez:")
+            || url.startsWith("phonepe:")
+            || url.startsWith("paytmmp:")
+            || url.startsWith("gpay:")
+            || url.startsWith("bhim:");
+    }
+
+    /**
+     * Hand the URL to whichever app claims it.
+     *
+     * Returns false when nothing can handle it, which lets the WebView carry on
+     * with its normal behaviour instead of leaving the shopper on a dead screen
+     * — someone without the chosen app installed should fall back to the other
+     * payment methods, not hit a blank page.
+     */
+    private boolean launchExternalApp(String url) {
+        try {
+            Intent intent;
+            if (url.startsWith("intent:")) {
+                // intent: URLs carry their own target and, usually, a
+                // browser_fallback_url for when the app is not installed.
+                intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                if (intent.resolveActivity(getPackageManager()) == null) {
+                    String fallback = intent.getStringExtra("browser_fallback_url");
+                    if (fallback != null) {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(fallback)));
+                        return true;
+                    }
+                    return false;
+                }
+            } else {
+                intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                // A bare upi: URL is deliberately left to the chooser when
+                // several apps are installed — picking one for the shopper
+                // would be wrong.
+                if (intent.resolveActivity(getPackageManager()) == null) return false;
+            }
+            startActivity(intent);
+            return true;
+        } catch (ActivityNotFoundException | java.net.URISyntaxException e) {
+            return false;
+        }
     }
 
     private void removePopup() {

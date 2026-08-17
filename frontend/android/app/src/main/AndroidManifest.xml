@@ -30,6 +30,27 @@
         </provider>
     </application>
 
+    <!--
+      Package visibility (Android 11 / API 30 and above).
+
+      Since API 30 an app cannot see other installed apps unless it declares
+      what it is looking for. Without this block resolveActivity() returns null
+      for every UPI app even when Google Pay is installed and working, so the
+      intent launch in MainActivity would decide "nothing can handle this" and
+      quietly give up. Declaring the intent, rather than a list of package
+      names, covers every UPI app including ones that do not exist yet.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
