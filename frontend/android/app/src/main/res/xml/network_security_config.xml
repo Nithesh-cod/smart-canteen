@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Cleartext policy for the app.
+
+  WHY THIS FILE EXISTS
+  Razorpay's checkout runs a device-fingerprinting step before it will validate
+  an account for netbanking. Part of that step probes a handful of loopback
+  ports over plain HTTP (http://localhost:7070/<random>.png and friends) to
+  detect emulators and remote-control tooling.
+
+  In a browser those probes succeed: Chrome treats http://localhost as a
+  "potentially trustworthy" origin, so it is exempt from the mixed-content rule
+  that would otherwise block plain HTTP loaded by an HTTPS page. Android's
+  WebView has no such exemption — since API 28 the platform default is
+  cleartextTrafficPermitted="false" for everything, so each probe died with
+  ERR_CLEARTEXT_NOT_PERMITTED, the fingerprint never completed, and
+  POST /v1/standard_checkout/payments/validate/account answered 500.
+
+  That is the entire difference between "netbanking works on the website" and
+  "netbanking fails in the app" — same key, same backend, same account. Card
+  payments were unaffected because they do not go through account validation.
+
+  WHY THIS IS SAFE
+  Cleartext is permitted ONLY for loopback. Traffic to 127.0.0.1 / ::1 never
+  leaves the handset, so there is no network path for anyone to read or tamper
+  with it — the usual objection to cleartext does not apply. Everything that
+  does leave the device stays under base-config, which keeps cleartext off, so
+  API calls, JWTs and payment traffic are still HTTPS-only and would fail
+  loudly rather than silently downgrade.
+
+  Deliberately NOT done: flipping Capacitor's allowMixedContent to true. That
+  is a blanket permission for any plain-HTTP subresource on any page the
+  WebView loads, including third-party checkout pages. This grants the one
+  thing that is actually needed and nothing else.
+-->
+<network-security-config>
+
+    <!-- Everything not named below: HTTPS only. -->
+    <base-config cleartextTrafficPermitted="false" />
+
+    <!-- Loopback only. Never traverses a network. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+
+</network-security-config>

@@ -24,8 +24,14 @@ const config: CapacitorConfig = {
     // app fetches from the API goes to the absolute Render origin instead —
     // there is no Vercel rewrite in here (see utils/constants.ts).
     //
-    // Cleartext stays OFF: every backend call is https, and enabling it would
-    // silently permit plaintext traffic carrying JWTs and payment calls.
+    // Cleartext stays OFF here: this flag is blanket permission for ANY
+    // plain-HTTP subresource on any page the WebView loads, third-party
+    // checkout pages included, and every backend call is https anyway.
+    //
+    // Razorpay's fingerprinting step does need plain HTTP to loopback, which
+    // is granted narrowly in res/xml/network_security_config.xml — loopback
+    // only, never a network hop. See that file for why netbanking failed here
+    // but worked on the website.
     allowMixedContent: false,
   },
 
