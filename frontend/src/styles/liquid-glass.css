@@ -379,3 +379,9 @@
 
 /* Respect the status bar and gesture area so content is not drawn underneath. */
 .is-native body { padding-top: env(safe-area-inset-top, 0px); }
+
+/* The site footer carries policy links for the payment-gateway review, which
+   only ever inspects the website. Inside the APK the app has its own
+   navigation and the links would just push the last row of dishes further
+   down a phone screen. */
+.is-native .site-footer { display: none !important; }

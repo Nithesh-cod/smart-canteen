@@ -13,6 +13,10 @@ import { Skeleton }    from './components/common/states'
 const ChefDisplay    = lazy(() => import('./pages/ChefDisplay'))
 const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'))
 const OrderTracking  = lazy(() => import('./pages/OrderTracking'))
+// Policy pages Razorpay's website review looks for. Lazy because a customer
+// ordering lunch should not download them, but they must be real routes with
+// their own URLs — a reviewer needs to link to each one directly.
+const LegalPage      = lazy(() => import('./pages/LegalPage'))
 
 const RouteFallback = () => (
   <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
@@ -36,6 +40,13 @@ function App() {
 
           {/* ── Unified login (all roles — routes by role after sign-in) ─ */}
           <Route path="/login"             element={<UnifiedLogin />} />
+
+          {/* ── Policy pages (public, required for payment-gateway review) ─ */}
+          <Route path="/terms"    element={<LegalPage slug="terms" />} />
+          <Route path="/privacy"  element={<LegalPage slug="privacy" />} />
+          <Route path="/refunds"  element={<LegalPage slug="refunds" />} />
+          <Route path="/shipping" element={<LegalPage slug="shipping" />} />
+          <Route path="/contact"  element={<LegalPage slug="contact" />} />
 
           {/* ── Chef display (requires chef or admin role) ────────────── */}
           <Route

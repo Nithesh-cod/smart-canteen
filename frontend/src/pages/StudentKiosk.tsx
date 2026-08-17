@@ -24,6 +24,7 @@ import type { Student } from '../types';
 import { useToast } from '../components/common/Toast';
 import { ErrorState } from '../components/common/states';
 import NetworkBanner from '../components/common/NetworkBanner';
+import SiteFooter from '../components/common/SiteFooter';
 import type { MenuItem, Order } from '../types';
 import api from '../services/api';
 // @ts-ignore — JSX component without types
@@ -676,6 +677,11 @@ const StudentKiosk: React.FC = () => {
           />
         )}
       </main>
+
+      {/* Policy links. A payment-gateway reviewer checks that these are
+          reachable from the site itself, not only by typing the URL, so they
+          sit in the page rather than being routes nothing points at. */}
+      <SiteFooter />
 
       {/* Floating cart button with bounce animation */}
       <style>{`
