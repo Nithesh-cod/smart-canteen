@@ -92,3 +92,11 @@ frontend/android/app/src/main/assets/public/
 # Ship builds via GitHub Releases (gh release upload) instead.
 *.apk
 *.aab
+
+# Razorpay key exports. The dashboard downloads the live key id AND secret as a
+# CSV, which lands in the project root with a predictable name. Anyone holding
+# that secret can create charges on the account, so it must never be committed
+# — and untracked is not the same as safe: one 'git add -A' publishes it.
+rzp-key*.csv
+*api_key*.csv
+*_keys.csv

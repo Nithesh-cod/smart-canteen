@@ -17,16 +17,16 @@
 export const BUSINESS = {
   /** EXACTLY as submitted to Razorpay during activation — not a shortened or
    *  friendlier version. This is the field most often mismatched. */
-  legalName: 'NEEDS_REAL_VALUE — legal business name as given to Razorpay',
+  legalName: 'CIET Canteen',
 
   /** The trading name students see. May differ from the legal name. */
   tradingName: 'Smart Canteen',
 
   /** Monitored inbox. Reviewers sometimes email it to check it is real. */
-  email: 'NEEDS_REAL_VALUE — support email',
+  email: 'nitheshr001@gmail.com',
 
   /** Include the country code. */
-  phone: 'NEEDS_REAL_VALUE — contact phone',
+  phone: '+91 97863 59161',
 
   /** Full postal address of the canteen, including PIN code. */
   address: 'NEEDS_REAL_VALUE — full address with PIN code',
