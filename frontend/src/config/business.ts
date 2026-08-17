@@ -29,7 +29,7 @@ export const BUSINESS = {
   phone: '+91 97863 59161',
 
   /** Full postal address of the canteen, including PIN code. */
-  address: 'NEEDS_REAL_VALUE — full address with PIN code',
+  address: 'Coimbatore Institute of Engineering and Technology, Narasipuram, Coimbatore 641109',
 
   /** Public site. Used for canonical links in the policy text. */
   website: 'https://smart-canteen-pi-gray.vercel.app',
